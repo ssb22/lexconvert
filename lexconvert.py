@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.1443 - convert between lexicons of different speech synthesizers\n(c) 2007-2010 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.1453 - convert between lexicons of different speech synthesizers\n(c) 2007-2012 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -82,7 +82,7 @@ table = [
    (0, ['I', 'I2'], 0, 0, 'IX', 'I', 'I', 0, 'IX', u'\u026a',0),
    ('i@', 'i@', 'iy ah', 'i ah', 'IY UX', 'I@', 'I@', 'EY AH', 'IXAH', u'\u026a\u0259','yi3re5'),
    (0, 0, 0, 0, 0, 'Ir\\', 'I r', 0, 0, u'\u026a\u0279',0),
-   ('ii', 'i:', 'iy', 'i', 'IY', 'i', 'i', 'IY', 'EE', 'i','yi5'),
+   ('ii', ['i:','i'], 'iy', 'i', 'IY', 'i', 'i', 'IY', 'EE', 'i','yi5'),
    (0, 0, 0, 0, 0, 'i:', 'i:', 0, 0, u'i\u02d0',0),
    ('jh', 'dZ', 'jh', 'jh', 'J', 'dZ', 'dZ', 'JH', 'J', [u'd\u0292', u'\u02a4'],'zhe0'),
    ('k', 'k', 'k', 'k', 'k', 'k', 'k', 'K ', 'K', 'k','ke0'),
@@ -242,58 +242,6 @@ for line in table:
   prevLine = line
 table = newTable
 
-def OED_alt_to_espeak(oed_alt):
-    # Converts values of ALT attributes from OED website into eSpeak.
-    # Be sure to include the /.../ either side of each pronunciation (you can pass in more than one).
-    # Returns a LIST of eSpeak entries.
-    # Note that OED's keyboard equivalents are almost identical to eSpeak,
-    # except for Q (which is 0 in eSpeak), and VI (aI in eSpeak) and one or two
-    # foreign symbols.
-    # (OED puts accent marks before the syllable rather than before the vowel like espeak;
-    # however espeak can correct this by itself so we don't have to.  But do be careful if
-    # converting directly to another format - run though espeak -x first, or improve
-    # convert(), or add stress-mark-move-forward code to this function.)
-    oed_alt = oed_alt.replace("{lsyllab}","l") \
-    .replace("{msyllab}","m") \
-    .replace("{nsyllab}","n") \
-    .replace("{zh}","Z").replace("{edh}","D").replace("{ng}","N") \
-    .replace("{sh}","S").replace("{vdftheta}","T").replace("{lbelt}","L") \
-    .replace("{shtu}","U").replace("{fata}","A").replace("{lm}",":") \
-    .replace("{shti}","I").replace("{ope}","E").replace("{schwa}","@") \
-    .replace("{recv}","O").replace("{rfa}","0").replace("{revv}","V") \
-    .replace("{rfatilde}","0~").replace("{sm}","'").replace("{smm}",",") \
-    .replace("VI","aI").replace('\xe6','a').strip()
-    ret = []
-    def add(word):
-        if word.startswith("(") and word.endswith(")"): word=word[1:-1] # some entries have ()s around them
-        # TODO if there is more instance than one of each type of variable pronunciation in the word, do we want to add ALL combinations?
-        # currently just vary all-or-nothing, to give a general idea of the variability
-        if "'," in word: return add(word.replace("',","'")),add(word.replace("',",",")) # ', can be either primary or secondary stress
-        if "{shtibar}" in word: return add(word.replace("{shtibar}","I")),add(word.replace("{shtibar}","@"))
-        if "{shtubar}" in word: return add(word.replace("{shtubar}","U")),add(word.replace("{shtubar}","@"))
-        if "(" in word and ")" in word: return add(word.replace("(","",1).replace(")","",1)), add(word[:word.index("(")]+word[word.index(")")+1:])
-        for c in word:
-            found = False
-            for t in table[1:]:
-                if c in t[1]:
-                    found = True ; break
-            if not found:
-                sys.stderr.write("NB omitting "+repr(word)+" because it still contains unknown characters (e.g. '"+c+"')\n")
-                return
-        ret.append(cleanup_espeak_entry(word))
-    to_add = [] ; adding=False
-    if not '/' in oed_alt:
-        sys.stderr.write("Warning: no / found, assuming entire input is one pronunciation entry\n")
-        oed_alt = "/"+oed_alt+"/"
-    for c in oed_alt:
-        if c=='/':
-            adding = not adding
-            if not adding:
-                add(''.join(to_add)) ; to_add = []
-        elif adding: to_add.append(c)
-    if to_add: sys.stderr.write("Warning: unterminated word (did you include both the starting and the ending slashes?)\n")
-    return ret
-
 cached_source,cached_dest,cached_dict = None,None,None
 def make_dictionary(source,dest):
     global cached_source,cached_dest,cached_dict
@@ -329,7 +277,7 @@ def convert(pronunc,source,dest):
     dictionary = make_dictionary(source,dest)
     while pronunc:
         for lettersToTry in [2,1,0]:
-            if not lettersToTry and source=="espeak": sys.stderr.write("Warning: ignoring unknown espeak phoneme "+repr(pronunc[0])+"\n")
+            if not lettersToTry and source=="espeak" and not pronunc[0] in "_: ": sys.stderr.write("Warning: ignoring unknown espeak phoneme "+repr(pronunc[0])+"\n")
             if not lettersToTry: pronunc=pronunc[1:] # ignore
             elif dictionary.has_key(pronunc[:lettersToTry]):
                 toAdd=dictionary[pronunc[:lettersToTry]]
@@ -591,6 +539,56 @@ def markup_inline_word(format,pronunc):
     elif format=="unicode-ipa": return pronunc.encode("utf-8") # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
     else: return pronunc # fallback - assume the user knows what to do with it
 
+def sylcount(festival):
+  # we treat @ as counting the same as the previous syllable (e.g. "fire",
+  # "power") but this can vary in different songs
+  count = inVowel = maybeCount = hadAt = 0
+  festival = festival.split()
+  for phone,i in zip(festival,range(len(festival))):
+    if phone[0] in "aeiou": inVowel=0 # unconditionally start new syllable
+    if phone[0] in "aeiou@12":
+      if not inVowel: count += 1
+      elif phone[0]=="@" and not hadAt: maybeCount = 1 # (e.g. "loyal", but NOT '1', e.g. "world")
+      if "@" in phone: hadAt = 1 # for words like "cheerful" ("i@ 1 @" counts as one)
+      inVowel = 1
+      if phone[0]=="@" and i>=3 and festival[i-2:i]==["ai","1"] and festival[i-3] in ["s","h"]: # special rule for higher, Messiah, etc - like "fire" but usually 2 syllables
+        maybeCount = 0 ; count += 1
+    else:
+      if not phone[0] in "drz": count += maybeCount # not 'r/z' e.g. "ours", "fired" usually 1 syllable in songs, "desirable" usually 4 not 5
+      # TODO steward?  y u@ 1 d but usally 2 syllables
+      inVowel = maybeCount = hadAt = 0
+  return count
+def hyphenate(word,numSyls):
+  orig = word
+  try: word,isu8 = word.decode('utf-8'),True
+  except: isu8 = False
+  pre=[] ; post=[]
+  while word and not 'a'<=word[0].lower()<='z':
+    pre.append(word[0]) ; word=word[1:]
+  while word and not 'a'<=word[-1].lower()<='z':
+    post.insert(0,word[-1]) ; word=word[:-1]
+  if numSyls>len(word): return orig # probably numbers or something
+  l = int((len(word)+numSyls/2)/numSyls) ; syls = []
+  for i in range(numSyls):
+    if i==numSyls-1: syls.append(word[i*l:])
+    else: syls.append(word[i*l:(i+1)*l])
+    if len(syls)>1:
+      if len(syls[-1])>2 and syls[-1][0]==syls[-1][1] and not syls[-1][0].lower() in "aeiou":
+        # repeated consonant at start - put one on previous
+        syls[-2] += syls[-1][0]
+        syls[-1] = syls[-1][1:]
+      elif ((len(syls[-2])>2 and syls[-2][-1]==syls[-2][-2] and not syls[-2][-1].lower() in "aeiou") \
+            or (syls[-1][0].lower() in "aeiouy" and len(syls[-2])>2)) \
+            and filter(lambda x:x.lower() in "aeiou",list(syls[-2][:-1])):
+        # repeated consonant at end - put one on next
+        # or vowel on right: move a letter over (sometimes the right thing to do...)
+        # (unless doing so leaves no vowels)
+        syls[-1] = syls[-2][-1]+syls[-1]
+        syls[-2] = syls[-2][:-1]
+  word = ''.join(pre)+"- ".join(syls)+''.join(post)
+  if isu8: word=word.encode('utf-8')
+  return word
+
 def main():
     if '--festival-dictionary-to-espeak' in sys.argv:
         try: festival_location=sys.argv[sys.argv.index('--festival-dictionary-to-espeak')+1]
@@ -603,14 +601,6 @@ def main():
         except:
             sys.stderr.write("Error: en_list could not be opened (did you remember to cd to the eSpeak dictsource directory first?\n") ; sys.exit(1)
         convert_system_festival_dictionary_to_espeak(festival_location,not '--without-check' in sys.argv,not os.system("test -e ~/.festivalrc"))
-    elif '--oed' in sys.argv:
-        sys.stderr.write("Copy the pronunciation entries from the OED and paste into here\n"
-        "The browser should copy the images' ALT text i.e. {zh}, {edh}, {ng}, etc.\n"
-        "Make sure to include the /.../ around each entry.\n"
-        "NOTE: Best use British pronunciations only, because some versions of eSpeak\nwill OMIT phonemes if you give them an American pronunciation.\n"
-        "When done, send EOF (Unix/Mac/etc Ctrl-D, Windows Ctrl-Z).\n")
-        os.popen("espeak -x","w").write(", ".join([markup_inline_word("espeak",w) for w in OED_alt_to_espeak(sys.stdin.read())]))
-        # (use espeak rather than converting directly to some other format - see comments in OED_alt_to_espeak)
     elif '--try' in sys.argv:
         i=sys.argv.index('--try')
         espeak = convert(' '.join(sys.argv[i+2:]),sys.argv[i+1],'espeak')
@@ -618,13 +608,21 @@ def main():
     elif '--trymac' in sys.argv:
         i=sys.argv.index('--trymac')
         mac = convert(' '.join(sys.argv[i+2:]),sys.argv[i+1],'mac')
-        os.popen("say","w").write(markup_inline_word("mac",mac))
+        os.popen("say -v Vicki","w").write(markup_inline_word("mac",mac))
+        # Need to specify a voice because the default voice might not be able to take English phonemes (especially on 10.7+)
+        # Vicki has been available since 10.3, as has the 'say' command (previous versions need osascript, see Gradint's code)
     elif '--phones' in sys.argv:
         i=sys.argv.index('--phones')
         format=sys.argv[i+1]
         w,r=os.popen4("espeak -q -x")
         w.write(' '.join(sys.argv[i+2:])) ; w.close()
         print ", ".join([" ".join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,r.read().split("\n"))])
+    elif '--syllables' in sys.argv:
+        i=sys.argv.index('--syllables')
+        w,r=os.popen4("espeak -q -x")
+        w.write('\n'.join(sys.argv[i+1:]).replace("!","").replace(":","")) ; w.close()
+        rrr = r.read().split("\n")
+        print " ".join([hyphenate(word,sylcount(convert(line,"espeak","festival"))) for word,line in zip(sys.argv[i+1:],filter(lambda x:x,rrr))])
     elif '--phones2phones' in sys.argv:
         i=sys.argv.index('--phones2phones')
         format1,format2 = sys.argv[i+1],sys.argv[i+2]
@@ -658,10 +656,10 @@ def main():
             outFile=open(fname,"w")
         else: assert 0, "Don't know where to put lexicon of format '%s', try using --phones or --phones2phones options instead" % (toFormat,)
         if not outFile:
-            len = 0
-            try: len = open(fname).read()
+            l = 0
+            try: l = open(fname).read()
             except: pass
-            assert not len, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)"
+            assert not l, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)"
             outFile=open(fname,"w")
         print "Writing lexicon entries to",fname
         convert_user_lexicon(fromFormat,toFormat,outFile)
@@ -672,9 +670,9 @@ def main():
         print "\nAvailable pronunciation formats:",', '.join(list(table[0]))
         print "\nUse --convert <from-format> <to-format> to convert a user lexicon file.  Expects Festival's .festivalrc to be in the home directory, or espeak's en_extra or Cepstral's lexicon.txt to be in the current directory.\nFor InfoVox/acapela, export the lexicon to acapela.txt in the current directory.\nE.g.: python lexconvert.py --convert festival cepstral"
         print "\nUse --try <format> <pronunciation> to try a pronunciation with eSpeak (requires 'espeak' command),\n e.g.: python lexconvert.py --try festival h @0 l ou1\n or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)\n (it converts to espeak format and then uses espeak to play it)\nUse --trymac to do the same as --try but with Mac OS 'say' instead of 'espeak'"
-        print "\nUse --oed to try some pronunciations from the Oxford English Dictionary (OED) website: it will prompt you to paste in the pronunciations and use eSpeak to display and pronounce each alternative.  (Note the OED notation can specify alternatives even in one marking, so you may get more than you expect.)"
-        print "\nUse --phones <format> <words> to convert 'words' to phones in format 'format'.  espeak will be run to do the text-to-phoneme conversion, and the output will then be converted to 'format'.\nE.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.\nNote that some commercial speech synthesizers do not work well when driven entirely from phones, because their internal format is different and is optimised for normal text."
         print "\nUse --phones2phones <format1> <format2> <phones in format1> to perform a one-off conversion of phones from format1 to format2."
+        print "\nUse --phones <format> <words> to convert 'words' to phones in format 'format'.  espeak will be run to do the text-to-phoneme conversion, and the output will then be converted to 'format'.\nE.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.\nNote that some commercial speech synthesizers do not work well when driven entirely from phones, because their internal format is different and is optimised for normal text."
+        print "\nUse --syllables <words> to attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"
         print "\nUse --festival-dictionary-to-espeak <location> to convert the Festival Oxford Advanced Learners Dictionary (OALD) pronunciation lexicon to ESpeak.\nYou need to specify the location of the OALD file in <location>,\ne.g. for Debian festlex-oald package: python lexconvert.py --festival-dictionary-to-espeak /usr/share/festival/dicts/oald/all.scm\nor if you can't install the Debian package, try downloading http://ftp.debian.org/debian/pool/non-free/f/festlex-oald/festlex-oald_1.4.0.orig.tar.gz, unpack it into /tmp, and do: python lexconvert.py --festival-dictionary-to-espeak /tmp/festival/lib/dicts/oald/oald-0.4.out\nIn all cases you need to cd to the espeak source directory before running this.  en_extra will be overwritten.  Converter will also read your ~/.festivalrc if it exists.  (You can later incrementally update from ~/.festivalrc using the --convert option; the entries from the system dictionary will not be overwritten in this case.)  Specify --without-check to bypass checking the existing espeak pronunciation for OALD entries (much faster, but makes a larger file and in some cases compromises the pronunciation quality)."
 
 if __name__ == "__main__": main()
