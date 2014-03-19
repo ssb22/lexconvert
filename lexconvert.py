@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.146 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.147 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -34,7 +34,7 @@ table = [
    # The first entry MUST be the syllable separator:
    ('0', '%', '-', '0', '=', '.', '', '0', '', '.','.',''),
    ('1', "'", '1', '1', '1', '"', 0, '1', '1', u'\u02c8','"', '4'), # primary stress - ignoring this for acapela-uk
-   ('2', ',', '2', '0', '2', '%', 0, '2', '2', u'\u02cc','\\textsecstress{}', '2'), # secondary stress - ignoring this for acapela-uk (TODO: latex-ipa?)
+   ('2', ',', '2', '0', '2', '%', 0, '2', '2', u'\u02cc','\\textsecstress{}', '2'), # secondary stress - ignoring this for acapela-uk
    ('', '', '', '', '', '', 0, '', '', '-','', ''),
    (0, 0, 0, 0, 0, 0, 0, 0, '', '#','\\#',0),
    (0, 0, 0, 0, 0, 0, 0, 0, '', ' ',' ',0),
@@ -287,19 +287,19 @@ def convert(pronunc,source,dest):
             if not lettersToTry: pronunc=pronunc[1:] # ignore
             elif dictionary.has_key(pronunc[:lettersToTry]):
                 toAdd=dictionary[pronunc[:lettersToTry]]
-                if toAdd in ['0','1','2','4'] and not dest=="espeak": # it's a stress mark in a notation that places stress marks AFTER vowels (not dest=="espeak" added because espeak uses 0 for other purposes)
+                if toAdd in ['0','1','2','4'] and not dest in ["espeak","latex-ipa"]: # it's a stress mark in a notation that places stress marks AFTER vowels (not dest in ["espeak","latex-ipa"] added because they use 0 for other purposes)
                     if dest=="bbcmicro": # not sure which pitch levels to map the stresses to; try these:
                       if toAdd=='1': toAdd='3'
                       elif toAdd=='2': toAdd='4'
-                    if source in ["espeak","unicode-ipa"]: # stress should be moved from before the vowel to after it
+                    if source in ["espeak","unicode-ipa","latex-ipa"]: # stress should be moved from before the vowel to after it
                         toAdd, toAddAfter = "",toAdd
                     else:
                         # With Cepstral synth, stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
-                        # (not dest=="espeak" because that uses 0 as a phoneme; anyway it's dealt with separately below)
+                        # (not dest in ["espeak","latex-ipa"] because they use 0 as a phoneme; dealt with separately below)
                         r=len(ret)-1
                         while ret[r] in dest_consonants or ret[r].endswith("*added"): r -= 1 # (if that raises IndexError then the input had a stress mark before any vowel) ("*added" condition is there so that implicit vowels don't get the stress)
                         ret.insert(r+1,toAdd) ; toAdd=""
-                elif toAdd in u"',\u02c8\u02cc" and dest in ["espeak","unicode-ipa"] and not source in ["espeak","unicode-ipa"]: # it's a stress mark that should be moved from after the vowel to before it
+                elif ((toAdd in u"',\u02c8\u02cc" and dest in ["espeak","unicode-ipa"]) or (toAdd in ['"','\\textsecstress{}'] and dest=="latex-ipa")) and not source in ["espeak","unicode-ipa","latex-ipa"]: # it's a stress mark that should be moved from after the vowel to before it
                     i=len(ret)
                     while i and (ret[i-1] in dest_consonants or ret[i-1].endswith("*added")): i -= 1
                     if i: i-=1
@@ -516,7 +516,9 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
     else: assert 0, "Reading from '%s' lexicon file not yet implemented" % (fromFormat,)
     if toFormat=="mac": outFile.write("# I don't yet know how to add to the Mac OS X lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed")
     elif "sapi" in toFormat: outFile.write("rem  You have to run this file\nrem  with ptts.exe in the same directory\nrem  to add these words to the SAPI lexicon\n\n")
-    elif toFormat=="unicode-ipa": outFile.write("<HTML><HEAD>\n<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=utf-8\">\n</HEAD><BODY><TABLE>\n")
+    elif toFormat=="unicode-ipa": outFile.write("""<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>""")
+    elif toFormat=="latex-ipa": outFile.write(r"""\documentclass[12pt,a4paper]{article} \usepackage{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}""")
+    elif toFormat=="pinyin-approx": outFile.write("Pinyin approxmations (very approximate!)\n----------------------------------------\n")
     for word, pronunc in lex:
         pronunc = convert(pronunc,fromFormat,toFormat)
         if toFormat=="espeak": outFile.write(word+" "+pronunc+"\n")
@@ -524,12 +526,15 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
         elif toFormat=="cepstral": outFile.write(word.lower()+" 0 "+pronunc+"\n")
         elif toFormat=="mac": outFile.write(" -e \"s/"+word+"/[[inpt PHON]]"+pronunc+"[[inpt TEXT]]/g\"")
         elif toFormat=="bbcmicro": outFile.write("> "+word.upper()+"_"+chr(128)+pronunc) # (specifying 'whole word'; remove the space before or the _ after if you want)
-        elif toFormat=="unicode-ipa": outFile.write("<TR><TD>"+word+"</TD><TD>"+pronunc.encode("UTF-8")+"</TD></TR>\n")
+        elif toFormat=="unicode-ipa": outFile.write("<tr><td>"+word+"</td><td>"+pronunc.encode("utf-8")+"</td></tr>\n")
+        elif toFormat=="latex-ipa": outFile.write(word+r" & \textipa{"+pronunc+r"}\\"+"\n")
+        elif toFormat=="pinyin-approx": outFile.write(word+" ~= "+pronunc+"\n")
         elif toFormat in ["acapela-uk","x-sampa"]: outFile.write(word+chr(9)+"#"+pronunc+chr(9)+"UNKNOWN\n") # TODO may be able to convert part-of-speech (NOUN etc) to/from some other formats e.g. Festival
         else: assert 0, "Writing to lexicon in %s format not yet implemented" % (format,)
     if toFormat=="mac": outFile.write("\n")
     elif toFormat=="bbcmicro": outFile.write(">**")
-    elif toFormat=="unicode-ipa": outFile.write("</TABLE></BODY></HTML>\n")
+    elif toFormat=="unicode-ipa": outFile.write("</table></body></html>\n")
+    elif toFormat=="latex-ipa": outFile.write("\end{longtable}\end{document}\n")
 
 first_word=True # hack for bbcmicro and TeX
 def markup_inline_word(format,pronunc):
@@ -659,8 +664,13 @@ def main():
             os.system("mv en_extra en_extra~ ; grep \" // \" en_extra~ > en_extra") # keep the commented entries, so can incrementally update the user lexicon only
             fname="en_extra"
             outFile=open(fname,"a")
-        elif toFormat=="unicode-ipa":
-            fname="words-ipa.html" # just make a table of words and pronunciation
+        elif toFormat in ["unicode-ipa","latex-ipa","pinyin-approx"]:
+            # just make a table of words and pronunciation
+            if toFormat=="unicode-ipa":
+              fname="words-ipa.html"
+            elif toFormat=="pinyin-approx":
+              fname="words-pinyin-approx.txt"
+            else: fname="words-ipa.tex"
             try:
                 open(fname)
                 assert 0, fname+" already exists, I'd rather not overwrite it; delete it yourself if you want"
