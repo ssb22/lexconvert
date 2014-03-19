@@ -626,7 +626,7 @@ def main():
         i=sys.argv.index('--trymac')
         mac = convert(' '.join(sys.argv[i+2:]),sys.argv[i+1],'mac')
         os.popen("say -v Vicki","w").write(markup_inline_word("mac",mac))
-        # Need to specify a voice because the default voice might not be able to take English phonemes (especially on 10.7+)
+        # Need to specify a voice because the default voice might not be able to take Apple phonemes (especially on 10.7+; even some British voices can't take them, let alone non-English voices; TODO is there ANY way to have phonetic control of at least the British voices?)
         # Vicki has been available since 10.3, as has the 'say' command (previous versions need osascript, see Gradint's code)
     elif '--phones' in sys.argv:
         i=sys.argv.index('--phones')
