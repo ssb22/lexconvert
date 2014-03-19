@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.1453 - convert between lexicons of different speech synthesizers\n(c) 2007-2012 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.146 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -26,108 +26,114 @@ program_name = "lexconvert v0.1453 - convert between lexicons of different speec
 # Column 'cmu': format of the US English "Carnegie Mellon University Pronouncing Dictionary" (http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
 # Column 'bbcmicro': BBC Micro Speech program by David J. Hoskins / Superior
 # Column 'unicode-ipa': Unicode IPA, as used on an increasing number of websites
+# Column 'latex-ipa': LaTeX IPA package
 # Column 'pinyin-approx' (convert TO only): Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words - works with some words better than others)
+# 0 = 'ditto' (copy the cell above)
 table = [
-   ('festival', 'espeak', 'sapi', 'cepstral', 'mac', 'x-sampa', 'acapela-uk', 'cmu', 'bbcmicro', 'unicode-ipa','pinyin-approx'),
+   ('festival', 'espeak', 'sapi', 'cepstral', 'mac', 'x-sampa', 'acapela-uk', 'cmu', 'bbcmicro', 'unicode-ipa','latex-ipa', 'pinyin-approx'),
    # The first entry MUST be the syllable separator:
-   ('0', '%', '-', '0', '=', '.', '', '0', '', '.',''),
-   ('1', "'", '1', '1', '1', '"', 0, '1', '1', u'\u02c8','4'), # primary stress - ignoring this for acapela-uk
-   ('2', ',', '2', '0', '2', '%', 0, '2', '2', u'\u02cc','2'), # secondary stress - ignoring this for acapela-uk
-   ('', '', '', '', '', '', 0, '', '', '-',''),
-   (0, 0, 0, 0, 0, 0, 0, 0, '', '#',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, '', ' ',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, '', '_',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, '', '?',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, '', '!',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, '', ',',0),
-   ('aa', ['A:', 'A@', 'aa'], 'aa', 'a', 'AA', 'A', 'A:', 'AA', 'AA', u'\u0251','a5'),
-   (0, 'A', 0, 0, 0, 0, 0, '2', 0, u'\u2051',0),
-   (0, 'A:', 0, 0, 0, ':', 0, '1', 0, u'\u02d0',0),
-   (0, 0, 0, 0, 0, 'A:', 0, 'AA', 0, u'\u0251\u02d0',0),
-   (0, 0, 0, 0, 0, 'Ar\\', 0, 0, 0, u'\u0251\u0279',0),
-   (0, 0, 0, 0, 'aa', 'a:', 0, 0, 0, 'a\\u02d0',0),
-   ('a', ['a', '&'], 'ae', 'ae', 'AE', '{', '{', 'AE', 'AE', [u'\xe6','a'],'ya5'),
-   ('uh', 'V', 'ah', 'ah', 'UX', 'V', 'V', 'AH', 'OH', u'\u028c','e5'),
-   ('o', '0', 'ao', 'oa', 'AA', 'Q', 'Q', 'AA', 'O', u'\u0252','yo5'),
-   (0, 0, 0, 0, 0, 'A', 'A', 0, 0, u'\u0251',0),
-   (0, 0, 0, 0, 0, 'O', 'O', 0, 0, u'\u0254',0),
-   ('au', 'aU', 'aw', 'aw', 'AW', 'aU', 'aU', 'AW', 'AW', u'a\u028a','ao5'),
-   (0, 0, 0, 0, 0, '{O', '{O', 0, 0, u'\xe6\u0254',0),
-   ('@', '@', 'ax', 'ah', 'AX', '@', '@', 'AH', 'AH', u'\u0259','e5'),
-   ('@@', '3:', 'er', 'er', 0, '3:', '3:', 'ER', 'ER', u'\u0259\u02d0','e5'),
-   ('@', '3', 'ax', 'ah', 0, '@', '@', 'AH', 'AH', u'\u025a','e5'),
-   ('@1', 'a2', 0, 0, 0, 0, 0, 0, 0, u'\u0259', 0),
-   ('@2', '@', 0, 0, 0, 0, 0, 0, 0, 0, 0),
-   ('ai', 'aI', 'ay', 'ay', 'AY', 'aI', 'aI', 'AY', 'IY', u'a\u026a','ai5'),
-   (0, 0, 0, 0, 0, 'Ae', 'A e', 0, 0, u'\u0251e',0),
-   ('b', 'b', 'b', 'b', 'b', 'b', 'b', 'B ', 'B', 'b','bu0'),
-   ('ch', 'tS', 'ch', 'ch', 'C', 'tS', 't S', 'CH', 'CH', [u't\u0283', u'\u02a7'],'che0'),
-   ('d', 'd', 'd', 'd', 'd', 'd', 'd', 'D ', 'D', 'd','de0'),
-   ('dh', 'D', 'dh', 'dh', 'D', 'D', 'D', 'DH', 'DH', u'\xf0','ze0'),
-   ('e', 'E', 'eh', 'eh', 'EH', 'E', 'e', 'EH', 'EH', u'\u025b','ye5'),
-   (0, 0, 'ey', 0, 0, 'e', 0, 0, 0, 'e',0),
-   ('@@', '3:', 'er', 'er', 'AX', '3:', '3:', 'ER', 'ER', [u'\u025d', u'\u025c\u02d0'],'e5'),
-   ('e@', 'e@', 'eh r', 'e@', 'EH r', 'E@', 'e @', 0, 'AI', u'\u025b\u0259','ye5'),
-   (0, 0, 0, 0, 0, 'Er\\', 'e r', 0, 0, u'\u025b\u0279',0),
-   (0, 0, 0, 0, 0, 'e:', 'e :', 0, 0, u'e\u02d0',0),
-   (0, 0, 0, 0, 0, 'E:', 0, 0, 0, u'\u025b\u02d0',0),
-   (0, 0, 0, 0, 0, 'e@', 'e @', 0, 0, u'e\u0259',0),
-   ('ei', 'eI', 'ey', 'ey', 'EY', 'eI', 'eI', 'EY', 'AY', u'e\u026a','ei5'),
-   (0, 0, 0, 0, 0, '{I', '{I', 0, 0, u'\xe6\u026a',0),
-   ('f', 'f', 'f', 'f', 'f', 'f', 'f', 'F ', 'F', 'f','fu0'),
-   ('g', 'g', 'g', 'g', 'g', 'g', 'g', 'G ', 'G', [u'\u0261', 'g'],'ge0'),
-   ('h', 'h', 'h', 'h', 'h', 'h', 'h', 'HH', '/H', 'h','he0'), # Jan suggested "hh" for SAPI, but it doesn't work on XP
-   ('i', 'I', 'ih', 'ih', 'IH', 'I', 'I', 'IH', 'IH', u'\u026a','yi5'),
-   (0, 0, 0, 0, 0, '1', '1', 0, 0, u'\u0268',0),
-   (0, ['I', 'I2'], 0, 0, 'IX', 'I', 'I', 0, 'IX', u'\u026a',0),
-   ('i@', 'i@', 'iy ah', 'i ah', 'IY UX', 'I@', 'I@', 'EY AH', 'IXAH', u'\u026a\u0259','yi3re5'),
-   (0, 0, 0, 0, 0, 'Ir\\', 'I r', 0, 0, u'\u026a\u0279',0),
-   ('ii', ['i:','i'], 'iy', 'i', 'IY', 'i', 'i', 'IY', 'EE', 'i','yi5'),
-   (0, 0, 0, 0, 0, 'i:', 'i:', 0, 0, u'i\u02d0',0),
-   ('jh', 'dZ', 'jh', 'jh', 'J', 'dZ', 'dZ', 'JH', 'J', [u'd\u0292', u'\u02a4'],'zhe0'),
-   ('k', 'k', 'k', 'k', 'k', 'k', 'k', 'K ', 'K', 'k','ke0'),
-   (0, 'x', 0, 0, 0, 'x', 'x', 0, 0, 'x',0), # actually 'x' is like Scottish 'loch', but if the synth can't do that then try k 
-   ('l', ['l', 'L'], 'l', 'l', 'l', 'l', 'l', 'L ', 'L', ['l', u'd\u026b'],'le0'),
-   ('m', 'm', 'm', 'm', 'm', 'm', 'm', 'M ', 'M', 'm','me0'),
-   ('n', 'n', 'n', 'n', 'n', 'n', 'n', 'N ', 'N', 'n','ne0'),
-   ('ng', 'N', 'ng', 'ng', 'N', 'N', 'N', 'NG', 'NX', u'\u014b','eng0'),
-   ('ou', 'oU', 'ow', 'ow', 'OW', '@U', '@U', 'OW', 'OW', [u'\u0259\u028a', 'o'],'ou5'),
-   (0, 0, 0, 0, 0, 'oU', 'o U', 0, 0, u'o\u028a',0),
-   (0, 0, 0, 0, 0, '@}', '@ }', 0, 0, u'\u0259\u0289',0),
-   ('oi', 'OI', 'oy', 'oy', 'OY', 'OI', 'OI', 'OY', 'OY', u'\u0254\u026a','ruo2yi5'),
-   (0, 0, 0, 0, 0, 'oI', 'o I', 0, 0, u'o\u026a',0),
-   ('p', 'p', 'p', 'p', 'p', 'p', 'p', 'P ', 'P', 'p','pu0'),
-   ('r', 'r', 'r', 'r', 'r', 'r\\', 'r', 'R ', 'R', u'\u0279','re0'),
-   (0, 0, 0, 0, 0, 'r', 0, 0, 0, 'r',0),
-   ('s', 's', 's', 's', 's', 's', 's', 'S ', 'S', 's','se0'),
-   ('sh', 'S', 'sh', 'sh', 'S', 'S', 'S', 'SH', 'SH', u'\u0283','she0'),
-   ('t', 't', 't', 't', 't', 't', 't', 'T ', 'T', ['t', u'\u027e'],'te0'),
-   ('th', 'T', 'th', 'th', 'T', 'T', 'T', 'TH', 'TH', u'\u03b8','zhe0'),
-   ('u@', 'U@', 'uh', 'uh', 'UH', 'U@', 'U@', 'UH', 'UH', u'\u028a\u0259','wu5'),
-   (0, 0, 0, 0, 0, 'Ur\\', 'U r', 0, 0, u'\u028a\u0279',0),
-   ('u', 'U', 0, 0, 0, 'U', 'U', 0, '/U', u'\u028a',0),
-   ('uu', 'u:', 'uw', 'uw', 'UW', '}:', 'u:', 'UW', ['UW','UX'], u'\u0289\u02d0','yu5'),
-   (0, 0, 0, 0, 0, 'u:', 0, 0, 0, [u'u\u02d0', 'u'],0),
-   ('oo', 'O:', 'AO', 'ao', 'AO', 'O:', 'O:', 'AO', 'AO', u'\u0254\u02d0','huo5'),
-   (0, 0, 0, 0, 0, 'O', 'O', 0, 0, u'\u0254',0),
-   (0, 0, 0, 0, 0, 'o:', 'O:', 0, 0, u'o\u02d0',0),
-   (0, ['O@', 'o@', 'O'], 0, 0, 0, 'O:', 0, 0, 0, u'\u0254\u02d0',0),
-   ('v', 'v', 'v', 'v', 'v', 'v', 'v', 'V ', 'V', 'v','fu0'),
-   ('w', 'w', 'w', 'w', 'w', 'w', 'w', 'W ', 'W', 'w','wu0'),
-   (0, 0, 0, 0, 0, 'W', 0, 0, 0, u'\u028d',0), # Jan suggested "x" for SAPI here, but that doesn't work on XP
-   ('y', 'j', 'y', 'j', 'y', 'j', 'j', 'Y ', 'Y', 'j','yu0'),
-   ('z', 'z', 'z', 'z', 'z', 'z', 'z', 'Z ', 'Z', 'z','ze0'),
-   ('zh', 'Z', 'zh', 'zh', 'Z', 'Z', 'Z', 'ZH', 'ZH', u'\u0292','zhe0'),
-   # TODO \u0294 (glottal stop) to eSpeak? (for local dialects)
+   ('0', '%', '-', '0', '=', '.', '', '0', '', '.','.',''),
+   ('1', "'", '1', '1', '1', '"', 0, '1', '1', u'\u02c8','"', '4'), # primary stress - ignoring this for acapela-uk
+   ('2', ',', '2', '0', '2', '%', 0, '2', '2', u'\u02cc','\\textsecstress{}', '2'), # secondary stress - ignoring this for acapela-uk (TODO: latex-ipa?)
+   ('', '', '', '', '', '', 0, '', '', '-','', ''),
+   (0, 0, 0, 0, 0, 0, 0, 0, '', '#','\\#',0),
+   (0, 0, 0, 0, 0, 0, 0, 0, '', ' ',' ',0),
+   (0, 0, 0, 0, 0, 0, 0, 0, '', '_','\\_',0),
+   (0, 0, 0, 0, 0, 0, 0, 0, '', '?','?',0),
+   (0, 0, 0, 0, 0, 0, 0, 0, '', '!','!',0),
+   (0, 0, 0, 0, 0, 0, 0, 0, '', ',',',',0),
+   ('aa', ['A:', 'A@', 'aa'], 'aa', 'a', 'AA', 'A', 'A:', 'AA', 'AA', u'\u0251','A','a5'),
+   (0, 'A', 0, 0, 0, 0, 0, '2', 0, 0,0,0),
+   (0, 'A:', 0, 0, 0, ':', 0, '1', 0, u'\u02d0',':',0),
+   (0, 0, 0, 0, 0, 'A:', 0, 'AA', 0, u'\u0251\u02d0','A:',0),
+   (0, 0, 0, 0, 0, 'Ar\\', 0, 0, 0, u'\u0251\u0279','A\\textturnr{}',0),
+   (0, 0, 0, 0, 'aa', 'a:', 0, 0, 0, 'a\\u02d0','a:',0),
+   ('a', ['a', '&'], 'ae', 'ae', 'AE', '{', '{', 'AE', 'AE', [u'\xe6','a'],'\\ae{}','ya5'),
+   ('uh', 'V', 'ah', 'ah', 'UX', 'V', 'V', 'AH', 'OH', u'\u028c','2','e5'),
+   ('o', '0', 'ao', 'oa', 'AA', 'Q', 'Q', 'AA', 'O', u'\u0252','6','yo5'),
+   (0, 0, 0, 0, 0, 'A', 'A', 0, 0, u'\u0251','A',0),
+   (0, 0, 0, 0, 0, 'O', 'O', 0, 0, u'\u0254','O',0),
+   ('au', 'aU', 'aw', 'aw', 'AW', 'aU', 'aU', 'AW', 'AW', u'a\u028a','aU','ao5'),
+   (0, 0, 0, 0, 0, '{O', '{O', 0, 0, u'\xe6\u0254','\\ae{}O',0),
+   ('@', '@', 'ax', 'ah', 'AX', '@', '@', 'AH', 'AH', u'\u0259','@','e5'),
+   ('@@', '3:', 'er', 'er', 0, '3:', '3:', 'ER', 'ER', u'\u0259\u02d0','@:','e5'),
+   ('@', '3', 'ax', 'ah', 0, '@', '@', 'AH', 'AH', u'\u025a','\\textrhookschwa{}','e5'),
+   ('@1', 'a2', 0, 0, 0, 0, 0, 0, 0, u'\u0259','@', 0),
+   ('@2', '@', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+   ('ai', 'aI', 'ay', 'ay', 'AY', 'aI', 'aI', 'AY', 'IY', u'a\u026a','aI','ai5'),
+   (0, 0, 0, 0, 0, 'Ae', 'A e', 0, 0, u'\u0251e','Ae',0),
+   ('b', 'b', 'b', 'b', 'b', 'b', 'b', 'B ', 'B', 'b','b','bu0'),
+   ('ch', 'tS', 'ch', 'ch', 'C', 'tS', 't S', 'CH', 'CH', [u't\u0283', u'\u02a7'],'tS','che0'),
+   ('d', 'd', 'd', 'd', 'd', 'd', 'd', 'D ', 'D', 'd','d','de0'),
+   ('dh', 'D', 'dh', 'dh', 'D', 'D', 'D', 'DH', 'DH', u'\xf0','D','ze0'),
+   ('e', 'E', 'eh', 'eh', 'EH', 'E', 'e', 'EH', 'EH', u'\u025b','E','ye5'),
+   (0, 0, 'ey', 0, 0, 'e', 0, 0, 0, 'e','e',0),
+   ('@@', '3:', 'er', 'er', 'AX', '3:', '3:', 'ER', 'ER', [u'\u025d', u'\u025c\u02d0'],'3:','e5'),
+   ('e@', 'e@', 'eh r', 'e@', 'EH r', 'E@', 'e @', 0, 'AI', u'\u025b\u0259','E@','ye5'),
+   (0, 0, 0, 0, 0, 'Er\\', 'e r', 0, 0, u'\u025b\u0279','E\\textturnr{}',0),
+   (0, 0, 0, 0, 0, 'e:', 'e :', 0, 0, u'e\u02d0','e:',0),
+   (0, 0, 0, 0, 0, 'E:', 0, 0, 0, u'\u025b\u02d0','E:',0),
+   (0, 0, 0, 0, 0, 'e@', 'e @', 0, 0, u'e\u0259','e@',0),
+   ('ei', 'eI', 'ey', 'ey', 'EY', 'eI', 'eI', 'EY', 'AY', u'e\u026a','eI','ei5'),
+   (0, 0, 0, 0, 0, '{I', '{I', 0, 0, u'\xe6\u026a','\\ae{}I',0),
+   ('f', 'f', 'f', 'f', 'f', 'f', 'f', 'F ', 'F', 'f','f','fu0'),
+   ('g', 'g', 'g', 'g', 'g', 'g', 'g', 'G ', 'G', [u'\u0261', 'g'],'g','ge0'),
+   ('h', 'h', 'h', 'h', 'h', 'h', 'h', 'HH', '/H', 'h','h','he0'), # Jan suggested "hh" for SAPI, but it doesn't work on XP
+   ('i', 'I', 'ih', 'ih', 'IH', 'I', 'I', 'IH', 'IH', u'\u026a','I','yi5'),
+   (0, 0, 0, 0, 0, '1', '1', 0, 0, u'\u0268','1',0),
+   (0, ['I', 'I2'], 0, 0, 'IX', 'I', 'I', 0, 'IX', u'\u026a','I',0),
+   ('i@', 'i@', 'iy ah', 'i ah', 'IY UX', 'I@', 'I@', 'EY AH', 'IXAH', u'\u026a\u0259','I@','yi3re5'),
+   (0, 0, 0, 0, 0, 'Ir\\', 'I r', 0, 0, u'\u026a\u0279','I\\textturnr{}',0),
+   ('ii', ['i:','i'], 'iy', 'i', 'IY', 'i', 'i', 'IY', 'EE', 'i','i','yi5'),
+   (0, 0, 0, 0, 0, 'i:', 'i:', 0, 0, u'i\u02d0','i:',0),
+   ('jh', 'dZ', 'jh', 'jh', 'J', 'dZ', 'dZ', 'JH', 'J', [u'd\u0292', u'\u02a4'],'dZ','zhe0'),
+   ('k', 'k', 'k', 'k', 'k', 'k', 'k', 'K ', 'K', 'k','k','ke0'),
+   (0, 'x', 0, 0, 0, 'x', 'x', 0, 0, 'x','x',0), # actually 'x' is like Scottish 'loch', but if the synth can't do that then try k 
+   ('l', ['l', 'L'], 'l', 'l', 'l', 'l', 'l', 'L ', 'L', 'l','l','le0'),
+   (0, 0, 0, 0, 0, 0, 0, 0, 0, u'd\u026b','d\\textltilde{}',0),
+   ('m', 'm', 'm', 'm', 'm', 'm', 'm', 'M ', 'M', 'm','m','me0'),
+   ('n', 'n', 'n', 'n', 'n', 'n', 'n', 'N ', 'N', 'n','n','ne0'),
+   ('ng', 'N', 'ng', 'ng', 'N', 'N', 'N', 'NG', 'NX', u'\u014b','N','eng0'),
+   ('ou', 'oU', 'ow', 'ow', 'OW', '@U', '@U', 'OW', 'OW', u'\u0259\u028a','@U','ou5'),
+   (0, 0, 0, 0, 0, 0, 0, 0, 0, 'o', 'o', 0),
+   (0, 0, 0, 0, 0, 'oU', 'o U', 0, 0, u'o\u028a','oU',0),
+   (0, 0, 0, 0, 0, '@}', '@ }', 0, 0, u'\u0259\u0289','@0',0),
+   ('oi', 'OI', 'oy', 'oy', 'OY', 'OI', 'OI', 'OY', 'OY', u'\u0254\u026a','OI','ruo2yi5'),
+   (0, 0, 0, 0, 0, 'oI', 'o I', 0, 0, u'o\u026a','oI',0),
+   ('p', 'p', 'p', 'p', 'p', 'p', 'p', 'P ', 'P', 'p','p','pu0'),
+   ('r', 'r', 'r', 'r', 'r', 'r\\', 'r', 'R ', 'R', u'\u0279','\\textturnr{}','re0'),
+   (0, 0, 0, 0, 0, 'r', 0, 0, 0, 'r','r',0),
+   ('s', 's', 's', 's', 's', 's', 's', 'S ', 'S', 's','s','se0'),
+   ('sh', 'S', 'sh', 'sh', 'S', 'S', 'S', 'SH', 'SH', u'\u0283','S','she0'),
+   ('t', 't', 't', 't', 't', 't', 't', 'T ', 'T', 't','t','te0'),
+   (0, 0, 0, 0, 0, 0, 0, 0, 0, u'\u027e','R', 0),
+   ('th', 'T', 'th', 'th', 'T', 'T', 'T', 'TH', 'TH', u'\u03b8','T','zhe0'),
+   ('u@', 'U@', 'uh', 'uh', 'UH', 'U@', 'U@', 'UH', 'UH', u'\u028a\u0259','U@','wu5'),
+   (0, 0, 0, 0, 0, 'Ur\\', 'U r', 0, 0, u'\u028a\u0279','U\\textturnr{}',0),
+   ('u', 'U', 0, 0, 0, 'U', 'U', 0, '/U', u'\u028a','U',0),
+   ('uu', 'u:', 'uw', 'uw', 'UW', '}:', 'u:', 'UW', ['UW','UX'], u'\u0289\u02d0','0:','yu5'),
+   (0, 0, 0, 0, 0, 'u:', 0, 0, 0, u'u\u02d0', 'u:',0),
+   (0, 0, 0, 0, 0, 0, 0, 0, 0, 'u', 'u', 0),
+   ('oo', 'O:', 'AO', 'ao', 'AO', 'O:', 'O:', 'AO', 'AO', u'\u0254\u02d0','O:','huo5'),
+   (0, 0, 0, 0, 0, 'O', 'O', 0, 0, u'\u0254','O',0),
+   (0, 0, 0, 0, 0, 'o:', 'O:', 0, 0, u'o\u02d0','o:',0),
+   (0, ['O@', 'o@', 'O'], 0, 0, 0, 'O:', 0, 0, 0, u'\u0254\u02d0','O:',0),
+   ('v', 'v', 'v', 'v', 'v', 'v', 'v', 'V ', 'V', 'v','v','fu0'),
+   ('w', 'w', 'w', 'w', 'w', 'w', 'w', 'W ', 'W', 'w','w','wu0'),
+   (0, 0, 0, 0, 0, 'W', 0, 0, 0, u'\u028d','\\textturnw{}',0), # Jan suggested "x" for SAPI here, but that doesn't work on XP
+   ('y', 'j', 'y', 'j', 'y', 'j', 'j', 'Y ', 'Y', 'j','j','yu0'),
+   ('z', 'z', 'z', 'z', 'z', 'z', 'z', 'Z ', 'Z', 'z','z','ze0'),
+   ('zh', 'Z', 'zh', 'zh', 'Z', 'Z', 'Z', 'ZH', 'ZH', u'\u0292','Z','zhe0'),
+   # TODO \u0294 (glottal stop) to eSpeak? (for local dialects), latex-ipa is 'P'
    # TODO bbcmicro also has CT as in fact, DR as in dragon, DUX as in duke, TR as in track
    # Hack (must be at end) - make sure all dictionaries have an entry for '@', for the @l rule:
-   ('@', '@', '@', 'ah', 'AX', '@', '@', '@', 'AH', u'\u0259','wu5'),
-   (0, 0, 'ax', '@', 0, 0, 0, 0, 0, 0,0),
-   (0, 0, 0, 'ah', '@', 0, 0, 0, 0, 0,0),
-   (0, 0, 0, 0, 'AX', 0, 0, 0, '@', '@',0),
+   ('@', '@', '@', 'ah', 'AX', '@', '@', '@', 'AH', u'\u0259','@','wu5'),
+   (0, 0, 'ax', '@', 0, 0, 0, 0, 0, 0,0,0),
+   (0, 0, 0, 'ah', '@', 0, 0, 0, 0, 0,0,0),
+   (0, 0, 0, 0, 'AX', 0, 0, 0, '@', '@',0,0),
 ]
 
-formats_where_space_separates_words = ["espeak","mac","unicode-ipa","x-sampa","bbcmicro","pinyin-approx"]
+formats_where_space_separates_words = ["espeak","mac","unicode-ipa","x-sampa","bbcmicro","pinyin-approx","latex-ipa"]
 
 espeak_consonants = "bdDfghklmnNprsStTvwjzZ"
 
@@ -525,7 +531,7 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
     elif toFormat=="bbcmicro": outFile.write(">**")
     elif toFormat=="unicode-ipa": outFile.write("</TABLE></BODY></HTML>\n")
 
-first_word=True # hack for bbcmicro
+first_word=True # hack for bbcmicro and TeX
 def markup_inline_word(format,pronunc):
     global first_word
     if format=="espeak": return "[["+pronunc+"]]"
@@ -537,6 +543,12 @@ def markup_inline_word(format,pronunc):
        first_word = False
        return "*SPEAK "+pronunc
     elif format=="unicode-ipa": return pronunc.encode("utf-8") # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
+    elif format=="latex-ipa":
+      if first_word:
+         first_word = False
+         r=r"% In preamble, put \usepackage{tipa}"+'\n'
+      else: r=''
+      return r+"\\textipa{"+pronunc+"}"
     else: return pronunc # fallback - assume the user knows what to do with it
 
 def sylcount(festival):
