@@ -517,7 +517,7 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
     if toFormat=="mac": outFile.write("# I don't yet know how to add to the Mac OS X lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed")
     elif "sapi" in toFormat: outFile.write("rem  You have to run this file\nrem  with ptts.exe in the same directory\nrem  to add these words to the SAPI lexicon\n\n")
     elif toFormat=="unicode-ipa": outFile.write("""<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>""")
-    elif toFormat=="latex-ipa": outFile.write(r"""\documentclass[12pt,a4paper]{article} \usepackage{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}""")
+    elif toFormat=="latex-ipa": outFile.write(r"""\documentclass[12pt,a4paper]{article} \usepackage[safe]{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}""")
     elif toFormat=="pinyin-approx": outFile.write("Pinyin approxmations (very approximate!)\n----------------------------------------\n")
     for word, pronunc in lex:
         pronunc = convert(pronunc,fromFormat,toFormat)
@@ -551,7 +551,7 @@ def markup_inline_word(format,pronunc):
     elif format=="latex-ipa":
       if first_word:
          first_word = False
-         r=r"% In preamble, put \usepackage{tipa}"+'\n'
+         r=r"% In preamble, put \usepackage[safe]{tipa}"+'\n' # (the [safe] part is recommended if you're mixing with other TeX)
       else: r=''
       return r+"\\textipa{"+pronunc+"}"
     else: return pronunc # fallback - assume the user knows what to do with it
