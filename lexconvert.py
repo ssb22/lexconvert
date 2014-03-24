@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.15 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.151 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -743,7 +743,7 @@ def catchSignals():
     os.killpg(os.getpgrp(),sigNo)
     raise KeyboardInterrupt
   for n in xrange(1,signal.NSIG):
-    if not signal.getsignal(n)==signal.SIG_IGN:
+    if not n==signal.SIGCHLD and not signal.getsignal(n)==signal.SIG_IGN:
       try: signal.signal(n,f)
       except: pass
 class MacBritish_System_Lexicon(object):
@@ -875,7 +875,7 @@ class MacBritish_System_Lexicon(object):
             self.set(phPos,val)
         self.dFile.close()
         del MacBritish_System_Lexicon.instances[self.voice]
-        assert not os.system("rm -f /tmp/"+voice+".PCMWave.lock")
+        assert not os.system("rm -f /tmp/"+self.voice+".PCMWave.lock")
         if self.restoreDic: sys.stderr.write("... lexicon for '"+self.voice+"' restored to normal\n")
 
 if __name__ == "__main__": main()
