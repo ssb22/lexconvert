@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.151 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.152 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -33,7 +33,7 @@ program_name = "lexconvert v0.151 - convert between lexicons of different speech
 table = [
    ('festival', 'espeak', 'sapi', 'cepstral', 'mac', 'mac-uk', 'x-sampa', 'acapela-uk', 'cmu', 'bbcmicro', 'unicode-ipa','latex-ipa', 'pinyin-approx'),
    # The first entry MUST be the syllable separator:
-   ('0', '%', '-', '0', '=','', '.', '', '0', '', '.','.',''),
+   ('0', '%', '-', '0', '=','.', '.', '', '0', '', '.','.',''),
    ('1', "'", '1', '1', '1',"'", '"', 0, '1', '1', u'\u02c8','"', '4'), # primary stress - ignoring this for acapela-uk
    ('2', ',', '2', '0', '2',"", '%', 0, '2', '2', u'\u02cc','\\textsecstress{}', '2'), # secondary stress - ignoring this for acapela-uk
    ('', '', '', '', '','', '', 0, '', '', '-','', ''),
@@ -273,6 +273,7 @@ def make_dictionary(source,dest):
     return d
 
 def convert(pronunc,source,dest):
+    if source==dest: return pronunc # essential for --try experimentation with codes not yet supported by lexconvert
     if source=="unicode-ipa":
         # try to decode it
         if "\\u" in pronunc and not '"' in pronunc: # maybe \uNNNN copied from Gecko on X11, can just evaluate it to get the unicode
@@ -306,9 +307,10 @@ def convert(pronunc,source,dest):
                     while i and (ret[i-1] in dest_consonants or ret[i-1].endswith("*added")): i -= 1
                     if i: i-=1
                     ret.insert(i,toAdd)
+                    if dest_syllable_sep: ret.append(dest_syllable_sep) # (TODO: this assumes stress marks are at end of syllable rather than immediately after vowel; correct for Festival; check others; probably a harmless assumption though; mac-uk is better with syllable separators although espeak basically ignores them; what of Unicode/TeX ?)
                     toAdd = ""
-                # attempt to sort out the festival dictionary's (and other's) implicit @ :
-                if ret and ret[-1] and toAdd in ['n','l'] and ret[-1] in dest_consonants: ret.append(dictionary['@']+'*added')
+                # attempt to sort out the festival dictionary's (and other's) implicit @ (TODO or is it an implicit uh ?):
+                elif ret and ret[-1] and toAdd in ['n','l'] and ret[-1] in dest_consonants: ret.append(dictionary['@']+'*added')
                 elif len(ret)>2 and ret[-2].endswith('*added') and toAdd and not toAdd in dest_consonants and not toAdd==dest_syllable_sep: del ret[-2]
                 # OK, add it:
                 if toAdd:
@@ -361,6 +363,7 @@ def convert(pronunc,source,dest):
         
         ]: ret=re.sub(s,r,ret)
     if dest=="espeak": return cleanup_espeak_entry(ret)
+    elif dest=="mac-uk": return ret.replace("o&U.Ol","o&Ul")
     else: return ret
 
 def cleanup_espeak_entry(r):
@@ -819,13 +822,24 @@ class MacBritish_System_Lexicon(object):
             if not (phonemes and 32<ord(phonemes[0])<127): continue # better not touch those, just in case
             if word in self.textToAvoid and not word in words_ok_to_redefine: continue
             yield word,pos,phonemes
+    def check_redef(self,words,phonemes):
+        aw = self.allWords() ; ap = 0
+        for w,p in zip(words,phonemes):
+          w = w.lower()
+          if not re.match("^[a-z0-9]*$",w): continue
+          if not w in aw: continue
+          if not ap:
+            ap = self.allPh()
+            sys.stderr.write("Warning: some words were already in system lexicon\nword\told\tnew\n")
+          sys.stderr.write(w+"\t"+ap[aw.index(w)][1]+"\t"+p+"\n")
     def speakPhones(self,phonesList):
         "Speaks every phonetic word in phonesList"
         words = [str(x)+"s" for x in range(len(phonesList))]
         d = self.setMultiple(words,phonesList)
         os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(" ".join(d.get(w,"") for w in words))
     def read(self,words,phonemes):
-        "Reads the text given in the constructor after setting up the lexicon with words:phonemes" # TODO: readToFile ?  Enter to restore??
+        "Reads the text given in the constructor after setting up the lexicon with words:phonemes"
+        # self.check_redef(words,phonemes) # uncomment if you want to know about these
         tta = ' '+self.textToAvoid+' '
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         for ww,pp in zip(words,phonemes):
