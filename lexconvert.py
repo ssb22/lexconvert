@@ -33,7 +33,7 @@ program_name = "lexconvert v0.152 - convert between lexicons of different speech
 table = [
    ('festival', 'espeak', 'sapi', 'cepstral', 'mac', 'mac-uk', 'x-sampa', 'acapela-uk', 'cmu', 'bbcmicro', 'unicode-ipa','latex-ipa', 'pinyin-approx'),
    # The first entry MUST be the syllable separator:
-   ('0', '%', '-', '0', '=','.', '.', '', '0', '', '.','.',''),
+   ('0', '%', '-', '0', '=','.', '.', '', '0', '', ['','.'],['','.'],''),
    ('1', "'", '1', '1', '1',"'", '"', 0, '1', '1', u'\u02c8','"', '4'), # primary stress - ignoring this for acapela-uk
    ('2', ',', '2', '0', '2',"", '%', 0, '2', '2', u'\u02cc','\\textsecstress{}', '2'), # secondary stress - ignoring this for acapela-uk
    ('', '', '', '', '','', '', 0, '', '', '-','', ''),
@@ -307,7 +307,7 @@ def convert(pronunc,source,dest):
                     while i and (ret[i-1] in dest_consonants or ret[i-1].endswith("*added")): i -= 1
                     if i: i-=1
                     ret.insert(i,toAdd)
-                    if dest_syllable_sep: ret.append(dest_syllable_sep) # (TODO: this assumes stress marks are at end of syllable rather than immediately after vowel; correct for Festival; check others; probably a harmless assumption though; mac-uk is better with syllable separators although espeak basically ignores them; what of Unicode/TeX ?)
+                    if dest_syllable_sep: ret.append(dest_syllable_sep) # (TODO: this assumes stress marks are at end of syllable rather than immediately after vowel; correct for Festival; check others; probably a harmless assumption though; mac-uk is better with syllable separators although espeak basically ignores them)
                     toAdd = ""
                 # attempt to sort out the festival dictionary's (and other's) implicit @ (TODO or is it an implicit uh ?):
                 elif ret and ret[-1] and toAdd in ['n','l'] and ret[-1] in dest_consonants: ret.append(dictionary['@']+'*added')
