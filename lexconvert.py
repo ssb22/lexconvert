@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.152 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.153 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -25,7 +25,7 @@ program_name = "lexconvert v0.152 - convert between lexicons of different speech
 # Column 'x-sampa': X-SAMPA
 # Column 'acapela-uk': acapela optimized X-SAMPA for UK English voices (e.g. "Peter")
 # Column 'cmu': format of the US English "Carnegie Mellon University Pronouncing Dictionary" (http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
-# Column 'bbcmicro': BBC Micro Speech program by David J. Hoskins / Superior
+# Column 'bbcmicro': BBC Micro Speech program by David J. Hoskins / Superior 1985 (takes 7.5k of RAM; sounds "retro" by modern standards; can use on BeebEm if you have diskimg/Speech.ssd)
 # Column 'unicode-ipa': Unicode IPA, as used on an increasing number of websites
 # Column 'latex-ipa': LaTeX IPA package
 # Column 'pinyin-approx' (convert TO only): Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words - works with some words better than others)
@@ -292,9 +292,9 @@ def convert(pronunc,source,dest):
             elif dictionary.has_key(pronunc[:lettersToTry]):
                 toAdd=dictionary[pronunc[:lettersToTry]]
                 if toAdd in ['0','1','2','4'] and not dest in noughts_used_other_than_stress: # it's a stress mark in a notation that places stress marks AFTER vowels (noughts_used_other_than_stress case handled below)
-                    if dest=="bbcmicro": # not sure which pitch levels to map the stresses to; try these:
-                      if toAdd=='1': toAdd='3'
-                      elif toAdd=='2': toAdd='4'
+                    if dest=="bbcmicro": # normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary stress and 4=primary stress (3 sounds less calm)
+                      if toAdd=='1': toAdd='4'
+                      elif toAdd=='2': toAdd='5'
                     if source in stress_comes_before_vowel: toAdd, toAddAfter = "",toAdd # move before to after
                     else:
                         # With Cepstral synth, stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
@@ -542,17 +542,25 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
     elif toFormat=="unicode-ipa": outFile.write("</table></body></html>\n")
     elif toFormat=="latex-ipa": outFile.write("\end{longtable}\end{document}\n")
 
-first_word=True # hack for bbcmicro and TeX
+bbc_charsSoFar=0 # hack for bbcmicro
+first_word=True # hack for TeX
 def markup_inline_word(format,pronunc):
-    global first_word
+    global first_word,bbc_charsSoFar
     if format=="espeak": return "[["+pronunc+"]]"
     elif format=="mac": return "[[inpt PHON]]"+pronunc+"[[inpt TEXT]]"
     elif "sapi" in format: return "<pron sym=\""+pronunc+"\"/>"
     elif format=="cepstral": return "<phoneme ph='"+pronunc+"'>p</phoneme>"
     elif format=="acapela-uk": return "\\Prn="+pronunc+"\\"
-    elif format=="bbcmicro" and first_word:
-       first_word = False
-       return "*SPEAK "+pronunc
+    elif format=="bbcmicro":
+      # You can paste these commands directly into BeebEm with Speech loaded, either at the BASIC prompt or in a listing (with line numbers provided by AUTO)
+      if not bbc_charsSoFar or bbc_charsSoFar+len(pronunc)+1 > 165: # 238 is max len of the immediate BASIC prompt, but get a "Line too long" message if over 165 (allow +1 for the space after this word)
+        if bbc_charsSoFar: r="\n"
+        else: r=""
+        bbc_charsSoFar = 7+len(pronunc)+1
+        return r+"*SPEAK "+pronunc
+      else:
+        bbc_charsSoFar += len(pronunc)+1
+        return pronunc
     elif format=="unicode-ipa": return pronunc.encode("utf-8") # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
     elif format=="latex-ipa":
       if first_word:
