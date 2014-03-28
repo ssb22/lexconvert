@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.153 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.154 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -25,11 +25,12 @@ program_name = "lexconvert v0.153 - convert between lexicons of different speech
 # Column 'x-sampa': X-SAMPA
 # Column 'acapela-uk': acapela optimized X-SAMPA for UK English voices (e.g. "Peter")
 # Column 'cmu': format of the US English "Carnegie Mellon University Pronouncing Dictionary" (http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
-# Column 'bbcmicro': BBC Micro Speech program by David J. Hoskins / Superior 1985 (takes 7.5k of RAM; sounds "retro" by modern standards; can use on BeebEm if you have diskimg/Speech.ssd)
+# Column 'bbcmicro': BBC Micro Speech program by David J. Hoskins / Superior 1985 (for discussion of emulators like BeebEm, including copyright considerations, see comments later)
 # Column 'unicode-ipa': Unicode IPA, as used on an increasing number of websites
 # Column 'latex-ipa': LaTeX IPA package
 # Column 'pinyin-approx' (convert TO only): Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words - works with some words better than others)
 # 0 = 'ditto' (copy the cell above)
+# None = no equivalent in this column (used for groups of multiple phonemes which can be broken down into components)
 table = [
    ('festival', 'espeak', 'sapi', 'cepstral', 'mac', 'mac-uk', 'x-sampa', 'acapela-uk', 'cmu', 'bbcmicro', 'unicode-ipa','latex-ipa', 'pinyin-approx'),
    # The first entry MUST be the syllable separator:
@@ -50,18 +51,18 @@ table = [
    (0, 0, 0, 0, 0,0, 'Ar\\', 0, 0, 0, u'\u0251\u0279','A\\textturnr{}',0),
    (0, 0, 0, 0, 'aa',0, 'a:', 0, 0, 0, 'a\\u02d0','a:',0),
    ('a', ['a', '&'], 'ae', 'ae', 'AE','@', '{', '{', 'AE', 'AE', [u'\xe6','a'],'\\ae{}','ya5'), # a as in apple
-   ('uh', 'V', 'ah', 'ah', 'UX','$', 'V', 'V', 'AH', 'OH', u'\u028c','2','e5'), # a as in ago
-   ('o', '0', 'ao', 'oa', 'AA','A+', 'Q', 'Q', 'AA', 'O', u'\u0252','6','yo5'), # o as in orange
+   ('uh', 'V', 'ah', 'ah', 'UX','$', 'V', 'V', 'AH', 'AH', u'\u028c','2','e5'), # u as in but, or the first part of un as in hunt
+   ('o', '0', 'ao', 'oa', 'AA','A+', 'Q', 'Q', 'AA', 'O', u'\u0252','6','yo5'),
    (0, 0, 0, 0, 0,0, 'A', 'A', 0, 0, u'\u0251','A',0),
    (0, 0, 0, 0, 0,0, 'O', 'O', 0, 0, u'\u0254','O',0),
    ('au', 'aU', 'aw', 'aw', 'AW','a&U', 'aU', 'aU', 'AW', 'AW', u'a\u028a','aU','ao5'), # o as in now
    (0, 0, 0, 0, 0,0, '{O', '{O', 0, 0, u'\xe6\u0254','\\ae{}O',0),
-   ('@', '@', 'ax', 'ah', 'AX','E0', '@', '@', 'AH', 'AH', u'\u0259','@','e5'), # e as in herd
-   ('@@', '3:', 'er', 'er', 0,0, '3:', '3:', 'ER', 'ER', u'\u0259\u02d0','@:','e5'),
+   ('@', ['@','a#'], 'ax', 'ah', 'AX','E0', '@', '@', 'AH', 'AH', u'\u0259','@','e5'), # a as in ago (TODO: eSpeak sometimes uses a# in 'had' when in a sentence, and this doesn't always sound good on other synths; might sometimes want to convert it to 'a'; not sure what contexts would call for this though)
+   ('@@', '3:', 'er', 'er', 0,0, '3:', '3:', 'ER', 'ER', u'\u0259\u02d0','@:','e5'), # e as in herd
    ('@', '3', 'ax', 'ah', 0,0, '@', '@', 'AH', 'AH', u'\u025a','\\textrhookschwa{}','e5'),
    ('@1', 'a2', 0, 0, 0,0, 0, 0, 0, 0, u'\u0259','@', 0),
-   ('@2', '@', 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0),
-   ('ai', 'aI', 'ay', 'ay', 'AY','a&I', 'aI', 'aI', 'AY', 'IY', u'a\u026a','aI','ai5'), # eye
+   ('@2', ['@2','@-'], 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0), # (eSpeak @- is a shorter version of @, TODO: double-check the relationship between @ and @2 in Festival)
+   ('ai', ['aI','aI2','aI;','aI2;'], 'ay', 'ay', 'AY','a&I', 'aI', 'aI', 'AY', 'IY', u'a\u026a','aI','ai5'), # eye
    (0, 0, 0, 0, 0,0, 'Ae', 'A e', 0, 0, u'\u0251e','Ae',0),
    ('b', 'b', 'b', 'b', 'b','b', 'b', 'b', 'B ', 'B', 'b','b','bu0'),
    ('ch', 'tS', 'ch', 'ch', 'C','t&S', 'tS', 't S', 'CH', 'CH', [u't\u0283', u'\u02a7'],'tS','che0'),
@@ -80,12 +81,12 @@ table = [
    ('f', 'f', 'f', 'f', 'f','f', 'f', 'f', 'F ', 'F', 'f','f','fu0'),
    ('g', 'g', 'g', 'g', 'g','g', 'g', 'g', 'G ', 'G', [u'\u0261', 'g'],'g','ge0'),
    ('h', 'h', 'h', 'h', 'h','h', 'h', 'h', 'HH', '/H', 'h','h','he0'), # Jan suggested "hh" for SAPI, but it doesn't work on XP
-   ('i', 'I', 'ih', 'ih', 'IH','I', 'I', 'I', 'IH', 'IH', u'\u026a','I','yi5'), # i as in it
+   ('i', ['I','I;','i'], 'ih', 'ih', 'IH','I', 'I', 'I', 'IH', 'IH', u'\u026a','I','yi5'), # i as in it
    (0, 0, 0, 0, 0,0, '1', '1', 0, 0, u'\u0268','1',0),
-   (0, ['I', 'I2'], 0, 0, 'IX',0, 'I', 'I', 0, 'IX', u'\u026a','I',0),
+   (0, ['I','I2','I2;'], 0, 0, 'IX',0, 'I', 'I', 0, 'IX', u'\u026a','I',0), # (IX sounds like a slightly shorter version of IH on the BBC)
    ('i@', 'i@', 'iy ah', 'i ah', 'IY UX','E0', 'I@', 'I@', 'EY AH', 'IXAH', u'\u026a\u0259','I@','yi3re5'), # ear
    (0, 0, 0, 0, 0,0, 'Ir\\', 'I r', 0, 0, u'\u026a\u0279','I\\textturnr{}',0),
-   ('ii', ['i:','i'], 'iy', 'i', 'IY','i', 'i', 'i', 'IY', 'EE', 'i','i','yi5'), # e as in eat
+   ('ii', ['i:','i:;'], 'iy', 'i', 'IY','i', 'i', 'i', 'IY', 'EE', 'i','i','yi5'), # e as in eat
    (0, 0, 0, 0, 0,0, 'i:', 'i:', 0, 0, u'i\u02d0','i:',0),
    ('jh', 'dZ', 'jh', 'jh', 'J','d&Z', 'dZ', 'dZ', 'JH', 'J', [u'd\u0292', u'\u02a4'],'dZ','zhe0'), # j as in jump
    ('k', 'k', 'k', 'k', 'k','k', 'k', 'k', 'K ', 'K', 'k','k','ke0'),
@@ -99,19 +100,21 @@ table = [
    (0, 0, 0, 0, 0,0, 0, 0, 0, 0, 'o', 'o', 0),
    (0, 0, 0, 0, 0,0, 'oU', 'o U', 0, 0, u'o\u028a','oU',0),
    (0, 0, 0, 0, 0,0, '@}', '@ }', 0, 0, u'\u0259\u0289','@0',0),
+   (None, 'oUl', None, None, None,None, None, None, None, 'OL', None,None,None), # ol as in gold (espeak says it in a slightly 'posh' way though)
    ('oi', 'OI', 'oy', 'oy', 'OY','O&I', 'OI', 'OI', 'OY', 'OY', u'\u0254\u026a','OI','ruo2yi5'), # oy as in toy
    (0, 0, 0, 0, 0,0, 'oI', 'o I', 0, 0, u'o\u026a','oI',0),
    ('p', 'p', 'p', 'p', 'p','p', 'p', 'p', 'P ', 'P', 'p','p','pu0'),
-   ('r', 'r', 'r', 'r', 'r','R+', 'r\\', 'r', 'R ', 'R', u'\u0279','\\textturnr{}','re0'),
+   ('r', ['r','r-'], 'r', 'r', 'r','R+', 'r\\', 'r', 'R ', 'R', u'\u0279','\\textturnr{}','re0'),
    (0, 0, 0, 0, 0,0, 'r', 0, 0, 0, 'r','r',0),
    ('s', 's', 's', 's', 's','s', 's', 's', 'S ', 'S', 's','s','se0'),
    ('sh', 'S', 'sh', 'sh', 'S','S', 'S', 'S', 'SH', 'SH', u'\u0283','S','she0'),
    ('t', 't', 't', 't', 't','t', 't', 't', 'T ', 'T', 't','t','te0'),
    (0, 0, 0, 0, 0,0, 0, 0, 0, 0, u'\u027e','R', 0),
    ('th', 'T', 'th', 'th', 'T','T', 'T', 'T', 'TH', 'TH', u'\u03b8','T','zhe0'),
-   ('u@', 'U@', 'uh', 'uh', 'UH','O', 'U@', 'U@', 'UH', 'UH', u'\u028a\u0259','U@','wu5'), # oor as in poor
+   ('u@', 'U@', 'uh', 'uh', 'UH','O', 'U@', 'U@', 'UH', ['AOR','UH'], u'\u028a\u0259','U@','wu5'), # oor as in poor
    (0, 0, 0, 0, 0,0, 'Ur\\', 'U r', 0, 0, u'\u028a\u0279','U\\textturnr{}',0),
-   ('u', 'U', 0, 0, 0,'U', 'U', 'U', 0, '/U', u'\u028a','U',0), # u as in pull
+   ('u', ['U','@5'], 0, 0, 0,'U', 'U', 'U', 0, ['UH','/U'], u'\u028a','U',0), # u as in pull (espeak also used U for the o in good; bbcmicro defaults to UH4)
+   (None, 'Ul', None, None, None,None, None, None, None, '/UL', None,None,None),
    ('uu', 'u:', 'uw', 'uw', 'UW','U', '}:', 'u:', 'UW', ['UW','UX'], u'\u0289\u02d0','0:','yu5'), # oo as in food
    (0, 0, 0, 0, 0,0, 'u:', 0, 0, 0, u'u\u02d0', 'u:',0),
    (0, 0, 0, 0, 0,0, 0, 0, 0, 0, 'u', 'u', 0),
@@ -256,13 +259,14 @@ def make_dictionary(source,dest):
     global cached_source,cached_dest,cached_dict
     if (source,dest) == (cached_source,cached_dest): return cached_dict
     types = list(table[0])
-    assert source in types,"Unknown synthesizer name to convert from"
-    assert dest in types, "Unknown synthesizer name to convert to"
+    assert source in types,"Unknown synthesizer name to convert from: "+repr(source)
+    assert dest in types, "Unknown synthesizer name to convert to: "+repr(dest)
     source,dest = types.index(source), types.index(dest)
     d = {}
     global dest_consonants ; dest_consonants = []
     global dest_syllable_sep ; dest_syllable_sep = table[1][dest]
     for l in table[1:]:
+        if l[source]==None or l[dest]==None: continue
         if not l[source] in d: d[l[source]]=l[dest]
         is_in_espeak_consonants=True
         for cTest in l[1]:
@@ -285,11 +289,15 @@ def convert(pronunc,source,dest):
             except: pass
     ret = [] ; toAddAfter = None
     dictionary = make_dictionary(source,dest)
+    maxLen=max(len(l) for l in dictionary.keys())
+    debugInfo=""
     while pronunc:
-        for lettersToTry in [2,1,0]:
-            if not lettersToTry and source=="espeak" and not pronunc[0] in "_: ": sys.stderr.write("Warning: ignoring unknown espeak phoneme "+repr(pronunc[0])+"\n")
-            if not lettersToTry: pronunc=pronunc[1:] # ignore
+        for lettersToTry in range(maxLen,-1,-1):
+            if not lettersToTry:
+              if source=="espeak" and not pronunc[0] in "_: !": sys.stderr.write("Warning: ignoring unknown espeak character "+repr(pronunc[0])+debugInfo+"\n")
+              pronunc=pronunc[1:] # ignore
             elif dictionary.has_key(pronunc[:lettersToTry]):
+                debugInfo=" after "+pronunc[:lettersToTry]
                 toAdd=dictionary[pronunc[:lettersToTry]]
                 if toAdd in ['0','1','2','4'] and not dest in noughts_used_other_than_stress: # it's a stress mark in a notation that places stress marks AFTER vowels (noughts_used_other_than_stress case handled below)
                     if dest=="bbcmicro": # normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary stress and 4=primary stress (3 sounds less calm)
@@ -325,7 +333,7 @@ def convert(pronunc,source,dest):
                 pronunc=pronunc[lettersToTry:]
                 break
     if toAddAfter: ret.append(toAddAfter)
-    if ret[-1]==dest_syllable_sep: del ret[-1] # spurious syllable separator at end
+    if ret and ret[-1]==dest_syllable_sep: del ret[-1] # spurious syllable separator at end
     if dest in space_separates_words_not_phonemes: separator = ''
     else: separator = ' '
     ret=separator.join(ret).replace('*added','')
@@ -552,11 +560,16 @@ def markup_inline_word(format,pronunc):
     elif format=="cepstral": return "<phoneme ph='"+pronunc+"'>p</phoneme>"
     elif format=="acapela-uk": return "\\Prn="+pronunc+"\\"
     elif format=="bbcmicro":
-      # You can paste these commands directly into BeebEm with Speech loaded, either at the BASIC prompt or in a listing (with line numbers provided by AUTO)
-      if not bbc_charsSoFar or bbc_charsSoFar+len(pronunc)+1 > 165: # 238 is max len of the immediate BASIC prompt, but get a "Line too long" message if over 165 (allow +1 for the space after this word)
+      # BBC Micro Speech program by David J. Hoskins / Superior 1985.  Took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; "retro" by modern standards but ground-breaking at the time.
+      # If you use an emulator like BeebEm, you'll need diskimg/Speech.ssd.  This can be made from your original Speech disc, or you might be able to find one but beware of copyright!  Same goes with the ROM images included in BeebEm.  There has been considerable discussion over whether UK copyright law does or should allow "format-shifting" your own legally-purchased media, and I don't fully understand all the discussion so I don't want to give advice on it here.  The issue is "format-shifting" your legally-purchased BBC Micro ROM code and Speech disc to emulator images; IF this is all right then I suspect downloading someone else's copy is arguably allowed as long as you bought it legally "back in the day", but I'm not a solicitor so I don't know.
+      # lexconvert's --phones bbcmicro option creates *SPEAK commands which you can type into the BBC Micro or paste into an emulator (e.g. BeebEm), either at the BASIC prompt or in a listing (with line numbers provided by AUTO).  You have to load the Speech program first of course.
+      # To script this, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
+      # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
+      # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
+      if not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 165: # 238 is max len of the immediate BASIC prompt, but get a "Line too long" message from Speech if go over 165 including the '*SPEAK ' (158 excluding it).
         if bbc_charsSoFar: r="\n"
         else: r=""
-        bbc_charsSoFar = 7+len(pronunc)+1
+        bbc_charsSoFar = 7+len(pronunc)+1 # +1 for the space after this word.
         return r+"*SPEAK "+pronunc
       else:
         bbc_charsSoFar += len(pronunc)+1
@@ -627,6 +640,91 @@ def macSayCommand():
 # e.g. SAY_COMMAND="say -o file.aiff" (TODO: document this in the help text?)
 # In Gradint you can set (e.g. if you have a ~/.festivalrc) extra_speech=[("en","python lexconvert.py --mac-uk festival")] ; extra_speech_tofile=[("en",'echo %s | SAY_COMMAND="say -o /tmp/said.aiff" python lexconvert.py --mac-uk festival && sox /tmp/said.aiff /tmp/said.wav',"/tmp/said.wav")]
 
+def getInputText(i,prompt):
+  txt = ' '.join(sys.argv[i:])
+  if not txt:
+    if (not hasattr(sys.stdin,"isatty")) or sys.stdin.isatty(): sys.stderr.write("Enter "+prompt+": ")
+    txt = sys.stdin.read()
+  return txt
+
+def write_bbcmicro_phones(ph):
+  # special case because it needs to track the commas to avoid "Line too long"
+  # (and actually we might as well just put each clause on a separate *SPEAK command, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places)
+  # also issue warnings if things get too big
+  totalKeystrokes = 0 ; lines = 0
+  for line in filter(lambda x:x,ph.split("\n")):
+    global bbc_charsSoFar ; bbc_charsSoFar=0
+    l=" ".join([markup_inline_word("bbcmicro",convert(word,"espeak","bbcmicro")) for word in line.split()])
+    print l.replace(" \n","\n")
+    totalKeystrokes += len(l)+1 ; lines += 1
+  # and warn if it looks too big:
+  limits_exceeded = [] ; severe=0
+  if totalKeystrokes >= 32768:
+    severe=1 ; limits_exceeded.append("BeebEm 32K keystroke limit") # At least in version 3, the clipboard is defined in beebwin.h as a char of size 32768 and its bounds are not checked.  Additionally, if you script a second paste before the first has finished (or if you try to use BeebEm's Copy command) then the first paste will be interrupted.  So if you really want to make BeebEm read a long text then I suggest setting a printer destination file, putting a VDU 2,10,3 after each batch of commands, and waiting for that \n to appear in that printer file before sending the next batch, or perhaps write a set of programs to a disk image and have them CHAIN each other or whatever.
+  page=0x1900 # BBC Model B with DFS
+  himem=0x7c00 # BBC Model B in Mode 7 (which is 40x25 characters = 1000 bytes, by default starting at 7c00 with 24 bytes spare at the top, but the scrolling system uses the full 1024 bytes and can tell the video controller to start rendering at any one of them; if you get Jeremy Ruston's book and program the VIDC yourself then you could fix it at 7c18 if you really want, or just set HIMEM=&8000 and don't touch the screen, but that doesn't give you very much more room)
+  speech_loc=0x5500 # unless you've loaded it into Sideways RAM or run RELOCAT to put it somewhere else
+  top=page+totalKeystrokes+lines*3+2 # (4 bytes for each program line, but totalKeystrokes includes 1 extra byte for each line anyway, hence lines*3)
+  if top > speech_loc: limits_exceeded.append("TOP=&5500 limit (Speech program will be overwritten unless relocated)") # and the *SP8000 Sideways RAM version doesn't seem to work on emulators like BeebEm.  The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
+  if top > himem: limits_exceeded.append("Model B Mode 7 HIMEM limit") # unless you overwrite the screen (see above). Not sure what's supposed to happen in BAS128 for the B+(?)/Master, but BeebEm 3 won't run Speech at all unless you set Model B; it reportedly worked on a real Master but who knows about BAS128 compatibility
+  if lines > 32768: limits_exceeded.append("BASIC II line number limit") # and you wouldn't get this far on a 32k computer without filling the memory first
+  elif 10*lines > 32767: limits_exceeded.append("AUTO line number limit (try AUTO 0,1)") # the highest possible line number in BBC BASIC II (for the Model B) is 32767, and the default AUTO increments in steps of 10.  You can use AUTO 0,1 to start at 0 and increment in steps of 1.
+  if severe: warning,after="WARNING: ",""
+  else: warning,after="Note: ","It should still work if pasted into BeebEm as immediate commands. "
+  after = ". "+after+"See comments in lexconvert for more details.\n"
+  if len(limits_exceeded)>1: sys.stderr.write(warning+"this text may be too big for the BBC Micro. The following limits were exceeded: "+", ".join(limits_exceeded)+after)
+  elif limits_exceeded: sys.stderr.write(warning+"this text may be too big for the BBC Micro because it exceeds the "+limits_exceeded[0]+after)
+
+def print_bbclex_instructions(fname,size):
+  def bbchex(n): return hex(n)[2:].upper()
+  print "The size of this lexicon is "+str(size)+" bytes (hex "+bbchex(size)+")"
+  noSRAM_lex_offset=0x155F # (on the BBC Micro, SRAM means Sideways RAM, not Static RAM as it does elsewhere; for clarity we'd better say "Sideways RAM" in all output)
+  SRAM_lex_offset=0x1683
+  default_lex_size=2204 # including terminating **
+  SRAM_max=0x4000 # 16k
+  noSRAM_default_addr=0x5500
+  noSRAM_min_addr=0x1900 # BBC B DFS + no program at all (RELOCAT actually supports going down to E00, but you won't be able to use the disk after this, only tapes)
+  noSRAM_himem=0x7c00 # unless you do strange tricks with the screen (see comments on himem=0x7c00 above)
+  def special_relocate_instructions(reloc_addr):
+    pagemove_min,pagemove_max = max(0xE00,noSRAM_min_addr-0x1E00), noSRAM_min_addr+0xE00 # if relocating to within this range, must move PAGE before loading RELOCAT. RELOCAT's supported range is 0xE00 to 0x5E00, omitting (PAGE-&1E00) to (PAGE+&E00)
+    if not pagemove_min<=reloc_addr<pagemove_max:
+      return "" # no special instructions needed
+    page = reloc_addr+0x1E00
+    page_max = min(0x5E00,noSRAM_default_addr-0xE00)
+    if page > page_max: return False # "Unfortunately RELOCAT can't put it at &"+bbchex(reloc_addr)+" even with PAGE changes."
+    return " RELOCAT must be run with PAGE in the range of &"+bbchex(page)+" to &"+bbchex(page_max)+" for this relocation to work."
+  check_for_append=True
+  # Instructions for replacing default lex in main RAM:
+  if noSRAM_default_addr+noSRAM_lex_offset+size > noSRAM_himem:
+    reloc_addr = noSRAM_himem-noSRAM_lex_offset-size
+    reloc_addr -= (reloc_addr%256)
+    if reloc_addr >= noSRAM_min_addr:
+      instr = special_relocate_instructions(reloc_addr)
+      if instr==False: print "This lexicon is too big for Speech in main RAM even with relocation, unless RELOCAT is rewritten to work from files."
+      else: print "This lexicon is too big for Speech at its default address of &"+bbchex(noSRAM_default_addr)+", but you could use RELOCAT to put a version at &"+bbchex(reloc_addr)+" (be sure to set HIMEM=&"+bbchex(reloc_addr)+") and then replace the default lexicon (if your new one covers all cases!) by *LOAD "+fname+" "+bbchex(reloc_addr+noSRAM_lex_offset)+" or change the relocated SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+"."+instr
+    else:
+      print "This lexicon is too big for Speech in main RAM even with relocation."
+      check_for_append=False
+  else: print "You can replace the default lexicon (if your new one covers all cases!) by *LOAD "+fname+" "+bbchex(noSRAM_default_addr+noSRAM_lex_offset)+" or change the SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+". Suggest you also set HIMEM=&"+bbchex(noSRAM_default_addr)+" for safety."
+  # Instructions for appending to default lex in main RAM:
+  if check_for_append:
+   if noSRAM_default_addr+noSRAM_lex_offset+default_lex_size-2+size > noSRAM_himem:
+    reloc_addr = noSRAM_himem-noSRAM_lex_offset-default_lex_size+2-size
+    reloc_addr -= (reloc_addr%256)
+    if reloc_addr >= noSRAM_min_addr:
+      instr = special_relocate_instructions(reloc_addr)
+      if instr==False: print "This lexicon is too big to append to the default lexicon for Speech in main RAM, even with relocation, unless RELOCAT is rewritten to work from files."
+      else: print "This lexicon is too big to append to the default lexicon if Speech is at its default address of &"+bbchex(noSRAM_default_addr)+", but you could use RELOCAT to put a version at &"+bbchex(reloc_addr)+" (be sure to set HIMEM=&"+bbchex(reloc_addr)+") and then append to the default lexicon (if you don't mind the default one catching things first!) by *LOAD "+fname+" "+bbchex(reloc_addr+noSRAM_lex_offset+default_lex_size-2)+" or change the relocated SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+"."+instr
+    else: print "This lexicon is too big to append to the default lexicon in main RAM, even with relocation."
+   else: print "You can append to the default lexicon (if you don't mind the default one catching things first!) by *LOAD "+fname+" "+bbchex(noSRAM_default_addr+noSRAM_lex_offset+default_lex_size-2)+" or change the SPEECH file from offset &"+bbchex(noSRAM_lex_offset+default_lex_size-2)+". Suggest you also set HIMEM=&"+bbchex(noSRAM_default_addr)+" for safety."
+  # Instructions for replacing lex in SRAM:
+  if size > SRAM_max-SRAM_lex_offset: print "This lexicon is too big for Speech in Sideways RAM." # unless you can patch Speech to run in SRAM but read its lexicon from main RAM
+  else:
+    print "In Sideways RAM, the default lexicon starts at &"+hex(SRAM_lex_offset+0x8000)[2:]+" but you can't access this from BASIC so suggest you back up the SP8000 file and write to its offset "+hex(SRAM_lex_offset)+"."
+    if size > SRAM_max-SRAM_lex_offset-default_lex_size+2: print "This lexicon is too big to add to the default lexicon in Sideways RAM."
+    else: print "You can append to the default lexicon in Sideways RAM (if you don't mind the default one catching things first!) from &"+hex(SRAM_lex_offset+0x8000+default_lex_size-2)[2:]+" in the Sideways RAM bank, but this can't be accessed from BASIC so suggest writing to SP8000 file at offset "+hex(SRAM_lex_offset+default_lex_size-2)+" but then be careful how to load it." # (default load address not suitable if it gets much bigger)
+  print "It might be better to load it into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
+
 def main():
     if '--festival-dictionary-to-espeak' in sys.argv:
         try: festival_location=sys.argv[sys.argv.index('--festival-dictionary-to-espeak')+1]
@@ -641,15 +739,15 @@ def main():
         convert_system_festival_dictionary_to_espeak(festival_location,not '--without-check' in sys.argv,not os.system("test -e ~/.festivalrc"))
     elif '--try' in sys.argv:
         i=sys.argv.index('--try')
-        espeak = convert(' '.join(sys.argv[i+2:]),sys.argv[i+1],'espeak')
+        espeak = convert(getInputText(i+2,"phones in "+sys.argv[i+1]+" format"),sys.argv[i+1],'espeak')
         os.popen("espeak -x","w").write(markup_inline_word("espeak",espeak))
     elif '--trymac' in sys.argv:
         i=sys.argv.index('--trymac')
-        mac = convert(' '.join(sys.argv[i+2:]),sys.argv[i+1],'mac')
+        mac = convert(getInputText(i+2,"phones in "+sys.argv[i+1]+" format"),sys.argv[i+1],'mac')
         os.popen(macSayCommand()+" -v Vicki","w").write(markup_inline_word("mac",mac)) # Need to specify a voice because the default voice might not be able to take Apple phonemes.  Vicki has been available since 10.3, as has the 'say' command (previous versions need osascript, see Gradint's code)
     elif '--trymac-uk' in sys.argv:
         i=sys.argv.index('--trymac-uk')
-        macuk = convert(' '.join(sys.argv[i+2:]),sys.argv[i+1],'mac-uk')
+        macuk = convert(getInputText(i+2,"phones in "+sys.argv[i+1]+" format"),sys.argv[i+1],'mac-uk')
         m = MacBritish_System_Lexicon("",os.environ.get("MACUK_VOICE","Daniel"))
         try:
           try: m.speakPhones(macuk.split())
@@ -659,19 +757,24 @@ def main():
     elif '--phones' in sys.argv:
         i=sys.argv.index('--phones')
         format=sys.argv[i+1]
-        w,r=os.popen4("espeak -q -x")
-        w.write(' '.join(sys.argv[i+2:])) ; w.close()
-        print ", ".join([" ".join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,r.read().split("\n"))])
+        txt = getInputText(i+2,"text")
+        w,r=os.popen4("espeak -q -x",bufsize=max(8192,3*len(txt))) # need to make sure output buffer is big enough (TODO: or use a temp file, or progressive write/read chunks) (as things stand, if bufsize is not big enough, w.close() on the following line can hang, as espeak waits for us to read its output before it can take all of our input)
+        w.write(txt) ; w.close()
+        if format=="bbcmicro":
+          write_bbcmicro_phones(r.read())
+        else:
+          print ", ".join([" ".join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,r.read().split("\n"))])
     elif '--syllables' in sys.argv:
         i=sys.argv.index('--syllables')
-        w,r=os.popen4("espeak -q -x")
-        w.write('\n'.join(sys.argv[i+1:]).replace("!","").replace(":","")) ; w.close()
+        txt=getInputText(i+1,"word(s)");words=txt.split()
+        w,r=os.popen4("espeak -q -x",bufsize=max(8192,3*len(txt))) # TODO: same as above (bufsize)
+        w.write('\n'.join(words).replace("!","").replace(":","")) ; w.close()
         rrr = r.read().split("\n")
-        print " ".join([hyphenate(word,sylcount(convert(line,"espeak","festival"))) for word,line in zip(sys.argv[i+1:],filter(lambda x:x,rrr))])
+        print " ".join([hyphenate(word,sylcount(convert(line,"espeak","festival"))) for word,line in zip(words,filter(lambda x:x,rrr))])
     elif '--phones2phones' in sys.argv:
         i=sys.argv.index('--phones2phones')
         format1,format2 = sys.argv[i+1],sys.argv[i+2]
-        text=' '.join(sys.argv[i+3:])
+        text=getInputText(i+3,"phones in "+format1+" format")
         if format1 in space_separates_words_not_phonemes:
           for w in text.split(): print markup_inline_word(format2, convert(w,format1,format2))
         else: print markup_inline_word(format2, convert(text,format1,format2))
@@ -714,6 +817,7 @@ def main():
             outFile=open(fname,"w")
         print "Writing lexicon entries to",fname
         convert_user_lexicon(fromFormat,toFormat,outFile)
+        if toFormat=="bbcmicro": print_bbclex_instructions(fname,outFile.tell())
         outFile.close()
         if toFormat=="espeak": os.system("espeak --compile=en")
     elif '--mac-uk' in sys.argv:
@@ -721,9 +825,7 @@ def main():
         fromFormat = sys.argv[i+1]
         accum = []
         convert_user_lexicon(fromFormat,"mac-uk",accum)
-        txt = ' '.join(sys.argv[i+2:])
-        if not txt: txt = sys.stdin.read()
-        m = MacBritish_System_Lexicon(txt,os.environ.get("MACUK_VOICE","Daniel"))
+        m = MacBritish_System_Lexicon(getInputText(i+2,"text"),os.environ.get("MACUK_VOICE","Daniel"))
         try:
           try: m.read([a[0] for a in accum],[a[1] for a in accum])
           finally: m.close()
@@ -733,12 +835,12 @@ def main():
         print program_name
         print "\nAvailable pronunciation formats:",', '.join(list(table[0]))
         print "\nUse --convert <from-format> <to-format> to convert a user lexicon file.  Expects Festival's .festivalrc to be in the home directory, or espeak's en_extra or Cepstral's lexicon.txt to be in the current directory.\nFor InfoVox/acapela, export the lexicon to acapela.txt in the current directory.\nE.g.: python lexconvert.py --convert festival cepstral"
-        print "\nUse --try <format> <pronunciation> to try a pronunciation with eSpeak (requires 'espeak' command),\n e.g.: python lexconvert.py --try festival h @0 l ou1\n or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)\n (it converts to espeak format and then uses espeak to play it)\nUse --trymac to do the same as --try but with Mac OS 'say' instead of 'espeak'\nUse --trymac-uk to try it with Mac OS British voices (but see --mac-uk below)"
-        print "\nUse --phones2phones <format1> <format2> <phones in format1> to perform a one-off conversion of phones from format1 to format2."
-        print "\nUse --phones <format> <words> to convert 'words' to phones in format 'format'.  espeak will be run to do the text-to-phoneme conversion, and the output will then be converted to 'format'.\nE.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.\nNote that some commercial speech synthesizers do not work well when driven entirely from phones, because their internal format is different and is optimised for normal text."
-        print "\nUse --syllables <words> to attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"
+        print "\nUse --try <format> [<pronunciation>] to try a pronunciation with eSpeak (requires 'espeak' command),\n e.g.: python lexconvert.py --try festival h @0 l ou1\n or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)\n (it converts to espeak format and then uses espeak to play it)\nUse --trymac to do the same as --try but with Mac OS 'say' instead of 'espeak'\nUse --trymac-uk to try it with Mac OS British voices (but see --mac-uk below)"
+        print "\nUse --phones2phones <format1> <format2> [<phones in format1>] to perform a one-off conversion of phones from format1 to format2."
+        print "\nUse --phones <format> [<words>] to convert 'words' to phones in format 'format'.  espeak will be run to do the text-to-phoneme conversion, and the output will then be converted to 'format'.\nE.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.\nNote that some commercial speech synthesizers do not work well when driven entirely from phones, because their internal format is different and is optimised for normal text."
+        print "\nUse --syllables [<words>] to attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"
         print "\nUse --festival-dictionary-to-espeak <location> to convert the Festival Oxford Advanced Learners Dictionary (OALD) pronunciation lexicon to ESpeak.\nYou need to specify the location of the OALD file in <location>,\ne.g. for Debian festlex-oald package: python lexconvert.py --festival-dictionary-to-espeak /usr/share/festival/dicts/oald/all.scm\nor if you can't install the Debian package, try downloading http://ftp.debian.org/debian/pool/non-free/f/festlex-oald/festlex-oald_1.4.0.orig.tar.gz, unpack it into /tmp, and do: python lexconvert.py --festival-dictionary-to-espeak /tmp/festival/lib/dicts/oald/oald-0.4.out\nIn all cases you need to cd to the espeak source directory before running this.  en_extra will be overwritten.  Converter will also read your ~/.festivalrc if it exists.  (You can later incrementally update from ~/.festivalrc using the --convert option; the entries from the system dictionary will not be overwritten in this case.)  Specify --without-check to bypass checking the existing espeak pronunciation for OALD entries (much faster, but makes a larger file and in some cases compromises the pronunciation quality)."
-        print "\nUse --mac-uk <from-format> to speak text from command line or standard input in Mac OS 10.7+ British voices while converting from a lexicon in from-format. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually.) By default the Daniel voice is used; Emily or Serena can be selected by setting the MACUK_VOICE environment variable."
+        print "\nUse --mac-uk <from-format> [<text>] to speak text in Mac OS 10.7+ British voices while converting from a lexicon in from-format. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually.) By default the Daniel voice is used; Emily or Serena can be selected by setting the MACUK_VOICE environment variable."
 
 catchingSigs = inSigHandler = False
 def catchSignals():
