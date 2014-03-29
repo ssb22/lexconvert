@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.155 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
-# with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
+program_name = "lexconvert v0.16 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 
 # Run without arguments for usage information
 
@@ -15,265 +14,1205 @@ program_name = "lexconvert v0.155 - convert between lexicons of different speech
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 
-# Phoneme Conversion Table:
-# Column 'festival': phoneme in Festival's British English notation
-# Column 'espeak': approximation in eSpeak, but note that eSpeak's phoneme representation is not that simple (hence some of the code below)
-# Column 'sapi': approximation in American English in MS SAPI notation
-# Column 'cepstral': phoneme in Cepstral's British English SSML phoneset
-# Column 'mac': approximation in American English in Apple's speech notation ([[inpt PHON]]...[[inpt TEXT]] with no spaces between the phonemes)
-# Column 'mac-uk': Scansoft/Nuance British voices for Mac OS 10.7+ (system lexicon editing required, see --mac-uk option)
-# Column 'x-sampa': X-SAMPA
-# Column 'acapela-uk': acapela optimized X-SAMPA for UK English voices (e.g. "Peter")
-# Column 'cmu': format of the US English "Carnegie Mellon University Pronouncing Dictionary" (http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
-# Column 'bbcmicro': BBC Micro Speech program by David J. Hoskins / Superior 1985 (for discussion of emulators like BeebEm, including copyright considerations, see comments later)
-# Column 'unicode-ipa': Unicode IPA, as used on an increasing number of websites
-# Column 'latex-ipa': LaTeX IPA package
-# Column 'pinyin-approx' (convert TO only): Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words - works with some words better than others)
-# 0 = 'ditto' (copy the cell above)
-# None = no equivalent in this column (used for groups of multiple phonemes which can be broken down into components)
-table = [
-   ('festival', 'espeak', 'sapi', 'cepstral', 'mac', 'mac-uk', 'x-sampa', 'acapela-uk', 'cmu', 'bbcmicro', 'unicode-ipa','latex-ipa', 'pinyin-approx'),
-   # The first entry MUST be the syllable separator:
-   ('0', '%', '-', '0', '=','.', '.', '', '0', '', ['','.'],['','.'],''),
-   ('1', "'", '1', '1', '1',"'", '"', 0, '1', '1', u'\u02c8','"', '4'), # primary stress - ignoring this for acapela-uk
-   ('2', ',', '2', '0', '2',"", '%', 0, '2', '2', u'\u02cc','\\textsecstress{}', '2'), # secondary stress - ignoring this for acapela-uk
-   ('', '', '', '', '','', '', 0, '', '', '-','', ''),
-   (0, 0, 0, 0, 0, 0, 0, 0, 0, '', '#','\\#',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, 0, '', ' ',' ',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, 0, '', '_','\\_',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, 0, '', '?','?',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, 0, '', '!','!',0),
-   (0, 0, 0, 0, 0, 0, 0, 0, 0, '', ',',',',0),
-   ('aa', ['A:', 'A@', 'aa'], 'aa', 'a', 'AA',"A", 'A', 'A:', 'AA', 'AA', u'\u0251','A','a5'), # a as in ah
-   (0, 'A', 0, 0, 0,0, 0, 0, '2', 0, 0,0,0),
-   (0, 'A:', 0, 0, 0,0, ':', 0, '1', 0, u'\u02d0',':',0),
-   (0, 0, 0, 0, 0,0, 'A:', 0, 'AA', 0, u'\u0251\u02d0','A:',0),
-   (0, 0, 0, 0, 0,0, 'Ar\\', 0, 0, 0, u'\u0251\u0279','A\\textturnr{}',0),
-   (0, 0, 0, 0, 'aa',0, 'a:', 0, 0, 0, 'a\\u02d0','a:',0),
-   ('a', ['a', '&'], 'ae', 'ae', 'AE','@', '{', '{', 'AE', 'AE', [u'\xe6','a'],'\\ae{}','ya5'), # a as in apple
-   ('uh', 'V', 'ah', 'ah', 'UX','$', 'V', 'V', 'AH', 'AH', u'\u028c','2','e5'), # u as in but, or the first part of un as in hunt
-   ('o', '0', 'ao', 'oa', 'AA','A+', 'Q', 'Q', 'AA', 'O', u'\u0252','6','yo5'),
-   (0, 0, 0, 0, 0,0, 'A', 'A', 0, 0, u'\u0251','A',0),
-   (0, 0, 0, 0, 0,0, 'O', 'O', 0, 0, u'\u0254','O',0),
-   ('au', 'aU', 'aw', 'aw', 'AW','a&U', 'aU', 'aU', 'AW', 'AW', u'a\u028a','aU','ao5'), # o as in now
-   (0, 0, 0, 0, 0,0, '{O', '{O', 0, 0, u'\xe6\u0254','\\ae{}O',0),
-   ('@', ['@','a#'], 'ax', 'ah', 'AX','E0', '@', '@', 'AH', 'AH', u'\u0259','@','e5'), # a as in ago (TODO: eSpeak sometimes uses a# in 'had' when in a sentence, and this doesn't always sound good on other synths; might sometimes want to convert it to 'a'; not sure what contexts would call for this though)
-   ('@@', '3:', 'er', 'er', 0,0, '3:', '3:', 'ER', 'ER', u'\u0259\u02d0','@:','e5'), # e as in herd
-   ('@', '3', 'ax', 'ah', 0,0, '@', '@', 'AH', 'AH', u'\u025a','\\textrhookschwa{}','e5'),
-   ('@1', 'a2', 0, 0, 0,0, 0, 0, 0, 0, u'\u0259','@', 0),
-   ('@2', ['@2','@-'], 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0), # (eSpeak @- is a shorter version of @, TODO: double-check the relationship between @ and @2 in Festival)
-   ('ai', ['aI','aI2','aI;','aI2;'], 'ay', 'ay', 'AY','a&I', 'aI', 'aI', 'AY', 'IY', u'a\u026a','aI','ai5'), # eye
-   (0, 0, 0, 0, 0,0, 'Ae', 'A e', 0, 0, u'\u0251e','Ae',0),
-   ('b', 'b', 'b', 'b', 'b','b', 'b', 'b', 'B ', 'B', 'b','b','bu0'),
-   ('ch', 'tS', 'ch', 'ch', 'C','t&S', 'tS', 't S', 'CH', 'CH', [u't\u0283', u'\u02a7'],'tS','che0'),
-   ('d', 'd', 'd', 'd', 'd','d', 'd', 'd', 'D ', 'D', 'd','d','de0'),
-   ('dh', 'D', 'dh', 'dh', 'D','D', 'D', 'D', 'DH', 'DH', u'\xf0','D','ze0'), # th as in them
-   ('e', 'E', 'eh', 'eh', 'EH','E', 'E', 'e', 'EH', 'EH', u'\u025b','E','ye5'), # e as in them
-   (0, 0, 'ey', 0, 0,0, 'e', 0, 0, 0, 'e','e',0),
-   ('@@', '3:', 'er', 'er', 'AX','0', '3:', '3:', 'ER', 'ER', [u'\u025d', u'\u025c\u02d0'],'3:','e5'), # -ar of year
-   ('e@', 'e@', 'eh r', 'e@', 'EH r','E&$', 'E@', 'e @', 0, 'AI', u'\u025b\u0259','E@','ye5'), # a as in air
-   (0, 0, 0, 0, 0,0, 'Er\\', 'e r', 0, 0, u'\u025b\u0279','E\\textturnr{}',0),
-   (0, 0, 0, 0, 0,0, 'e:', 'e :', 0, 0, u'e\u02d0','e:',0),
-   (0, 0, 0, 0, 0,0, 'E:', 0, 0, 0, u'\u025b\u02d0','E:',0),
-   (0, 0, 0, 0, 0,0, 'e@', 'e @', 0, 0, u'e\u0259','e@',0),
-   ('ei', 'eI', 'ey', 'ey', 'EY','e&I', 'eI', 'eI', 'EY', 'AY', u'e\u026a','eI','ei5'), # a as in ate
-   (0, 0, 0, 0, 0,0, '{I', '{I', 0, 0, u'\xe6\u026a','\\ae{}I',0),
-   ('f', 'f', 'f', 'f', 'f','f', 'f', 'f', 'F ', 'F', 'f','f','fu0'),
-   ('g', 'g', 'g', 'g', 'g','g', 'g', 'g', 'G ', 'G', [u'\u0261', 'g'],'g','ge0'),
-   ('h', 'h', 'h', 'h', 'h','h', 'h', 'h', 'HH', '/H', 'h','h','he0'), # Jan suggested "hh" for SAPI, but it doesn't work on XP
-   ('i', ['I','I;','i'], 'ih', 'ih', 'IH','I', 'I', 'I', 'IH', 'IH', u'\u026a','I','yi5'), # i as in it
-   (0, 0, 0, 0, 0,0, '1', '1', 0, 0, u'\u0268','1',0),
-   (0, ['I','I2','I2;'], 0, 0, 'IX',0, 'I', 'I', 0, 'IX', u'\u026a','I',0), # (IX sounds like a slightly shorter version of IH on the BBC)
-   ('i@', 'i@', 'iy ah', 'i ah', 'IY UX','E0', 'I@', 'I@', 'EY AH', 'IXAH', u'\u026a\u0259','I@','yi3re5'), # ear
-   (0, 0, 0, 0, 0,0, 'Ir\\', 'I r', 0, 0, u'\u026a\u0279','I\\textturnr{}',0),
-   ('ii', ['i:','i:;'], 'iy', 'i', 'IY','i', 'i', 'i', 'IY', 'EE', 'i','i','yi5'), # e as in eat
-   (0, 0, 0, 0, 0,0, 'i:', 'i:', 0, 0, u'i\u02d0','i:',0),
-   ('jh', 'dZ', 'jh', 'jh', 'J','d&Z', 'dZ', 'dZ', 'JH', 'J', [u'd\u0292', u'\u02a4'],'dZ','zhe0'), # j as in jump
-   ('k', 'k', 'k', 'k', 'k','k', 'k', 'k', 'K ', 'K', 'k','k','ke0'),
-   (0, 'x', 0, 0, 0,0, 'x', 'x', 0, 0, 'x','x',0), # actually 'x' is like Scottish 'loch', but if the synth can't do that then try k 
-   ('l', ['l', 'L'], 'l', 'l', 'l','l', 'l', 'l', 'L ', 'L', 'l','l','le0'),
-   (0, 0, 0, 0, 0,0, 0, 0, 0, 0, u'd\u026b','d\\textltilde{}',0),
-   ('m', 'm', 'm', 'm', 'm','m', 'm', 'm', 'M ', 'M', 'm','m','me0'),
-   ('n', 'n', 'n', 'n', 'n','n', 'n', 'n', 'N ', 'N', 'n','n','ne0'),
-   ('ng', 'N', 'ng', 'ng', 'N','nK', 'N', 'N', 'NG', 'NX', u'\u014b','N','eng0'),
-   ('ou', 'oU', 'ow', 'ow', 'OW','o&U', '@U', '@U', 'OW', 'OW', u'\u0259\u028a','@U','ou5'), # o as in go
-   (0, 0, 0, 0, 0,0, 0, 0, 0, 0, 'o', 'o', 0),
-   (0, 0, 0, 0, 0,0, 'oU', 'o U', 0, 0, u'o\u028a','oU',0),
-   (0, 0, 0, 0, 0,0, '@}', '@ }', 0, 0, u'\u0259\u0289','@0',0),
-   (None, 'oUl', None, None, None,None, None, None, None, 'OL', None,None,None), # ol as in gold (espeak says it in a slightly 'posh' way though)
-   ('oi', 'OI', 'oy', 'oy', 'OY','O&I', 'OI', 'OI', 'OY', 'OY', u'\u0254\u026a','OI','ruo2yi5'), # oy as in toy
-   (0, 0, 0, 0, 0,0, 'oI', 'o I', 0, 0, u'o\u026a','oI',0),
-   ('p', 'p', 'p', 'p', 'p','p', 'p', 'p', 'P ', 'P', 'p','p','pu0'),
-   ('r', ['r','r-'], 'r', 'r', 'r','R+', 'r\\', 'r', 'R ', 'R', u'\u0279','\\textturnr{}','re0'),
-   (0, 0, 0, 0, 0,0, 'r', 0, 0, 0, 'r','r',0),
-   ('s', 's', 's', 's', 's','s', 's', 's', 'S ', 'S', 's','s','se0'),
-   ('sh', 'S', 'sh', 'sh', 'S','S', 'S', 'S', 'SH', 'SH', u'\u0283','S','she0'),
-   ('t', 't', 't', 't', 't','t', 't', 't', 'T ', 'T', 't','t','te0'),
-   (0, 0, 0, 0, 0,0, 0, 0, 0, 0, u'\u027e','R', 0),
-   ('th', 'T', 'th', 'th', 'T','T', 'T', 'T', 'TH', 'TH', u'\u03b8','T','zhe0'),
-   ('u@', 'U@', 'uh', 'uh', 'UH','O', 'U@', 'U@', 'UH', ['AOR','UH'], u'\u028a\u0259','U@','wu5'), # oor as in poor
-   (0, 0, 0, 0, 0,0, 'Ur\\', 'U r', 0, 0, u'\u028a\u0279','U\\textturnr{}',0),
-   ('u', ['U','@5'], 0, 0, 0,'U', 'U', 'U', 0, ['UH','/U'], u'\u028a','U',0), # u as in pull (espeak also used U for the o in good; bbcmicro defaults to UH4)
-   (None, 'Ul', None, None, None,None, None, None, None, '/UL', None,None,None),
-   ('uu', 'u:', 'uw', 'uw', 'UW','U', '}:', 'u:', 'UW', ['UW','UX'], u'\u0289\u02d0','0:','yu5'), # oo as in food
-   (0, 0, 0, 0, 0,0, 'u:', 0, 0, 0, u'u\u02d0', 'u:',0),
-   (0, 0, 0, 0, 0,0, 0, 0, 0, 0, 'u', 'u', 0),
-   ('oo', 'O:', 'AO', 'ao', 'AO','O', 'O:', 'O:', 'AO', 'AO', u'\u0254\u02d0','O:','huo5'), # close to 'or'
-   (0, 0, 0, 0, 0,0, 'O', 'O', 0, 0, u'\u0254','O',0),
-   (0, 0, 0, 0, 0,0, 'o:', 'O:', 0, 0, u'o\u02d0','o:',0),
-   (0, ['O@', 'o@', 'O'], 0, 0, 0,0, 'O:', 0, 0, 0, u'\u0254\u02d0','O:',0),
-   ('v', 'v', 'v', 'v', 'v','v', 'v', 'v', 'V ', 'V', 'v','v','fu0'),
-   ('w', 'w', 'w', 'w', 'w','w', 'w', 'w', 'W ', 'W', 'w','w','wu0'),
-   (0, 0, 0, 0, 0,0, 'W', 0, 0, 0, u'\u028d','\\textturnw{}',0), # Jan suggested "x" for SAPI here, but that doesn't work on XP
-   ('y', 'j', 'y', 'j', 'y','j', 'j', 'j', 'Y ', 'Y', 'j','j','yu0'),
-   ('z', 'z', 'z', 'z', 'z','z', 'z', 'z', 'Z ', 'Z', 'z','z','ze0'),
-   ('zh', 'Z', 'zh', 'zh', 'Z','Z', 'Z', 'Z', 'ZH', 'ZH', u'\u0292','Z','zhe0'), # ge of blige etc
-   # TODO \u0294 (glottal stop) to eSpeak? (for local dialects), latex-ipa is 'P'
-   # TODO bbcmicro also has CT as in fact, DR as in dragon, DUX as in duke, TR as in track
-   # Hack (must be at end) - make sure all dictionaries have an entry for '@', for the @l rule:
-   ('@', '@', '@', 'ah', 'AX','E0', '@', '@', '@', 'AH', u'\u0259','@','wu5'),
-   (0, 0, 'ax', '@', 0,0, 0, 0, 0, 0, 0,0,0),
-   (0, 0, 0, 'ah', '@',0, 0, 0, 0, 0, 0,0,0),
-   (0, 0, 0, 0, 'AX',0, 0, 0, 0, '@', '@',0,0),
-]
+# Old versions of this code are being kept on SourceForge's E-GuideDog SVN at
+# http://svn.code.sf.net/p/e-guidedog/code/ssb22/lexconvert
+# although some early ones are missing.
 
-space_separates_words_not_phonemes = ["espeak","mac","mac-uk","unicode-ipa","latex-ipa","x-sampa","bbcmicro","pinyin-approx"]
-noughts_used_other_than_stress = ["espeak","latex-ipa","mac-uk"] # and might need special-case code in convert()
-stress_comes_before_vowel = ["espeak","unicode-ipa","latex-ipa","mac-uk"] # otherwise after
+def Phonemes():
+   """Create phonemes by calling vowel(), consonant(),
+     variant() and other().
+   
+     For the variants, if a particular variant does not
+     exist in the destination format then we will treat it
+     as equivalent to the last non-variant we created.
+  
+     For anything else that does not exist in the
+     destination format, we will first try to break it
+     down into parts (useful for having compounds like
+     'opt_ol_as_in_gold' without having to put them into
+     ALL of the formats), and if that still doesn't work
+     then we drop a character (with warning depending on
+     the format's setting of safe_to_drop_characters)."""
+   a_as_in_ah = vowel()
+   _, var1_a_as_in_ah = variant()
+   _, var2_a_as_in_ah = variant()
+   _, var3_a_as_in_ah = variant()
+   _, var4_a_as_in_ah = variant()
+   _, var5_a_as_in_ah = variant()
+   a_as_in_apple = vowel()
+   u_as_in_but = vowel() # or the first part of un as in hunt
+   o_as_in_orange = vowel()
+   _, var1_o_as_in_orange = variant()
+   _, var2_o_as_in_orange = variant()
+   o_as_in_now = vowel()
+   _, var1_o_as_in_now = variant()
+   a_as_in_ago = vowel()
+   _, var1_a_as_in_ago = variant()
+   _, var2_a_as_in_ago = variant()
+   _, var3_a_as_in_ago = variant()
+   _, var4_a_as_in_ago = variant()
+   _, var5_a_as_in_ago = variant()
+   e_as_in_herd = vowel()
+   eye = vowel()
+   _, var1_eye = variant()
+   b = consonant()
+   ch = consonant()
+   d = consonant()
+   th_as_in_them = consonant()
+   e_as_in_them = vowel()
+   _, var1_e_as_in_them = variant()
+   ar_as_in_year = vowel()
+   a_as_in_air = vowel()
+   _, var1_a_as_in_air = variant()
+   _, var2_a_as_in_air = variant()
+   _, var3_a_as_in_air = variant()
+   _, var4_a_as_in_air = variant()
+   a_as_in_ate = vowel()
+   _, var1_a_as_in_ate = variant()
+   f = consonant()
+   g = consonant()
+   h = consonant()
+   i_as_in_it = vowel()
+   _, var1_i_as_in_it = variant()
+   _, var2_i_as_in_it = variant()
+   ear = vowel()
+   _, var1_ear = variant()
+   e_as_in_eat = vowel()
+   _, var1_e_as_in_eat = variant()
+   j_as_in_jump = consonant()
+   k = consonant()
+   _, opt_scottish_loch = variant()
+   l = consonant()
+   _, var1_l = variant()
+   m = consonant()
+   n = consonant()
+   ng = consonant()
+   o_as_in_go = vowel()
+   _, var1_o_as_in_go = variant()
+   _, var2_o_as_in_go = variant()
+   _, var3_o_as_in_go = variant()
+   opt_ol_as_in_gold = vowel()
+   oy_as_in_toy = vowel()
+   _, var1_oy_as_in_toy = variant()
+   p = consonant()
+   r = consonant()
+   _, var1_r = variant()
+   s = consonant()
+   sh = consonant()
+   t = consonant()
+   _, var1_t = variant()
+   th = consonant()
+   oor_as_in_poor = vowel()
+   _, var1_oor_as_in_poor = variant()
+   _, opt_u_as_in_pull = variant()
+   opt_ul_as_in_pull = vowel()
+   oo_as_in_food = vowel()
+   _, var1_oo_as_in_food = variant()
+   _, var2_oo_as_in_food = variant()
+   close_to_or = vowel()
+   _, var1_close_to_or = variant()
+   _, var2_close_to_or = variant()
+   _, var3_close_to_or = variant()
+   v = consonant()
+   w = consonant()
+   _, var1_w = variant()
+   y = consonant()
+   z = consonant()
+   ge_of_blige_etc = consonant()
+   glottal_stop = other()
+   syllable_separator = other()
+   _, primary_stress = variant()
+   _, secondary_stress = variant()
+   text_sharp = other()
+   text_space = other()
+   text_underline = other()
+   text_question = other()
+   text_exclamation = other()
+   text_comma = other()
+   return locals()
 
-espeak_consonants = "bdDfghklmnNprsStTvwjzZ"
+def LexFormats():
+  """Makes the phoneme conversion tables of each format.
+     Each table has string to phoneme entries and phoneme
+     to string entries.  The string to phoneme entries are
+     used when converting OUT of that format, and the
+     phoneme to string entries are used when converting IN
+     (so you can recognise phonemes you don't support and
+     convert them to something else).  By default, a tuple
+     of the form (string,phoneme) will create entries in
+     BOTH directions; one-directional entries are created
+     via (string,phoneme,False) or (phoneme,string,False).
+     The makeDic function checks the keys are unique."""
+  globals().update(Phonemes())
+  return { "festival" : makeDic(
+    "Festival's default British voice",
+    ('0',syllable_separator),
+    ('1',primary_stress),
+    ('2',secondary_stress),
+    ('aa',a_as_in_ah),
+    ('a',a_as_in_apple),
+    ('uh',u_as_in_but),
+    ('o',o_as_in_orange),
+    ('au',o_as_in_now),
+    ('@',a_as_in_ago),
+    ('@@',e_as_in_herd),
+    ('@1',var2_a_as_in_ago),
+    ('@2',var3_a_as_in_ago),
+    ('ai',eye),
+    ('b',b),
+    ('ch',ch),
+    ('d',d),
+    ('dh',th_as_in_them),
+    ('e',e_as_in_them),
+    (ar_as_in_year,'@@',False),
+    ('e@',a_as_in_air),
+    ('ei',a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('i',i_as_in_it),
+    ('i@',ear),
+    ('ii',e_as_in_eat),
+    ('jh',j_as_in_jump),
+    ('k',k),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('ng',ng),
+    ('ou',o_as_in_go),
+    ('oi',oy_as_in_toy),
+    ('p',p),
+    ('r',r),
+    ('s',s),
+    ('sh',sh),
+    ('t',t),
+    ('th',th),
+    ('u@',oor_as_in_poor),
+    ('u',opt_u_as_in_pull),
+    ('uu',oo_as_in_food),
+    ('oo',close_to_or),
+    ('v',v),
+    ('w',w),
+    ('y',y),
+    ('z',z),
+    ('zh',ge_of_blige_etc),
+    # lex_filename etc not set (handled as special case, taking from ~/.festivalrc, and read-only for now)
+    inline_format = "%s", inline_header="",
+    space_separates_words_not_phonemes=False,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really? (could instead give a string of known-safe characters)
+    cleanup_regexps=[],
+  ),
+
+  "espeak" : makeDic(
+    "eSpeak's default British voice", # but note that eSpeak's phoneme representation is not always that simple, hence the cleanup_regexps and some special-case code later
+    ('%',syllable_separator),
+    ("'",primary_stress),
+    (',',secondary_stress),
+    # TODO: glottal_stop? (in regional pronunciations etc)
+    ('A:',a_as_in_ah),
+    ('A@',a_as_in_ah,False),
+    ('aa',a_as_in_ah,False),
+    ('A',var1_a_as_in_ah),
+    ('a',a_as_in_apple),
+    ('&',a_as_in_apple,False),
+    ('V',u_as_in_but),
+    ('0',o_as_in_orange),
+    ('aU',o_as_in_now),
+    ('@',a_as_in_ago),
+    ('a#',a_as_in_ago,False), # (TODO: eSpeak sometimes uses a# in 'had' when in a sentence, and this doesn't always sound good on other synths; might sometimes want to convert it to a_as_in_apple; not sure what contexts would call for this though)
+    ('3:',e_as_in_herd),
+    ('3',var1_a_as_in_ago),
+    ('a2',var2_a_as_in_ago),
+    ('@2',var3_a_as_in_ago),
+    ('@-',var3_a_as_in_ago,False), # (eSpeak @- sounds to me like a shorter version of @, TODO: double-check the relationship between @ and @2 in Festival)
+    ('aI',eye),
+    ('aI2',eye,False),
+    ('aI;',eye,False),
+    ('aI2;',eye,False),
+    ('b',b),
+    ('tS',ch),
+    ('d',d),
+    ('D',th_as_in_them),
+    ('E',e_as_in_them),
+    (ar_as_in_year,'3:',False),
+    ('e@',a_as_in_air),
+    ('eI',a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('I',i_as_in_it),
+    ('I;',i_as_in_it,False),
+    ('i',i_as_in_it,False),
+    ('I2',var2_i_as_in_it,False),
+    ('I2;',var2_i_as_in_it,False),
+    ('i@',ear),
+    ('i:',e_as_in_eat),
+    ('i:;',e_as_in_eat,False),
+    ('dZ',j_as_in_jump),
+    ('k',k),
+    ('x',opt_scottish_loch),
+    ('l',l),
+    ('L',l,False),
+    ('m',m),
+    ('n',n),
+    ('N',ng),
+    ('oU',o_as_in_go),
+    ('oUl',opt_ol_as_in_gold), # (espeak says "gold" in a slightly 'posh' way though)
+    ('OI',oy_as_in_toy),
+    ('p',p),
+    ('r',r),
+    ('r-',r,False),
+    ('s',s),
+    ('S',sh),
+    ('t',t),
+    ('T',th),
+    ('U@',oor_as_in_poor),
+    ('U',opt_u_as_in_pull),
+    ('@5',opt_u_as_in_pull,False),
+    ('Ul',opt_ul_as_in_pull),
+    ('u:',oo_as_in_food),
+    ('O:',close_to_or),
+    ('O@',var3_close_to_or),
+    ('o@',var3_close_to_or,False),
+    ('O',var3_close_to_or,False),
+    ('v',v),
+    ('w',w),
+    ('j',y),
+    ('z',z),
+    ('Z',ge_of_blige_etc),
+    lex_filename = "en_extra",
+    lex_header = "",
+    lex_entry_format = "%s %s\n",
+    lex_word_case = any,
+    lex_footer = "",
+    inline_format = "[[%s]]", inline_header="",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters="_: !",
+    cleanup_regexps=[
+      ("k'a2n","k'@n"),
+      ("ka2n","k@n"),
+      ("gg","g"),
+      ("@U","oU"), # (eSpeak uses oU to represent @U; difference is given by its accent parameters)
+      ("([iU]|([AO]:))@r$","\1@"),
+      ("([^e])@r",r"\1_remove_3"),("_remove_",""),
+      # (r"([^iU]@)l",r"\1L") # only in older versions of espeak (not valid in more recent versions)
+      ("rr$","r"),
+      ("3:r$","3:"),
+      # TODO: 'declared' & 'declare' the 'r' after the 'E' sounds a bit 'regional' (but pretty).  but sounds incomplete w/out 'r', and there doesn't seem to be an E2 or E@
+      # TODO: consider adding 'g' to words ending in 'N' (if want the 'g' pronounced in '-ng' words) (however, careful of words like 'yankee' where the 'g' would be followed by a 'k'; this may also be a problem going into the next word)
+    ],
+  ),
+
+  "sapi" : makeDic(
+    "Microsoft Speech API (American English)",
+    ('-',syllable_separator),
+    ('1',primary_stress),
+    ('2',secondary_stress),
+    ('aa',a_as_in_ah),
+    ('ae',a_as_in_apple),
+    ('ah',u_as_in_but),
+    ('ao',o_as_in_orange),
+    ('aw',o_as_in_now),
+    ('ax',a_as_in_ago),
+    ('er',e_as_in_herd),
+    ('@',var4_a_as_in_ago),
+    ('ay',eye),
+    ('b',b),
+    ('ch',ch),
+    ('d',d),
+    ('dh',th_as_in_them),
+    ('eh',e_as_in_them),
+    ('ey',var1_e_as_in_them),
+    (ar_as_in_year,'er',False),
+    ('eh r',a_as_in_air),
+    (a_as_in_ate,'ey',False),
+    ('f',f),
+    ('g',g),
+    ('h',h), # Jan suggested 'hh', but I can't get this to work on Windows XP (TODO: try newer versions of Windows)
+    ('ih',i_as_in_it),
+    ('iy ah',ear),
+    ('iy',e_as_in_eat),
+    ('jh',j_as_in_jump),
+    ('k',k),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('ng',ng),
+    ('ow',o_as_in_go),
+    ('oy',oy_as_in_toy),
+    ('p',p),
+    ('r',r),
+    ('s',s),
+    ('sh',sh),
+    ('t',t),
+    ('th',th),
+    ('uh',oor_as_in_poor),
+    ('uw',oo_as_in_food),
+    ('AO',close_to_or),
+    ('v',v),
+    ('w',w),
+    # ('x',var1_w), # suggested by Jan, but I can't get this to work on Windows XP (TODO: try newer versions of Windows)
+    ('y',y),
+    ('z',z),
+    ('zh',ge_of_blige_etc),
+    lex_filename="run-ptts.bat", # write-only for now
+    lex_header = "rem  You have to run this file\nrem  with ptts.exe in the same directory\nrem  to add these words to the SAPI lexicon\n\n",
+    lex_entry_format='ptts -la %s "%s"\n',
+    lex_word_case = any,
+    lex_footer = "",
+    inline_format = '<pron sym="%s"/>', inline_header="",
+    space_separates_words_not_phonemes=False,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[],
+  ),
+
+  "cepstral" : makeDic(
+    "Cepstral's British English SSML phoneset",
+    ('0',syllable_separator),
+    ('1',primary_stress),
+    ('a',a_as_in_ah),
+    ('ae',a_as_in_apple),
+    ('ah',u_as_in_but),
+    ('oa',o_as_in_orange),
+    ('aw',o_as_in_now),
+    (a_as_in_ago,'ah',False),
+    ('er',e_as_in_herd),
+    ('@',var5_a_as_in_ago),
+    ('ay',eye),
+    ('b',b),
+    ('ch',ch),
+    ('d',d),
+    ('dh',th_as_in_them),
+    ('eh',e_as_in_them),
+    (ar_as_in_year,'er',False),
+    ('e@',a_as_in_air),
+    ('ey',a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('ih',i_as_in_it),
+    ('i ah',ear),
+    ('i',e_as_in_eat),
+    ('jh',j_as_in_jump),
+    ('k',k),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('ng',ng),
+    ('ow',o_as_in_go),
+    ('oy',oy_as_in_toy),
+    ('p',p),
+    ('r',r),
+    ('s',s),
+    ('sh',sh),
+    ('t',t),
+    ('th',th),
+    ('uh',oor_as_in_poor),
+    ('uw',oo_as_in_food),
+    ('ao',close_to_or),
+    ('v',v),
+    ('w',w),
+    ('j',y),
+    ('z',z),
+    ('zh',ge_of_blige_etc),
+    lex_filename="lexicon.txt",
+    lex_header = "",
+    lex_entry_format = "%s 0 %s\n",
+    lex_word_case = "lower",
+    lex_footer = "",
+    inline_format = "<phoneme ph='%s'>p</phoneme>",
+    inline_header = "",
+    space_separates_words_not_phonemes=False,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[(" 1","1"),(" 0","0")],
+  ),
+
+  "mac" : makeDic(
+    "approximation in American English using the [[inpt PHON]] notation of Apple's US voices",
+    ('=',syllable_separator),
+    ('1',primary_stress),
+    ('2',secondary_stress),
+    ('AA',a_as_in_ah),
+    ('aa',var5_a_as_in_ah),
+    ('AE',a_as_in_apple),
+    ('UX',u_as_in_but),
+    (o_as_in_orange,'AA',False),
+    ('AW',o_as_in_now),
+    ('AX',a_as_in_ago),
+    ('AY',eye),
+    ('b',b),
+    ('C',ch),
+    ('d',d),
+    ('D',th_as_in_them),
+    ('EH',e_as_in_them),
+    (ar_as_in_year,'AX',False),
+    ('EH r',a_as_in_air),
+    ('EY',a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('IH',i_as_in_it),
+    ('IX',var2_i_as_in_it),
+    ('IY UX',ear),
+    ('IY',e_as_in_eat),
+    ('J',j_as_in_jump),
+    ('k',k),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('N',ng),
+    ('OW',o_as_in_go),
+    ('OY',oy_as_in_toy),
+    ('p',p),
+    ('r',r),
+    ('s',s),
+    ('S',sh),
+    ('t',t),
+    ('T',th),
+    ('UH',oor_as_in_poor),
+    ('UW',oo_as_in_food),
+    ('AO',close_to_or),
+    ('v',v),
+    ('w',w),
+    ('y',y),
+    ('z',z),
+    ('Z',ge_of_blige_etc),
+    lex_filename="substitute.sh", # write-only for now
+    lex_header = "# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed",
+    lex_entry_format=' -e "s/%s/[[inpt PHON]]%s[[inpt TEXT]]/g"',
+    lex_word_case = any,
+    lex_footer = "\n",
+    inline_format = "[[inpt PHON]]%s[[inpt TEXT]]",
+    inline_header = "",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[],
+  ),
+
+  "mac-uk" : makeDic(
+    "Scansoft/Nuance British voices for Mac OS 10.7+ (system lexicon editing required, see --mac-uk option)",
+    ('.',syllable_separator),
+    ("'",primary_stress),
+    ('',secondary_stress),
+    ('A',a_as_in_ah),
+    ('@',a_as_in_apple),
+    ('$',u_as_in_but),
+    ('A+',o_as_in_orange),
+    ('a&U',o_as_in_now),
+    ('E0',a_as_in_ago),
+    (e_as_in_herd,'E0',False),
+    ('a&I',eye),
+    ('b',b),
+    ('t&S',ch),
+    ('d',d),
+    ('D',th_as_in_them),
+    ('E',e_as_in_them),
+    ('0',ar_as_in_year),
+    ('E&$',a_as_in_air),
+    ('e&I',a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('I',i_as_in_it),
+    (ear,'E0',False),
+    ('i',e_as_in_eat),
+    ('d&Z',j_as_in_jump),
+    ('k',k),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('nK',ng),
+    ('o&U',o_as_in_go),
+    ('O&I',oy_as_in_toy),
+    ('p',p),
+    ('R+',r),
+    ('s',s),
+    ('S',sh),
+    ('t',t),
+    ('T',th),
+    ('O',oor_as_in_poor),
+    ('U',opt_u_as_in_pull),
+    (oo_as_in_food,'U',False),
+    (close_to_or,'O',False),
+    ('v',v),
+    ('w',w),
+    ('j',y),
+    ('z',z),
+    ('Z',ge_of_blige_etc),
+    # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
+    inline_format = "%s", inline_header = "mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it\n",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[(r'o\&U\.Ol', r'o\&Ul')],
+  ),
+
+  "x-sampa" : makeDic(
+    "General X-SAMPA notation (contributed by Jan Weiss)",
+    ('.',syllable_separator),
+    ('"',primary_stress),
+    ('%',secondary_stress),
+    ('A',a_as_in_ah),
+    (':',var2_a_as_in_ah),
+    ('A:',var3_a_as_in_ah),
+    ('Ar\\',var4_a_as_in_ah),
+    ('a:',var5_a_as_in_ah),
+    ('{',a_as_in_apple),
+    ('V',u_as_in_but),
+    ('Q',o_as_in_orange),
+    (var1_o_as_in_orange,'A',False),
+    ('O',var2_o_as_in_orange),
+    ('aU',o_as_in_now),
+    ('{O',var1_o_as_in_now),
+    ('@',a_as_in_ago),
+    ('3:',e_as_in_herd),
+    ('aI',eye),
+    ('Ae',var1_eye),
+    ('b',b),
+    ('tS',ch),
+    ('d',d),
+    ('D',th_as_in_them),
+    ('E',e_as_in_them),
+    ('e',var1_e_as_in_them),
+    (ar_as_in_year,'3:',False),
+    ('E@',a_as_in_air),
+    ('Er\\',var1_a_as_in_air),
+    ('e:',var2_a_as_in_air),
+    ('E:',var3_a_as_in_air),
+    ('e@',var4_a_as_in_air),
+    ('eI',a_as_in_ate),
+    ('{I',var1_a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('I',i_as_in_it),
+    ('1',var1_i_as_in_it),
+    ('I@',ear),
+    ('Ir\\',var1_ear),
+    ('i',e_as_in_eat),
+    ('i:',var1_e_as_in_eat),
+    ('dZ',j_as_in_jump),
+    ('k',k),
+    ('x',opt_scottish_loch),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('N',ng),
+    ('@U',o_as_in_go),
+    ('oU',var2_o_as_in_go),
+    ('@}',var3_o_as_in_go),
+    ('OI',oy_as_in_toy),
+    ('oI',var1_oy_as_in_toy),
+    ('p',p),
+    ('r\\',r),
+    (var1_r,'r',False),
+    ('s',s),
+    ('S',sh),
+    ('t',t),
+    ('T',th),
+    ('U@',oor_as_in_poor),
+    ('Ur\\',var1_oor_as_in_poor),
+    ('U',opt_u_as_in_pull),
+    ('}:',oo_as_in_food),
+    ('u:',var1_oo_as_in_food),
+    (var2_oo_as_in_food,'u:',False),
+    ('O:',close_to_or),
+    (var1_close_to_or,'O',False),
+    ('o:',var2_close_to_or),
+    ('v',v),
+    ('w',w),
+    ('W',var1_w),
+    ('j',y),
+    ('z',z),
+    ('Z',ge_of_blige_etc),
+    lex_filename="acapela.txt",
+    lex_header = "",
+    lex_entry_format = "%s"+chr(9)+"#%s"+chr(9)+"UNKNOWN\n", # TODO: may be able to convert part-of-speech (NOUN etc) to/from some other formats e.g. Festival
+    lex_word_case = any,
+    lex_footer = "",
+    inline_format = "%s", # TODO: ?
+    inline_header = "",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[],
+  ),
+
+  "acapela-uk" : makeDic(
+    'Acapela-optimised X-SAMPA for UK English voices (e.g. "Peter"), contributed by Jan Weiss',
+    ('A:',a_as_in_ah),
+    ('{',a_as_in_apple),
+    ('V',u_as_in_but),
+    ('Q',o_as_in_orange),
+    ('A',var1_o_as_in_orange),
+    ('O',var2_o_as_in_orange),
+    ('aU',o_as_in_now),
+    ('{O',var1_o_as_in_now),
+    ('@',a_as_in_ago),
+    ('3:',e_as_in_herd),
+    ('aI',eye),
+    ('A e',var1_eye),
+    ('b',b),
+    ('t S',ch),
+    ('d',d),
+    ('D',th_as_in_them),
+    ('e',e_as_in_them),
+    (ar_as_in_year,'3:',False),
+    ('e @',a_as_in_air),
+    ('e r',var1_a_as_in_air),
+    ('e :',var2_a_as_in_air),
+    (var3_a_as_in_air,'e :',False),
+    ('eI',a_as_in_ate),
+    ('{I',var1_a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('I',i_as_in_it),
+    ('1',var1_i_as_in_it),
+    ('I@',ear),
+    ('I r',var1_ear),
+    ('i',e_as_in_eat),
+    ('i:',var1_e_as_in_eat),
+    ('dZ',j_as_in_jump),
+    ('k',k),
+    ('x',opt_scottish_loch),
+    ('l',l),
+    ('m',m),
+    ('n',n),
+    ('N',ng),
+    ('@U',o_as_in_go),
+    ('o U',var2_o_as_in_go),
+    ('@ }',var3_o_as_in_go),
+    ('OI',oy_as_in_toy),
+    ('o I',var1_oy_as_in_toy),
+    ('p',p),
+    ('r',r),
+    ('s',s),
+    ('S',sh),
+    ('t',t),
+    ('T',th),
+    ('U@',oor_as_in_poor),
+    ('U r',var1_oor_as_in_poor),
+    ('U',opt_u_as_in_pull),
+    ('u:',oo_as_in_food),
+    ('O:',close_to_or),
+    (var1_close_to_or,'O',False),
+    ('v',v),
+    ('w',w),
+    ('j',y),
+    ('z',z),
+    ('Z',ge_of_blige_etc),
+    lex_filename="acapela.txt",
+    lex_header = "",
+    lex_entry_format = "%s"+chr(9)+"#%s"+chr(9)+"UNKNOWN\n", # TODO: part-of-speech (as above)
+    lex_word_case = any,
+    lex_footer = "",
+    inline_format = "\\Prn=%s\\", inline_header = "",
+    space_separates_words_not_phonemes=False,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[],
+  ),
+
+  "cmu" : makeDic(
+    'format of the US-English Carnegie Mellon University Pronouncing Dictionary (contributed by Jan Weiss)', # (http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
+    ('0',syllable_separator),
+    ('1',primary_stress),
+    ('2',secondary_stress),
+    ('AA',a_as_in_ah),
+    (var1_a_as_in_ah,'2',False),
+    (var2_a_as_in_ah,'1',False),
+    ('AE',a_as_in_apple),
+    ('AH',u_as_in_but),
+    (o_as_in_orange,'AA',False),
+    ('AW',o_as_in_now),
+    (a_as_in_ago,'AH',False),
+    ('ER',e_as_in_herd), # TODO: check this one
+    ('@',var4_a_as_in_ago),
+    (var5_a_as_in_ago,'@',False),
+    ('AY',eye),
+    ('B ',b),
+    ('CH',ch),
+    ('D ',d),
+    ('DH',th_as_in_them),
+    ('EH',e_as_in_them),
+    (ar_as_in_year,'ER',False),
+    (a_as_in_air,'ER',False),
+    ('EY',a_as_in_ate),
+    ('F ',f),
+    ('G ',g),
+    ('HH',h),
+    ('IH',i_as_in_it),
+    ('EY AH',ear),
+    ('IY',e_as_in_eat),
+    ('JH',j_as_in_jump),
+    ('K ',k),
+    ('L ',l),
+    ('M ',m),
+    ('N ',n),
+    ('NG',ng),
+    ('OW',o_as_in_go),
+    ('OY',oy_as_in_toy),
+    ('P ',p),
+    ('R ',r),
+    ('S ',s),
+    ('SH',sh),
+    ('T ',t),
+    ('TH',th),
+    ('UH',oor_as_in_poor),
+    ('UW',oo_as_in_food),
+    ('AO',close_to_or),
+    ('V ',v),
+    ('W ',w),
+    ('Y ',y),
+    ('Z ',z),
+    ('ZH',ge_of_blige_etc),
+    # lex_filename not set (does CMU have a lex file?)
+    inline_format = "%s", inline_header="",
+    space_separates_words_not_phonemes=False,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[],
+  ),
+
+  "bbcmicro" : makeDic(
+    "BBC Micro Speech program from 1985 (see comments in lexconvert.py for more details)",
+    # Speech was written by David J. Hoskins and published by Superior Software.  It took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; sounds "retro" by modern standards but quite impressive for the BBC Micro in 1985.  Samples are played by amplitude-modulating the BBC's tone generator.
+    # If you use an emulator like BeebEm, you'll need diskimg/Speech.ssd.  This can be made from your original Speech disc, or you might be able to find one but beware of copyright!  Same goes with the Model B ROM images included in BeebEm (you might want to delete the other models).  There has been considerable discussion over whether UK copyright law does or should allow "format-shifting" your own legally-purchased media, and I don't fully understand all the discussion so I don't want to give advice on it here.  The issue is "format-shifting" your legally-purchased BBC Micro ROM code and Speech disc to emulator images; IF this is all right then I suspect downloading someone else's copy is arguably allowed as long as you bought it legally "back in the day", but I'm not a solicitor so I don't know.
+    # lexconvert's --phones bbcmicro option creates *SPEAK commands which you can type into the BBC Micro or paste into an emulator, either at the BASIC prompt, or in a listing with line numbers provided by AUTO.  You have to load the Speech program first of course.
+    # To script this on BeebEm, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
+    # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
+    # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
+    ('4',primary_stress),
+    ('5',secondary_stress), # (these are pitch numbers on the BBC; normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary and 4=primary; 3 sounds less calm)
+    ('AA',a_as_in_ah),
+    ('AE',a_as_in_apple),
+    ('AH',u_as_in_but),
+    ('O',o_as_in_orange),
+    ('AW',o_as_in_now),
+    (a_as_in_ago,'AH',False),
+    ('ER',e_as_in_herd),
+    ('IY',eye),
+    ('B',b),
+    ('CH',ch),
+    ('D',d),
+    ('DH',th_as_in_them),
+    ('EH',e_as_in_them),
+    (ar_as_in_year,'ER',False),
+    ('AI',a_as_in_air),
+    ('AY',a_as_in_ate),
+    ('F',f),
+    ('G',g),
+    ('/H',h),
+    ('IH',i_as_in_it),
+    ('IX',var2_i_as_in_it), # (IX sounds to me like a slightly shorter version of IH)
+    ('IXAH',ear),
+    ('EE',e_as_in_eat),
+    ('J',j_as_in_jump),
+    ('K',k),
+    ('C',k,False), # for CT as in "fact", read out as K+T
+    ('L',l),
+    ('M',m),
+    ('N',n),
+    ('NX',ng),
+    ('OW',o_as_in_go),
+    ('OL',opt_ol_as_in_gold),
+    ('OY',oy_as_in_toy),
+    ('P',p),
+    ('R',r),
+    ('S',s),
+    ('SH',sh),
+    ('T',t),
+    ('TH',th),
+    ('AOR',oor_as_in_poor),
+    ('UH',oor_as_in_poor,False), # TODO: really? (espeak 'U' goes to opt_u_as_in_pull, and eSpeak also used U for the o in good, which sounds best with Speech's default UH4, hence the line below, but where did we get UH->oor_as_in_poor from?  Low-priority though because how often do you convert OUT of bbcmicro format)
+    (opt_u_as_in_pull,'UH',False),
+    ('/U',opt_u_as_in_pull,False),
+    ('/UL',opt_ul_as_in_pull),
+    ('UW',oo_as_in_food),
+    ('UX',oo_as_in_food,False),
+    ('AO',close_to_or),
+    ('V',v),
+    ('W',w),
+    ('Y',y),
+    ('Z',z),
+    ('ZH',ge_of_blige_etc),
+    lex_filename="BBCLEX",
+    lex_header = "",
+    lex_entry_format="> %s_"+chr(128)+"%s", # (specifying 'whole word' for now; remove the space before or the _ after if you want)
+    lex_word_case = "upper",
+    lex_footer = ">**",
+    # inline_format not set - handled by special-case code
+    inline_header = "",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[
+      ('KT','CT'), # Speech instructions: "CT as in fact"
+      ('DYUW','DUX'), # "DUX as in duke" (TODO: converting that back out? will currently read as D+UX)
+    ],
+  ),
+
+  "unicode-ipa" : makeDic(
+    "Unicode IPA (as used in an increasing number of dictionary programs, websites etc)",
+    ('.',syllable_separator,False),
+    (u'\u02c8',primary_stress),
+    (u'\u02cc',secondary_stress),
+    ('#',text_sharp),
+    (' ',text_space),
+    ('_',text_underline),
+    ('?',text_question),
+    ('!',text_exclamation),
+    (',',text_comma),
+    (u'\u0251',a_as_in_ah),
+    (u'\u02d0',var2_a_as_in_ah),
+    (u'\u0251\u02d0',var3_a_as_in_ah),
+    (u'\u0251\u0279',var4_a_as_in_ah),
+    ('a\\u02d0',var5_a_as_in_ah),
+    (u'\xe6',a_as_in_apple),
+    ('a',a_as_in_apple,False),
+    (u'\u028c',u_as_in_but),
+    (u'\u0252',o_as_in_orange),
+    (var1_o_as_in_orange,u'\u0251',False),
+    (u'\u0254',var2_o_as_in_orange),
+    (u'a\u028a',o_as_in_now),
+    (u'\xe6\u0254',var1_o_as_in_now),
+    (u'\u0259',a_as_in_ago),
+    (u'\u0259\u02d0',e_as_in_herd),
+    (u'\u025a',var1_a_as_in_ago),
+    (u'a\u026a',eye),
+    (u'\u0251e',var1_eye),
+    ('b',b),
+    (u't\u0283',ch),
+    (u'\u02a7',ch,False),
+    ('d',d),
+    (u'\xf0',th_as_in_them),
+    (u'\u025b',e_as_in_them),
+    ('e',var1_e_as_in_them),
+    (u'\u025d',ar_as_in_year),
+    (u'\u025c\u02d0',ar_as_in_year,False),
+    (u'\u025b\u0259',a_as_in_air),
+    (u'\u025b\u0279',var1_a_as_in_air),
+    (u'e\u02d0',var2_a_as_in_air),
+    (u'\u025b\u02d0',var3_a_as_in_air),
+    (u'e\u0259',var4_a_as_in_air),
+    (u'e\u026a',a_as_in_ate),
+    (u'\xe6\u026a',var1_a_as_in_ate),
+    ('f',f),
+    (u'\u0261',g),
+    ('h',h),
+    (u'\u026a',i_as_in_it),
+    (u'\u0268',var1_i_as_in_it),
+    (u'\u026a\u0259',ear),
+    (u'\u026a\u0279',var1_ear),
+    ('i',e_as_in_eat),
+    (u'i\u02d0',var1_e_as_in_eat),
+    (u'd\u0292',j_as_in_jump),
+    (u'\u02a4',j_as_in_jump,False),
+    ('k',k),
+    ('x',opt_scottish_loch),
+    ('l',l),
+    (u'd\u026b',var1_l),
+    ('m',m),
+    ('n',n),
+    (u'\u014b',ng),
+    (u'\u0259\u028a',o_as_in_go),
+    ('o',var1_o_as_in_go),
+    (u'o\u028a',var2_o_as_in_go),
+    (u'\u0259\u0289',var3_o_as_in_go),
+    (u'\u0254\u026a',oy_as_in_toy),
+    (u'o\u026a',var1_oy_as_in_toy),
+    ('p',p),
+    (u'\u0279',r),
+    (var1_r,'r',False),
+    ('s',s),
+    (u'\u0283',sh),
+    ('t',t),
+    (u'\u027e',var1_t),
+    (u'\u03b8',th),
+    (u'\u028a\u0259',oor_as_in_poor),
+    (u'\u028a\u0279',var1_oor_as_in_poor),
+    (u'\u028a',opt_u_as_in_pull),
+    (u'\u0289\u02d0',oo_as_in_food),
+    (u'u\u02d0',var1_oo_as_in_food),
+    ('u',var2_oo_as_in_food),
+    (u'\u0254\u02d0',close_to_or),
+    (var1_close_to_or,u'\u0254',False),
+    (u'o\u02d0',var2_close_to_or),
+    ('v',v),
+    ('w',w),
+    (u'\u028d',var1_w),
+    ('j',y),
+    ('z',z),
+    (u'\u0292',ge_of_blige_etc),
+    (u'\u0294',glottal_stop),
+    lex_filename="words-ipa.html", # write-only for now
+    lex_header = '<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>',
+    lex_entry_format="<tr><td>%s</td><td>%s</td></tr>\n",
+    lex_word_case = any,
+    lex_footer = "</table></body></html>\n",
+    inline_format = "%s", inline_header="",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # TODO: really? (at least '-' should be safe to drop)
+    cleanup_regexps=[],
+  ),
+
+  "latex-ipa" : makeDic(
+    "LaTeX IPA package (in case you need to typeset your custom pronunciations in an academic paper or something)",
+    ('.',syllable_separator,False),
+    ('"',primary_stress),
+    ('\\textsecstress{}',secondary_stress),
+    ('\\#',text_sharp),
+    (' ',text_space),
+    ('\\_',text_underline),
+    ('?',text_question),
+    ('!',text_exclamation),
+    (',',text_comma),
+    ('A',a_as_in_ah),
+    (':',var2_a_as_in_ah),
+    ('A:',var3_a_as_in_ah),
+    ('A\\textturnr{}',var4_a_as_in_ah),
+    ('a:',var5_a_as_in_ah),
+    ('\\ae{}',a_as_in_apple),
+    ('2',u_as_in_but),
+    ('6',o_as_in_orange),
+    (var1_o_as_in_orange,'A',False),
+    ('O',var2_o_as_in_orange),
+    ('aU',o_as_in_now),
+    ('\\ae{}O',var1_o_as_in_now),
+    ('@',a_as_in_ago),
+    ('@:',e_as_in_herd),
+    ('\\textrhookschwa{}',var1_a_as_in_ago),
+    ('aI',eye),
+    ('Ae',var1_eye),
+    ('b',b),
+    ('tS',ch),
+    ('d',d),
+    ('D',th_as_in_them),
+    ('E',e_as_in_them),
+    ('e',var1_e_as_in_them),
+    ('3:',ar_as_in_year),
+    ('E@',a_as_in_air),
+    ('E\\textturnr{}',var1_a_as_in_air),
+    ('e:',var2_a_as_in_air),
+    ('E:',var3_a_as_in_air),
+    ('e@',var4_a_as_in_air),
+    ('eI',a_as_in_ate),
+    ('\\ae{}I',var1_a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('h',h),
+    ('I',i_as_in_it),
+    ('1',var1_i_as_in_it),
+    ('I@',ear),
+    ('I\\textturnr{}',var1_ear),
+    ('i',e_as_in_eat),
+    ('i:',var1_e_as_in_eat),
+    ('dZ',j_as_in_jump),
+    ('k',k),
+    ('x',opt_scottish_loch),
+    ('l',l),
+    ('d\\textltilde{}',var1_l),
+    ('m',m),
+    ('n',n),
+    ('N',ng),
+    ('@U',o_as_in_go),
+    ('o',var1_o_as_in_go),
+    ('oU',var2_o_as_in_go),
+    ('@0',var3_o_as_in_go),
+    ('OI',oy_as_in_toy),
+    ('oI',var1_oy_as_in_toy),
+    ('p',p),
+    ('\\textturnr{}',r),
+    (var1_r,'r',False),
+    ('s',s),
+    ('S',sh),
+    ('t',t),
+    ('R',var1_t),
+    ('T',th),
+    ('U@',oor_as_in_poor),
+    ('U\\textturnr{}',var1_oor_as_in_poor),
+    ('U',opt_u_as_in_pull),
+    ('0:',oo_as_in_food),
+    ('u:',var1_oo_as_in_food),
+    ('u',var2_oo_as_in_food),
+    ('O:',close_to_or),
+    (var1_close_to_or,'O',False),
+    ('o:',var2_close_to_or),
+    ('v',v),
+    ('w',w),
+    ('\\textturnw{}',var1_w),
+    ('j',y),
+    ('z',z),
+    ('Z',ge_of_blige_etc),
+    ('P',glottal_stop),
+    lex_filename="words-ipa.tex", # write-only for now
+    lex_header = r'\documentclass[12pt,a4paper]{article} \usepackage[safe]{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}',
+    lex_entry_format=r"%s & \textipa{%s}\\"+"\n",
+    lex_word_case = any,
+    lex_footer = r"\end{longtable}\end{document}"+"\n",
+    inline_format = "\\textipa{%s}",
+    inline_header = r"% In preamble, put \usepackage[safe]{tipa}", # (the [safe] part is recommended if you're mixing with other TeX)
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[],
+  ),
+
+  "pinyin-approx" : makeDic(
+    "Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words - works with some words better than others)", # write-only for now
+    ('4',primary_stress),
+    ('2',secondary_stress),
+    ('a5',a_as_in_ah),
+    ('ya5',a_as_in_apple),
+    ('e5',u_as_in_but),
+    ('yo5',o_as_in_orange),
+    ('ao5',o_as_in_now),
+    (a_as_in_ago,'e5',False),
+    ('wu5',var4_a_as_in_ago),
+    (var5_a_as_in_ago,'wu5',False),
+    ('ai5',eye),
+    ('bu0',b),
+    ('che0',ch),
+    ('de0',d),
+    ('ze0',th_as_in_them),
+    ('ye5',e_as_in_them),
+    (ar_as_in_year,'e5',False),
+    (a_as_in_air,'ye5',False),
+    ('ei5',a_as_in_ate),
+    ('fu0',f),
+    ('ge0',g),
+    ('he0',h),
+    ('yi5',i_as_in_it),
+    ('yi3re5',ear),
+    (e_as_in_eat,'yi5',False),
+    ('zhe0',j_as_in_jump),
+    ('ke0',k),
+    ('le0',l),
+    ('me0',m),
+    ('ne0',n),
+    ('eng0',ng),
+    ('ou5',o_as_in_go),
+    ('ruo2yi5',oy_as_in_toy),
+    ('pu0',p),
+    ('re0',r),
+    ('se0',s),
+    ('she0',sh),
+    ('te0',t),
+    (th,'zhe0',False),
+    (oor_as_in_poor,'wu5',False),
+    ('yu5',oo_as_in_food),
+    ('huo5',close_to_or),
+    (v,'fu0',False),
+    ('wu0',w),
+    ('yu0',y),
+    (z,'ze0',False),
+    (ge_of_blige_etc,'zhe0',False),
+    lex_filename="words-pinyin-approx.tex", # write-only for now
+    lex_header = "Pinyin approxmations (very approximate!)\n----------------------------------------\n",
+    lex_entry_format = "%s ~= %s\n",
+    lex_word_case = any,
+    lex_footer = "",
+    inline_format = "%s", inline_header = "",
+    space_separates_words_not_phonemes=True,
+    stress_comes_before_vowel=False,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_regexps=[
+      ("te0ye","tie"),
+      ("e0e5","e5"),("([^aeiou][uo])0e(5)",r"\1\2"),
+      ("yu0y","y"),
+      ("wu0yo5","wo5"),
+      ("([bdfghklmnpwz])[euo]0ei",r"\1ei"),
+      ("([bdghklmnpstwz])[euo]0ai",r"\1ai"),
+      ("([ghklmnpstyz])[euo]0ya",r"\1a"),("([ghklmnpstz])a([0-5]*)ne0",r"\1an\2"),
+      ("([bdfghklmnpstwyz])[euo]0a([1-5])",r"\1a\2"),
+      ("([bdjlmnpt])[euo]0yi",r"\1i"),("([bjlmnp])i([1-5]*)ne0",r"\1in\2"),
+      ("([zs])he0ei",r"\1hei"),
+      ("([dfghklmnprstyz])[euo]0ou",r"\1ou"),
+      ("([dghklnrst])[euo]0huo",r"\1uo"),
+      ("([bfpm])[euo]0huo",r"\1o"),
+      ("([bdghklmnprstyz])[euo]0ao",r"\1ao"),
+      ("([zcs])h[eu]0ao",r"\1hao"),
+      ("re0r","r"),
+      ("zhe0ne0","zhun5"),
+      ("54","4"),
+      ("52","2"),
+      ("([bdjlmnpty])i([1-9])eng0",r"\1ing\2"),
+      ("ya([1-9])eng0",r"yang\1"),
+      ("ya([1-9])ne0",r"an\1"),
+      ("ye([1-9])ne0",r"yan\1"),("([wr])[eu]0yan",r"\1en"),
+      ("yi([1-9])ne0",r"yin\1"),
+      
+      ("yu0","yu5"),("eng0","eng5"), # they won't work unvoiced anyway
+      ("0","5"), # comment out if the synth supports 'tone 0 for unvoiced'
+      #("[euo]0","0"), # comment in if it expects consonants only when doing that
+    ],
+  ),
+}
+
+class Counter(object):
+    c=sc=0
+def other():
+    Counter.c += 1 ; Counter.sc=0 ; return Counter.c
+consonants = []
+def consonant():
+    r = other() ; consonants.append(r) ; return r
+def vowel(): return other()
+def variant():
+    Counter.sc += 1
+    while str(Counter.sc).endswith('0'): Counter.sc += 1
+    return 0, float('%d.%d' % (Counter.c,Counter.sc))
+    # the 0 is so we can say _, name = variant()
+    # so as to get some extra indentation
+
+def makeDic(doc,*args,**kwargs):
+    d = {("settings","doc"):doc}
+    for a in args:
+        assert type(a)==tuple and (len(a)==2 or len(a)==3)
+        k=a[0]
+        assert not k in d, "Duplicate key "+repr(k) # Python does not do this in {...} notation, just lets you overwrite!
+        v=a[1] ; d[k] = v
+        if len(a)==3: bidir=a[2]
+        else: bidir=True
+        if bidir:
+            # (k,v,True) = both (k,v) and (v,k)
+            assert not v in d, "Duplicate key "+repr(v)+" (did you forget a ,False to suppress bidirectional mapping?)"
+            d[v] = k
+    for k,v in kwargs.items(): d[('settings',k)] = v
+    return d
+def getSetting(formatName,settingName):
+  return lexFormats[formatName][('settings',settingName)]
+lexFormats = LexFormats()
 
 import commands,sys,re,os
 
-for row in table: assert len(row)==len(table[0]),"Wrong row length: "+repr(row) # sanity-check the table
-
-def compare_tables(table1,table2,colsToIgnore):
-  # Debug function to compare 2 versions of the table
-  def checkDuplicateRows(t,which):
-    d = {}
-    for i in t:
-      if d.has_key(i): print "Warning: duplicate row in "+which+":",i
-      d[i]=1
-  checkDuplicateRows(table1,"first table") ; checkDuplicateRows(table2,"second table")
-  for col in table1[0]:
-    if col not in table2[0]: print "Deleted column:",col
-  for col in table2[0]:
-    if col not in table1[0]: print "Added column:",col
-  maps = [{}, {}]
-  commonCols = filter(lambda x:x in table2[0],table1[0])
-  for dx in [0,1]:
-    table = [table1,table2][dx]
-    for col1 in commonCols:
-      if col1 in colsToIgnore: continue
-      i1 = list(table[0]).index(col1)
-      for col2 in filter(lambda x: x>col1, commonCols):
-        if col2 in colsToIgnore: continue
-        i2 = list(table[0]).index(col2)
-        for row in table[1:]:
-          if not row[i1] or not row[i2]: continue # don't bother reporting mappings involving null strings - they don't matter
-          maps[dx][(col1,row[i1],col2,row[i2])] = True
-  deleted_mappings = filter(lambda k:not maps[1].has_key(k), maps[0].keys())
-  added_mappings = filter(lambda k:not maps[0].has_key(k), maps[1].keys())
-  def simplify_mappings(mappings,which):
-    byRow = {} ; byCol = {}
-    for k1,v1,k2,v2 in mappings:
-      if not byRow.has_key((k1,v1)): byRow[(k1,v1)]=[]
-      byRow[(k1,v1)].append((k2,v2))
-      if not byCol.has_key((k2,v2)): byCol[(k2,v2)]=[]
-      byCol[(k2,v2)].append((k1,v1))
-    byColCopy = byCol.copy()
-    for r in byRow.keys():
-      rowLen = len(r)
-      maxColLen = max(map(lambda c:len(byCol[c]),byRow[r]))
-      if rowLen > maxColLen:
-        if len(byRow[r])>1: word="mappings:"
-        else: word="mapping"
-        print which,word,r,"to",byRow[r]
-        for k in byColCopy.keys():
-          if r in byColCopy[k]: byColCopy[k].remove(r)
-    for c in filter(lambda x:byColCopy[x],byColCopy.keys()):
-      if len(byColCopy[c])>1: word="mappings:"
-      else: word="mapping"
-      print which,word,c,"to",byColCopy[c]
-  simplify_mappings(deleted_mappings,"Deleted")
-  simplify_mappings(added_mappings,"Added")
-
-# e.g. if someone sends in newlexconvert.py and you want to review all changes not involving sampa/acapela:
-# import lexconvert,newlexconvert
-# lexconvert.compare_tables(lexconvert.table,newlexconvert.table,['x-sampa', 'acapela-uk'])
-
-def squash_table(colsToDelete):
-  # For maintenance use.  Deletes colsToDelete, and introduces dittos/list-alternatives
-  colsToDelete=map(lambda c:list(table[0]).index(c),colsToDelete)
-  colsToDelete.sort() ; colsToDelete.reverse()
-  ret = [] ; lastRow = None
-  for row in table:
-    row=list(row)
-    for c in colsToDelete: del row[c]
-    if ret:
-      for i in range(len(row)):
-        k=-1
-        while ret[k][i]==0: k -= 1
-        if row[i]==ret[k][i]: row[i]=0
-      if len(filter(lambda x:not x==0,row))==1:
-        # only 1 thing changed
-        ret[-1]=list(ret[-1])
-        for i in range(len(row)):
-          if not row[i]==0:
-            if not type(ret[-1][i])==type([]): ret[-1][i]=[ret[-1][i]]
-            ret[-1][i].append(row[i])
-        ret[-1]=tuple(ret[-1])
-        continue
-    ret.append(tuple(row))
-  # return ret
-  print "table = ["
-  for r in ret: print "   "+repr(r)+","
-  print "]"
-
-# Deal with any rows that contain lists of alternatives
-# or 0 (ditto) marks
-# If multiple lists in a row e.g. ([ab],[cd]), give [(a,c), (b,c), (a,d)], as (b,d) would never be reached anyway.
-# (Removing duplicates and redundant rows is not really necessary but may help debugging)
-newTable=[] ; hadAlready = {}
-prevLine = None
-for line in table:
-  line=list(line)
-  for i in range(len(line)):
-    if line[i]==0: line[i]=prevLine[i]
-  line=tuple(line)
-  colsWithLists = filter(lambda col: type(line[col])==type([]), range(len(line)))
-  if not colsWithLists: newTable.append(line)
-  for col in colsWithLists:
-    def firstItemIfList(l):
-      if type(l)==type([]): return l[0]
-      else: return l
-    for extraTuple in [tuple(map(lambda x:firstItemIfList(x),list(line[:col])+[i]+list(line[col+1:]))) for i in line[col]]:
-      if hadAlready.has_key(extraTuple): continue
-      hadAlready[extraTuple]=1
-      newTable.append(extraTuple)
-  prevLine = line
-table = newTable
-
-cached_source,cached_dest,cached_dict = None,None,None
-def make_dictionary(source,dest):
-    global cached_source,cached_dest,cached_dict
-    if (source,dest) == (cached_source,cached_dest): return cached_dict
-    types = list(table[0])
-    assert source in types,"Unknown synthesizer name to convert from: "+repr(source)
-    assert dest in types, "Unknown synthesizer name to convert to: "+repr(dest)
-    source,dest = types.index(source), types.index(dest)
+cached_sourceName,cached_destName,cached_dict = None,None,None
+def make_dictionary(sourceName,destName):
+    global cached_sourceName,cached_destName,cached_dict
+    if (sourceName,destName) == (cached_sourceName,cached_destName): return cached_dict
+    source = lexFormats[sourceName]
+    dest = lexFormats[destName]
     d = {}
     global dest_consonants ; dest_consonants = []
-    global dest_syllable_sep ; dest_syllable_sep = table[1][dest]
-    for l in table[1:]:
-        if l[source]==None or l[dest]==None: continue
-        if not l[source] in d: d[l[source]]=l[dest]
-        is_in_espeak_consonants=True
-        for cTest in l[1]:
-            if cTest not in espeak_consonants:
-                is_in_espeak_consonants=False; break
-        if is_in_espeak_consonants: dest_consonants.append(l[dest])
-    cached_source,cached_dest,cached_dict=source,dest,d
+    global dest_syllable_sep ; dest_syllable_sep = dest.get(syllable_separator,"")
+    global implicit_vowel_before_NL
+    implicit_vowel_before_NL = None
+    for k,v in source.items():
+      if type(k)==tuple: continue # settings
+      if type(v) in [str,unicode]: continue # (num->string entries are for converting IN to source; we want the string->num entries for converting out)
+      if not v in dest: v = int(v) # (try the main version of a variant)
+      if not v in dest: continue # (haven't got it - will have to ignore or break into parts)
+      d[k] = dest[v]
+      if v in consonants: dest_consonants.append(d[k])
+      if int(v)==e_as_in_herd and (not implicit_vowel_before_NL or v==int(v)): # TODO: or u_as_in_but ?  used by festival and some other synths before words ending 'n' or 'l' (see usage of implicit_vowel_before_NL later)
+        implicit_vowel_before_NL = d[k]
+    cached_sourceName,cached_destName,cached_dict=sourceName,destName,d
     return d
 
 def convert(pronunc,source,dest):
@@ -291,34 +1230,34 @@ def convert(pronunc,source,dest):
     dictionary = make_dictionary(source,dest)
     maxLen=max(len(l) for l in dictionary.keys())
     debugInfo=""
+    safe_to_drop = getSetting(source,"safe_to_drop_characters")
     while pronunc:
         for lettersToTry in range(maxLen,-1,-1):
             if not lettersToTry:
-              if source=="espeak" and not pronunc[0] in "_: !": sys.stderr.write("Warning: ignoring unknown espeak character "+repr(pronunc[0])+debugInfo+"\n")
+              if safe_to_drop==True: pass
+              elif (not safe_to_drop) or not pronunc[0] in safe_to_drop: sys.stderr.write("Warning: ignoring unknown "+source+" character "+repr(pronunc[0])+debugInfo+"\n")
               pronunc=pronunc[1:] # ignore
             elif dictionary.has_key(pronunc[:lettersToTry]):
                 debugInfo=" after "+pronunc[:lettersToTry]
                 toAdd=dictionary[pronunc[:lettersToTry]]
-                if toAdd in ['0','1','2','4'] and not dest in noughts_used_other_than_stress: # it's a stress mark in a notation that places stress marks AFTER vowels (noughts_used_other_than_stress case handled below)
-                    if dest=="bbcmicro": # normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary stress and 4=primary stress (3 sounds less calm)
-                      if toAdd=='1': toAdd='4'
-                      elif toAdd=='2': toAdd='5'
-                    if source in stress_comes_before_vowel: toAdd, toAddAfter = "",toAdd # move before to after
+                isStressMark=(toAdd and toAdd in [lexFormats[dest].get(primary_stress,''),lexFormats[dest].get(secondary_stress,''),lexFormats[dest].get(syllable_separator,'')])
+                if isStressMark and not getSetting(dest,"stress_comes_before_vowel"):
+                    if getSetting(source,"stress_comes_before_vowel"): toAdd, toAddAfter = "",toAdd # move stress marks from before vowel to after
                     else:
                         # With Cepstral synth, stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
                         # (not dest in ["espeak","latex-ipa"] because they use 0 as a phoneme; dealt with separately below)
                         r=len(ret)-1
                         while ret[r] in dest_consonants or ret[r].endswith("*added"): r -= 1 # (if that raises IndexError then the input had a stress mark before any vowel) ("*added" condition is there so that implicit vowels don't get the stress)
                         ret.insert(r+1,toAdd) ; toAdd=""
-                elif ((toAdd in u"',\u02c8\u02cc" and dest in ["espeak","unicode-ipa","mac-uk"]) or (toAdd in ['"','\\textsecstress{}'] and dest=="latex-ipa")) and not source in stress_comes_before_vowel: # it's a stress mark that should be moved from after the vowel to before it
+                elif isStressMark and not getSetting(source,"stress_comes_before_vowel"): # it's a stress mark that should be moved from after the vowel to before it
                     i=len(ret)
                     while i and (ret[i-1] in dest_consonants or ret[i-1].endswith("*added")): i -= 1
                     if i: i-=1
                     ret.insert(i,toAdd)
                     if dest_syllable_sep: ret.append(dest_syllable_sep) # (TODO: this assumes stress marks are at end of syllable rather than immediately after vowel; correct for Festival; check others; probably a harmless assumption though; mac-uk is better with syllable separators although espeak basically ignores them)
                     toAdd = ""
-                # attempt to sort out the festival dictionary's (and other's) implicit @ (TODO or is it an implicit uh ?):
-                elif ret and ret[-1] and toAdd in ['n','l'] and ret[-1] in dest_consonants: ret.append(dictionary['@']+'*added')
+                # attempt to sort out the festival dictionary's (and other's) implicit_vowel_before_NL
+                elif implicit_vowel_before_NL and ret and ret[-1] and toAdd in ['n','l'] and ret[-1] in dest_consonants: ret.append(implicit_vowel_before_NL+'*added')
                 elif len(ret)>2 and ret[-2].endswith('*added') and toAdd and not toAdd in dest_consonants and not toAdd==dest_syllable_sep: del ret[-2]
                 # OK, add it:
                 if toAdd:
@@ -329,63 +1268,17 @@ def convert(pronunc,source,dest):
                         toAddAfter=None
                     ret += toAdd[1:]
                     # TODO: the above few lines make sure that toAddAfter goes after the FIRST phoneme if toAdd is multiple phonemes, but works only when converting from eSpeak to non-eSpeak; it ought to work when converting from non-eSpeak to non-eSpeak also (doesn't matter when converting TO eSpeak)
-                if source=="espeak" and pronunc[:lettersToTry]=="e@" and len(pronunc)>lettersToTry and pronunc[lettersToTry]=="r" and (len(pronunc)==lettersToTry+1 or pronunc[lettersToTry+1] in espeak_consonants): lettersToTry += 1 # hack because the 'r' is implicit in other synths (but DO have it if there's another vowel to follow)
+                if source=="espeak" and pronunc[:lettersToTry]=="e@" and len(pronunc)>lettersToTry and pronunc[lettersToTry]=="r" and (len(pronunc)==lettersToTry+1 or pronunc[lettersToTry+1] in "bdDfghklmnNprsStTvwjzZ"): lettersToTry += 1 # hack because the 'r' is implicit in other synths (but DO have it if there's another vowel to follow)
                 pronunc=pronunc[lettersToTry:]
                 break
     if toAddAfter: ret.append(toAddAfter)
     if ret and ret[-1]==dest_syllable_sep: del ret[-1] # spurious syllable separator at end
-    if dest in space_separates_words_not_phonemes: separator = ''
+    if getSetting(dest,'space_separates_words_not_phonemes'): separator = ''
     else: separator = ' '
     ret=separator.join(ret).replace('*added','')
-    if dest=="cepstral": return ret.replace(" 1","1").replace(" 0","0")
-    if dest=="pinyin-approx":
-        for s,r in [
-        ("te0ye","tie"),
-        ("e0e5","e5"),("([^aeiou][uo])0e(5)",r"\1\2"),
-        ("yu0y","y"),
-        ("wu0yo5","wo5"),
-        ("([bdfghklmnpwz])[euo]0ei",r"\1ei"),
-        ("([bdghklmnpstwz])[euo]0ai",r"\1ai"),
-        ("([ghklmnpstyz])[euo]0ya",r"\1a"),("([ghklmnpstz])a([0-5]*)ne0",r"\1an\2"),
-        ("([bdfghklmnpstwyz])[euo]0a([1-5])",r"\1a\2"),
-        ("([bdjlmnpt])[euo]0yi",r"\1i"),("([bjlmnp])i([1-5]*)ne0",r"\1in\2"),
-        ("([zs])he0ei",r"\1hei"),
-        ("([dfghklmnprstyz])[euo]0ou",r"\1ou"),
-        ("([dghklnrst])[euo]0huo",r"\1uo"),
-        ("([bfpm])[euo]0huo",r"\1o"),
-        ("([bdghklmnprstyz])[euo]0ao",r"\1ao"),
-        ("([zcs])h[eu]0ao",r"\1hao"),
-        ("re0r","r"),
-        ("zhe0ne0","zhun5"),
-        ("54","4"),
-        ("52","2"),
-        ("([bdjlmnpty])i([1-9])eng0",r"\1ing\2"),
-        ("ya([1-9])eng0",r"yang\1"),
-        ("ya([1-9])ne0",r"an\1"),
-        ("ye([1-9])ne0",r"yan\1"),("([wr])[eu]0yan",r"\1en"),
-        ("yi([1-9])ne0",r"yin\1"),
-
-        ("yu0","yu5"),("eng0","eng5"), # they won't work unvoiced anyway
-        ("0","5"), # comment out if the synth supports 'tone 0 for unvoiced'
-        #("[euo]0","0"), # comment in if it expects consonants only when doing that
-        
-        ]: ret=re.sub(s,r,ret)
-    if dest=="espeak": return cleanup_espeak_entry(ret)
-    elif dest=="mac-uk": return ret.replace("o&U.Ol","o&Ul")
-    else: return ret
-
-def cleanup_espeak_entry(r):
-    r = r.replace("k'a2n","k'@n").replace("ka2n","k@n").replace("gg","g").replace("@U","oU") # (eSpeak uses oU to represent @U; difference is given by its accent parameters)
-    if r.endswith("i@r"): return r[:-3]+"i@"
-    if r.endswith("U@r"): return r[:-3]+"U@"
-    elif r.endswith("@r") and not r.endswith("e@r"): return r[:-2]+"3"
-    if r.endswith("A:r"): return r[:-3]+"A@"
-    if r.endswith("O:r"): return r[:-3]+"O@"
-    # if r.endswith("@l") and not r.endswith("i@l") and not r.endswith("U@l"): return r[:-2]+"@L" # only in older versions of espeak (not valid in more recent versions)
-    if r.endswith("rr") or r.endswith("3:r"): return r[:-1]
-    # TODO: 'declared' & 'declare' the 'r' after the 'E' sounds a bit 'regional' (but pretty).  but sounds incomplete w/out 'r', and there doesn't seem to be an E2 or E@
-    # TODO: consider adding 'g' to words ending in 'N' (if want the 'g' pronounced in '-ng' words) (however, careful of words like 'yankee' where the 'g' would be followed by a 'k'; this may also be a problem going into the next word)
-    return r
+    for s,r in getSetting(dest,'cleanup_regexps'):
+      ret=re.sub(s,r,ret)
+    return ret
 
 def espeak_probably_right_already(existing_pronunc,new_pronunc):
     # Compares our "new" pronunciation with eSpeak's existing pronunciation.  As our transcription into eSpeak notation is only approximate, it could be that our new pronunciation is not identical to the existing one but the existing one is actually correct.
@@ -512,60 +1405,51 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
       os.system("espeak --compile=en")
     return not_output_because_ok
 
-def convert_user_lexicon(fromFormat,toFormat,outFile):
-    if fromFormat=="festival": lex = eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']')
-    elif fromFormat=="espeak": lex = filter(lambda x:len(x)==2,[l.split()[:2] for l in open("en_extra").readlines()])
+def read_user_lexicon(fromFormat):
+    if fromFormat=="festival": return eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']')
+    lexfile = open(getSetting(fromFormat,"lex_filename"))
+    if fromFormat=="espeak": return filter(lambda x:len(x)==2,[l.split()[:2] for l in lexfile.readlines()])
+    elif fromFormat=="bbcmicro": return [(w[0].lstrip().rstrip('_').lower(),w[1]) for w in filter(lambda x:len(x)==2,[w.split(chr(128)) for w in lexfile.read().split('>')])] # TODO: this reads back the entries we generate, but is unlikely to work well with the wildcards in the default lexicon that would have been added if SPEECH_DISK was set
     elif fromFormat in ["acapela-uk","x-sampa"]:
         lex = []
-        for l in open("acapela.txt").readlines():
+        for l in lexfile.readlines():
             word, pronunc, ignore = l.split(None,2)
             if pronunc.startswith("#"): pronunc=pronunc[1:]
             lex.append((word,pronunc))
+        return lex
     elif fromFormat=="cepstral":
         lex = []
-        for l in open("lexicon.txt").readlines():
+        for l in lexfile.readlines():
             word, ignore, pronunc = l.split(None,2)
             lex.append((word,pronunc))
+        return lex
     else: raise Exception("Reading from '%s' lexicon file not yet implemented" % (fromFormat,))
-    if toFormat=="mac": outFile.write("# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed")
-    elif "sapi" in toFormat: outFile.write("rem  You have to run this file\nrem  with ptts.exe in the same directory\nrem  to add these words to the SAPI lexicon\n\n")
-    elif toFormat=="unicode-ipa": outFile.write("""<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>""")
-    elif toFormat=="latex-ipa": outFile.write(r"""\documentclass[12pt,a4paper]{article} \usepackage[safe]{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}""")
-    elif toFormat=="pinyin-approx": outFile.write("Pinyin approxmations (very approximate!)\n----------------------------------------\n")
+
+def convert_user_lexicon(fromFormat,toFormat,outFile):
+    lex = read_user_lexicon(fromFormat)
+    if not toFormat=="mac-uk":
+      outFile.write(getSetting(toFormat,"lex_header"))
+      entryFormat=getSetting(toFormat,"lex_entry_format")
+      wordCase=getSetting(toFormat,"lex_word_case")
     for word, pronunc in lex:
         pronunc = convert(pronunc,fromFormat,toFormat)
-        if toFormat=="espeak": outFile.write(word+" "+pronunc+"\n")
-        elif "sapi" in toFormat: outFile.write("ptts -la "+word+" \""+pronunc+"\"\n")
-        elif toFormat=="cepstral": outFile.write(word.lower()+" 0 "+pronunc+"\n")
-        elif toFormat=="mac": outFile.write(" -e \"s/"+word+"/[[inpt PHON]]"+pronunc+"[[inpt TEXT]]/g\"")
-        elif toFormat=="bbcmicro": outFile.write("> "+word.upper()+"_"+chr(128)+pronunc) # (specifying 'whole word'; remove the space before or the _ after if you want)
-        elif toFormat=="unicode-ipa": outFile.write("<tr><td>"+word+"</td><td>"+pronunc.encode("utf-8")+"</td></tr>\n")
-        elif toFormat=="latex-ipa": outFile.write(word+r" & \textipa{"+pronunc+r"}\\"+"\n")
-        elif toFormat=="pinyin-approx": outFile.write(word+" ~= "+pronunc+"\n")
-        elif toFormat in ["acapela-uk","x-sampa"]: outFile.write(word+chr(9)+"#"+pronunc+chr(9)+"UNKNOWN\n") # TODO may be able to convert part-of-speech (NOUN etc) to/from some other formats e.g. Festival
-        elif toFormat=="mac-uk": outFile.append((word,pronunc)) # (it's not really a file)
-        else: raise Exception("Writing to lexicon in %s format not yet implemented" % (format,))
-    if toFormat=="mac": outFile.write("\n")
-    elif toFormat=="bbcmicro": close_bbclex(outFile)
-    elif toFormat=="unicode-ipa": outFile.write("</table></body></html>\n")
-    elif toFormat=="latex-ipa": outFile.write("\end{longtable}\end{document}\n")
+        if type(pronunc)==unicode: pronunc=pronunc.encode('utf-8')
+        if toFormat=="mac-uk": outFile.append((word,pronunc)) # (it's not really a file)
+        else:
+          if wordCase=="upper": word=word.upper()
+          elif wordCase=="lower": word=word.lower()
+          outFile.write(entryFormat % (word,pronunc))
+    if toFormat=="bbcmicro": bbc_appendDefaultLex(outFile)
+    if not toFormat=="mac-uk": outFile.write(getSetting(toFormat,"lex_footer"))
 
+def write_inlineWord_header(format):
+    h = getSetting(format,"inline_header")
+    if h: print h
 bbc_charsSoFar=0 # hack for bbcmicro
-first_word=True # hack for TeX
 def markup_inline_word(format,pronunc):
-    global first_word,bbc_charsSoFar
-    if format=="espeak": return "[["+pronunc+"]]"
-    elif format=="mac": return "[[inpt PHON]]"+pronunc+"[[inpt TEXT]]"
-    elif "sapi" in format: return "<pron sym=\""+pronunc+"\"/>"
-    elif format=="cepstral": return "<phoneme ph='"+pronunc+"'>p</phoneme>"
-    elif format=="acapela-uk": return "\\Prn="+pronunc+"\\"
-    elif format=="bbcmicro":
-      # BBC Micro Speech program by David J. Hoskins / Superior 1985.  Took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; "retro" by modern standards but ground-breaking at the time.
-      # If you use an emulator like BeebEm, you'll need diskimg/Speech.ssd.  This can be made from your original Speech disc, or you might be able to find one but beware of copyright!  Same goes with the Model B ROM images included in BeebEm (you might want to delete the other models).  There has been considerable discussion over whether UK copyright law does or should allow "format-shifting" your own legally-purchased media, and I don't fully understand all the discussion so I don't want to give advice on it here.  The issue is "format-shifting" your legally-purchased BBC Micro ROM code and Speech disc to emulator images; IF this is all right then I suspect downloading someone else's copy is arguably allowed as long as you bought it legally "back in the day", but I'm not a solicitor so I don't know.
-      # lexconvert's --phones bbcmicro option creates *SPEAK commands which you can type into the BBC Micro or paste into an emulator (e.g. BeebEm), either at the BASIC prompt or in a listing (with line numbers provided by AUTO).  You have to load the Speech program first of course.
-      # To script this, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
-      # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
-      # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
+    if type(pronunc)==unicode: pronunc=pronunc.encode('utf-8') # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
+    if format=="bbcmicro":
+      global bbc_charsSoFar
       if not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 165: # 238 is max len of the immediate BASIC prompt, but get a "Line too long" message from Speech if go over 165 including the '*SPEAK ' (158 excluding it).
         if bbc_charsSoFar: r="\n"
         else: r=""
@@ -574,14 +1458,7 @@ def markup_inline_word(format,pronunc):
       else:
         bbc_charsSoFar += len(pronunc)+1
         return pronunc
-    elif format=="unicode-ipa": return pronunc.encode("utf-8") # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
-    elif format=="latex-ipa":
-      if first_word:
-         first_word = False
-         r=r"% In preamble, put \usepackage[safe]{tipa}"+'\n' # (the [safe] part is recommended if you're mixing with other TeX)
-      else: r=''
-      return r+"\\textipa{"+pronunc+"}"
-    else: return pronunc
+    return getSetting(format,"inline_format") % pronunc
 
 def sylcount(festival):
   # we treat @ as counting the same as the previous syllable (e.g. "fire",
@@ -674,14 +1551,13 @@ def write_bbcmicro_phones(ph):
   after = ". "+after+"See comments in lexconvert for more details.\n"
   if len(limits_exceeded)>1: sys.stderr.write(warning+"this text may be too big for the BBC Micro. The following limits were exceeded: "+", ".join(limits_exceeded)+after)
   elif limits_exceeded: sys.stderr.write(warning+"this text may be too big for the BBC Micro because it exceeds the "+limits_exceeded[0]+after)
-def close_bbclex(outFile):
-  if os.environ.get("SPEECH_DISK",""):
-    d=open(os.environ['SPEECH_DISK']).read()
-    i=d.index('>OUS_') # if this fails, it wasn't a Speech disk
-    j=d.index(">**",i)
-    assert j-i==2201, "Lexicon on SPEECH_DISK is wrong size (%d). Is this really an original disk image?" % (j-i)
-    outFile.write(d[i:j])
-  outFile.write(">**")
+def bbc_appendDefaultLex(outFile):
+  if not os.environ.get("SPEECH_DISK",""): return
+  d=open(os.environ['SPEECH_DISK']).read()
+  i=d.index('>OUS_') # if this fails, it wasn't a Speech disk
+  j=d.index(">**",i)
+  assert j-i==2201, "Lexicon on SPEECH_DISK is wrong size (%d). Is this really an original disk image?" % (j-i)
+  outFile.write(d[i:j])
   # TODO: can we compress the BBC lexicon?  i.e. detect if a rule will happen anyway due to subsequent wildcard rules, and delete it if so (don't know how many bytes that would save)
 
 def bbchex(n): return hex(n)[2:].upper()
@@ -767,6 +1643,7 @@ def main():
         txt = getInputText(i+2,"text")
         w,r=os.popen4("espeak -q -x",bufsize=max(8192,3*len(txt))) # need to make sure output buffer is big enough (TODO: or use a temp file, or progressive write/read chunks) (as things stand, if bufsize is not big enough, w.close() on the following line can hang, as espeak waits for us to read its output before it can take all of our input)
         w.write(txt) ; w.close()
+        write_inlineWord_header(format)
         if format=="bbcmicro":
           write_bbcmicro_phones(r.read())
         else:
@@ -782,7 +1659,7 @@ def main():
         i=sys.argv.index('--phones2phones')
         format1,format2 = sys.argv[i+1],sys.argv[i+2]
         text=getInputText(i+3,"phones in "+format1+" format")
-        if format1 in space_separates_words_not_phonemes:
+        if getSetting(format1,'space_separates_words_not_phonemes'):
           for w in text.split(): print markup_inline_word(format2, convert(w,format1,format2))
         else: print markup_inline_word(format2, convert(text,format1,format2))
     elif '--convert' in sys.argv:
@@ -790,37 +1667,20 @@ def main():
         fromFormat = sys.argv[i+1]
         toFormat = sys.argv[i+2]
         assert not fromFormat==toFormat, "cannot convert a lexicon to its own format (that could result in it being truncated)"
-        outFile = None
-        if toFormat=="cepstral": fname="lexicon.txt"
-        elif toFormat in ["acapela-uk","x-sampa"]: fname="acapela.txt"
-        elif "sapi" in toFormat: fname="run-ptts.bat"
-        elif toFormat=="mac": fname="substitute.sh"
-        elif toFormat=="bbcmicro": fname="BBCLEX"
-        elif toFormat=="espeak":
+        assert not toFormat=="mac-uk", "Cannot permanently save a Mac-UK lexicon; please use the --mac-uk option to read text"
+        try: fname=getSetting(toFormat,"lex_filename")
+        except KeyError: raise Exception("Write support for lexicons of format '%s' not yet implemented; try using --phones or --phones2phones options instead" % (toFormat,))
+        if toFormat=="espeak":
+            assert fname=="en_extra", "If you changed eSpeak's lex_filename in the table you also need to change the code below"
             try: open("en_list")
             except: raise Exception("You should cd to the espeak source directory before running this")
             os.system("mv en_extra en_extra~ ; grep \" // \" en_extra~ > en_extra") # keep the commented entries, so can incrementally update the user lexicon only
-            fname="en_extra"
             outFile=open(fname,"a")
-        elif toFormat in ["unicode-ipa","latex-ipa","pinyin-approx"]:
-            # just make a table of words and pronunciation
-            if toFormat=="unicode-ipa":
-              fname="words-ipa.html"
-            elif toFormat=="pinyin-approx":
-              fname="words-pinyin-approx.txt"
-            else: fname="words-ipa.tex"
-            try:
-                open(fname)
-                assert 0, fname+" already exists, I'd rather not overwrite it; delete it yourself if you want" # (if you run with python -O then this is ignored, as are some other checks so be careful)
-            except IOError: pass
-            outFile=open(fname,"w")
-        elif toFormat=="mac-uk": raise Exception("Cannot permanently save a Mac-UK lexicon; please use the --mac-uk option to read text")
-        else: raise Exception("Don't know where to put lexicon of format '%s', try using --phones or --phones2phones options instead" % (toFormat,))
-        if not outFile:
+        else:
             l = 0
             try: l = open(fname).read()
             except: pass
-            assert not l, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)"
+            assert not l, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)" # (if you run with python -O then this is ignored, as are some other checks so be careful)
             outFile=open(fname,"w")
         print "Writing lexicon entries to",fname
         convert_user_lexicon(fromFormat,toFormat,outFile)
@@ -845,7 +1705,10 @@ def main():
           sys.stderr.write("Interrupted\n")
     else:
         print program_name
-        print "\nAvailable pronunciation formats:",', '.join(list(table[0]))
+        print "\nAvailable pronunciation formats:"
+        keys=lexFormats.keys() ; keys.sort()
+        for k in keys:
+          print k+": "+getSetting(k,"doc")
         print "\nUse --convert <from-format> <to-format> to convert a user lexicon file.  Expects Festival's .festivalrc to be in the home directory, or espeak's en_extra or Cepstral's lexicon.txt to be in the current directory.\nFor InfoVox/acapela, export the lexicon to acapela.txt in the current directory.\nE.g.: python lexconvert.py --convert festival cepstral"
         print "\nUse --try <format> [<pronunciation>] to try a pronunciation with eSpeak (requires 'espeak' command),\n e.g.: python lexconvert.py --try festival h @0 l ou1\n or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)\n (it converts to espeak format and then uses espeak to play it)\nUse --trymac to do the same as --try but with Mac OS 'say' instead of 'espeak'\nUse --trymac-uk to try it with Mac OS British voices (but see --mac-uk below)"
         print "\nUse --phones2phones <format1> <format2> [<phones in format1>] to perform a one-off conversion of phones from format1 to format2."
