@@ -1704,18 +1704,34 @@ def main():
         except KeyboardInterrupt:
           sys.stderr.write("Interrupted\n")
     else:
-        print program_name
-        print "\nAvailable pronunciation formats:"
+        html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
+        def htmlify(h): return h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>').replace('--','<tt>--</tt>') # (the last bit is so typography.js doesn't try to rewrite options stuff to en-dash)
+        if not html: htmlify = lambda x:x
+        print htmlify(program_name)
+        if html: missALine = "<p>"
+        else: missALine = ""
+        print missALine
+        print "Available pronunciation formats:"
+        if html: print "<dl>"
         keys=lexFormats.keys() ; keys.sort()
         for k in keys:
-          print k+": "+getSetting(k,"doc")
-        print "\nUse --convert <from-format> <to-format> to convert a user lexicon file.  Expects Festival's .festivalrc to be in the home directory, or espeak's en_extra or Cepstral's lexicon.txt to be in the current directory.\nFor InfoVox/acapela, export the lexicon to acapela.txt in the current directory.\nE.g.: python lexconvert.py --convert festival cepstral"
-        print "\nUse --try <format> [<pronunciation>] to try a pronunciation with eSpeak (requires 'espeak' command),\n e.g.: python lexconvert.py --try festival h @0 l ou1\n or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)\n (it converts to espeak format and then uses espeak to play it)\nUse --trymac to do the same as --try but with Mac OS 'say' instead of 'espeak'\nUse --trymac-uk to try it with Mac OS British voices (but see --mac-uk below)"
-        print "\nUse --phones2phones <format1> <format2> [<phones in format1>] to perform a one-off conversion of phones from format1 to format2."
-        print "\nUse --phones <format> [<words>] to convert 'words' to phones in format 'format'.  espeak will be run to do the text-to-phoneme conversion, and the output will then be converted to 'format'.\nE.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.\nNote that some commercial speech synthesizers do not work well when driven entirely from phones, because their internal format is different and is optimised for normal text."
-        print "\nUse --syllables [<words>] to attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"
-        print "\nUse --festival-dictionary-to-espeak <location> to convert the Festival Oxford Advanced Learners Dictionary (OALD) pronunciation lexicon to ESpeak.\nYou need to specify the location of the OALD file in <location>,\ne.g. for Debian festlex-oald package: python lexconvert.py --festival-dictionary-to-espeak /usr/share/festival/dicts/oald/all.scm\nor if you can't install the Debian package, try downloading http://ftp.debian.org/debian/pool/non-free/f/festlex-oald/festlex-oald_1.4.0.orig.tar.gz, unpack it into /tmp, and do: python lexconvert.py --festival-dictionary-to-espeak /tmp/festival/lib/dicts/oald/oald-0.4.out\nIn all cases you need to cd to the espeak source directory before running this.  en_extra will be overwritten.  Converter will also read your ~/.festivalrc if it exists.  (You can later incrementally update from ~/.festivalrc using the --convert option; the entries from the system dictionary will not be overwritten in this case.)  Specify --without-check to bypass checking the existing espeak pronunciation for OALD entries (much faster, but makes a larger file and in some cases compromises the pronunciation quality)."
-        print "\nUse --mac-uk <from-format> [<text>] to speak text in Mac OS 10.7+ British voices while converting from a lexicon in from-format. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually.) By default the Daniel voice is used; Emily or Serena can be selected by setting the MACUK_VOICE environment variable."
+          if html: print "<dt>"+k+"</dt><dd>"+htmlify(getSetting(k,"doc"))+"</dd>"
+          else: print k+": "+getSetting(k,"doc")
+        if html: print "</dl>"
+        else: print
+        print htmlify("Use --convert <from-format> <to-format> to convert a user lexicon file.  Expects Festival's .festivalrc to be in the home directory, or espeak's en_extra or Cepstral's lexicon.txt to be in the current directory.\nFor InfoVox/acapela, export the lexicon to acapela.txt in the current directory.\nE.g.: python lexconvert.py --convert festival cepstral")
+        print missALine
+        print htmlify("Use --try <format> [<pronunciation>] to try a pronunciation with eSpeak (requires 'espeak' command),\n e.g.: python lexconvert.py --try festival h @0 l ou1\n or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)\n (it converts to espeak format and then uses espeak to play it)\nUse --trymac to do the same as --try but with Mac OS 'say' instead of 'espeak'\nUse --trymac-uk to try it with Mac OS British voices (but see --mac-uk below)")
+        print missALine
+        print htmlify("Use --phones2phones <format1> <format2> [<phones in format1>] to perform a one-off conversion of phones from format1 to format2.")
+        print missALine
+        print htmlify("Use --phones <format> [<words>] to convert 'words' to phones in format 'format'.  espeak will be run to do the text-to-phoneme conversion, and the output will then be converted to 'format'.\nE.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.\nNote that some commercial speech synthesizers do not work well when driven entirely from phones, because their internal format is different and is optimised for normal text.")
+        print missALine
+        print htmlify("Use --syllables [<words>] to attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)")
+        print missALine
+        print htmlify("Use --festival-dictionary-to-espeak <location> to convert the Festival Oxford Advanced Learners Dictionary (OALD) pronunciation lexicon to ESpeak.\nYou need to specify the location of the OALD file in <location>,\ne.g. for Debian festlex-oald package: python lexconvert.py --festival-dictionary-to-espeak /usr/share/festival/dicts/oald/all.scm\nor if you can't install the Debian package, try downloading http://ftp.debian.org/debian/pool/non-free/f/festlex-oald/festlex-oald_1.4.0.orig.tar.gz, unpack it into /tmp, and do: python lexconvert.py --festival-dictionary-to-espeak /tmp/festival/lib/dicts/oald/oald-0.4.out\nIn all cases you need to cd to the espeak source directory before running this.  en_extra will be overwritten.  Converter will also read your ~/.festivalrc if it exists.  (You can later incrementally update from ~/.festivalrc using the --convert option; the entries from the system dictionary will not be overwritten in this case.)  Specify --without-check to bypass checking the existing espeak pronunciation for OALD entries (much faster, but makes a larger file and in some cases compromises the pronunciation quality).")
+        print missALine
+        print htmlify("Use --mac-uk <from-format> [<text>] to speak text in Mac OS 10.7+ British voices while converting from a lexicon in from-format. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually.) By default the Daniel voice is used; Emily or Serena can be selected by setting the MACUK_VOICE environment variable.")
 
 catchingSigs = inSigHandler = False
 def catchSignals():
