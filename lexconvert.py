@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-program_name = "lexconvert v0.154 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
+program_name = "lexconvert v0.155 - convert between lexicons of different speech synthesizers\n(c) 2007-2012,2014 Silas S. Brown.  License: GPL"
 # with contributions from Jan Weiss (x-sampa, acapela-uk, cmu)
 
 # Run without arguments for usage information
@@ -546,7 +546,7 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
         elif toFormat=="mac-uk": outFile.append((word,pronunc)) # (it's not really a file)
         else: raise Exception("Writing to lexicon in %s format not yet implemented" % (format,))
     if toFormat=="mac": outFile.write("\n")
-    elif toFormat=="bbcmicro": outFile.write(">**")
+    elif toFormat=="bbcmicro": close_bbclex(outFile)
     elif toFormat=="unicode-ipa": outFile.write("</table></body></html>\n")
     elif toFormat=="latex-ipa": outFile.write("\end{longtable}\end{document}\n")
 
@@ -561,7 +561,7 @@ def markup_inline_word(format,pronunc):
     elif format=="acapela-uk": return "\\Prn="+pronunc+"\\"
     elif format=="bbcmicro":
       # BBC Micro Speech program by David J. Hoskins / Superior 1985.  Took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; "retro" by modern standards but ground-breaking at the time.
-      # If you use an emulator like BeebEm, you'll need diskimg/Speech.ssd.  This can be made from your original Speech disc, or you might be able to find one but beware of copyright!  Same goes with the ROM images included in BeebEm.  There has been considerable discussion over whether UK copyright law does or should allow "format-shifting" your own legally-purchased media, and I don't fully understand all the discussion so I don't want to give advice on it here.  The issue is "format-shifting" your legally-purchased BBC Micro ROM code and Speech disc to emulator images; IF this is all right then I suspect downloading someone else's copy is arguably allowed as long as you bought it legally "back in the day", but I'm not a solicitor so I don't know.
+      # If you use an emulator like BeebEm, you'll need diskimg/Speech.ssd.  This can be made from your original Speech disc, or you might be able to find one but beware of copyright!  Same goes with the Model B ROM images included in BeebEm (you might want to delete the other models).  There has been considerable discussion over whether UK copyright law does or should allow "format-shifting" your own legally-purchased media, and I don't fully understand all the discussion so I don't want to give advice on it here.  The issue is "format-shifting" your legally-purchased BBC Micro ROM code and Speech disc to emulator images; IF this is all right then I suspect downloading someone else's copy is arguably allowed as long as you bought it legally "back in the day", but I'm not a solicitor so I don't know.
       # lexconvert's --phones bbcmicro option creates *SPEAK commands which you can type into the BBC Micro or paste into an emulator (e.g. BeebEm), either at the BASIC prompt or in a listing (with line numbers provided by AUTO).  You have to load the Speech program first of course.
       # To script this, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
       # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
@@ -674,13 +674,32 @@ def write_bbcmicro_phones(ph):
   after = ". "+after+"See comments in lexconvert for more details.\n"
   if len(limits_exceeded)>1: sys.stderr.write(warning+"this text may be too big for the BBC Micro. The following limits were exceeded: "+", ".join(limits_exceeded)+after)
   elif limits_exceeded: sys.stderr.write(warning+"this text may be too big for the BBC Micro because it exceeds the "+limits_exceeded[0]+after)
+def close_bbclex(outFile):
+  if os.environ.get("SPEECH_DISK",""):
+    d=open(os.environ['SPEECH_DISK']).read()
+    i=d.index('>OUS_') # if this fails, it wasn't a Speech disk
+    j=d.index(">**",i)
+    assert j-i==2201, "Lexicon on SPEECH_DISK is wrong size (%d). Is this really an original disk image?" % (j-i)
+    outFile.write(d[i:j])
+  outFile.write(">**")
+  # TODO: can we compress the BBC lexicon?  i.e. detect if a rule will happen anyway due to subsequent wildcard rules, and delete it if so (don't know how many bytes that would save)
 
+def bbchex(n): return hex(n)[2:].upper()
+def bbcshortest(n):
+  if len(str(n)) < len('&'+bbchex(n)): return str(n)
+  else: return '&'+bbchex(n)
+def bbcPokes(data,start):
+  while len(data)%4: data+=chr(0) # pad to mult of 4
+  i=0 ; ret=[]
+  while i<len(data):
+    ret.append('!'+bbcshortest(start)+'='+bbcshortest(ord(data[i])+(ord(data[i+1])<<8)+(ord(data[i+2])<<16)+(ord(data[i+3])<<24)))
+    i += 4 ; start += 4
+  return '\n'.join(ret)+'\n'
 def print_bbclex_instructions(fname,size):
-  def bbchex(n): return hex(n)[2:].upper()
   print "The size of this lexicon is "+str(size)+" bytes (hex "+bbchex(size)+")"
+  global bbcStart ; bbcStart=None
   noSRAM_lex_offset=0x155F # (on the BBC Micro, SRAM means Sideways RAM, not Static RAM as it does elsewhere; for clarity we'd better say "Sideways RAM" in all output)
   SRAM_lex_offset=0x1683
-  default_lex_size=2204 # including terminating **
   SRAM_max=0x4000 # 16k
   noSRAM_default_addr=0x5500
   noSRAM_min_addr=0x1900 # BBC B DFS + no program at all (RELOCAT actually supports going down to E00, but you won't be able to use the disk after this, only tapes)
@@ -693,37 +712,25 @@ def print_bbclex_instructions(fname,size):
     page_max = min(0x5E00,noSRAM_default_addr-0xE00)
     if page > page_max: return False # "Unfortunately RELOCAT can't put it at &"+bbchex(reloc_addr)+" even with PAGE changes."
     return " RELOCAT must be run with PAGE in the range of &"+bbchex(page)+" to &"+bbchex(page_max)+" for this relocation to work."
-  check_for_append=True
-  # Instructions for replacing default lex in main RAM:
   if noSRAM_default_addr+noSRAM_lex_offset+size > noSRAM_himem:
     reloc_addr = noSRAM_himem-noSRAM_lex_offset-size
     reloc_addr -= (reloc_addr%256)
     if reloc_addr >= noSRAM_min_addr:
       instr = special_relocate_instructions(reloc_addr)
       if instr==False: print "This lexicon is too big for Speech in main RAM even with relocation, unless RELOCAT is rewritten to work from files."
-      else: print "This lexicon is too big for Speech at its default address of &"+bbchex(noSRAM_default_addr)+", but you could use RELOCAT to put a version at &"+bbchex(reloc_addr)+" (be sure to set HIMEM=&"+bbchex(reloc_addr)+") and then replace the default lexicon (if your new one covers all cases!) by *LOAD "+fname+" "+bbchex(reloc_addr+noSRAM_lex_offset)+" or change the relocated SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+"."+instr
-    else:
-      print "This lexicon is too big for Speech in main RAM even with relocation."
-      check_for_append=False
-  else: print "You can replace the default lexicon (if your new one covers all cases!) by *LOAD "+fname+" "+bbchex(noSRAM_default_addr+noSRAM_lex_offset)+" or change the SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+". Suggest you also set HIMEM=&"+bbchex(noSRAM_default_addr)+" for safety."
-  # Instructions for appending to default lex in main RAM:
-  if check_for_append:
-   if noSRAM_default_addr+noSRAM_lex_offset+default_lex_size-2+size > noSRAM_himem:
-    reloc_addr = noSRAM_himem-noSRAM_lex_offset-default_lex_size+2-size
-    reloc_addr -= (reloc_addr%256)
-    if reloc_addr >= noSRAM_min_addr:
-      instr = special_relocate_instructions(reloc_addr)
-      if instr==False: print "This lexicon is too big to append to the default lexicon for Speech in main RAM, even with relocation, unless RELOCAT is rewritten to work from files."
-      else: print "This lexicon is too big to append to the default lexicon if Speech is at its default address of &"+bbchex(noSRAM_default_addr)+", but you could use RELOCAT to put a version at &"+bbchex(reloc_addr)+" (be sure to set HIMEM=&"+bbchex(reloc_addr)+") and then append to the default lexicon (if you don't mind the default one catching things first!) by *LOAD "+fname+" "+bbchex(reloc_addr+noSRAM_lex_offset+default_lex_size-2)+" or change the relocated SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+"."+instr
-    else: print "This lexicon is too big to append to the default lexicon in main RAM, even with relocation."
-   else: print "You can append to the default lexicon (if you don't mind the default one catching things first!) by *LOAD "+fname+" "+bbchex(noSRAM_default_addr+noSRAM_lex_offset+default_lex_size-2)+" or change the SPEECH file from offset &"+bbchex(noSRAM_lex_offset+default_lex_size-2)+". Suggest you also set HIMEM=&"+bbchex(noSRAM_default_addr)+" for safety."
+      else:
+        bbcStart = reloc_addr+noSRAM_lex_offset
+        print "This lexicon is too big for Speech at its default address of &"+bbchex(noSRAM_default_addr)+", but you could use RELOCAT to put a version at &"+bbchex(reloc_addr)+" (then do the suggested *SAVE, reset, and run *SP; be sure to set HIMEM=&"+bbchex(reloc_addr)+") and then *LOAD "+fname+" "+bbchex(bbcStart)+" or change the relocated SP file from offset &"+bbchex(noSRAM_lex_offset)+"."+instr
+    else: print "This lexicon is too big for Speech in main RAM even with relocation."
+  else:
+    bbcStart = noSRAM_default_addr+noSRAM_lex_offset
+    print "You can load this lexicon by *LOAD "+fname+" "+bbchex(bbcStart)+" or change the SPEECH file from offset &"+bbchex(noSRAM_lex_offset)+". Suggest you also set HIMEM=&"+bbchex(noSRAM_default_addr)+" for safety."
   # Instructions for replacing lex in SRAM:
   if size > SRAM_max-SRAM_lex_offset: print "This lexicon is too big for Speech in Sideways RAM." # unless you can patch Speech to run in SRAM but read its lexicon from main RAM
-  else:
-    print "In Sideways RAM, the default lexicon starts at &"+hex(SRAM_lex_offset+0x8000)[2:]+" but you can't access this from BASIC so suggest you back up the SP8000 file and write to its offset "+hex(SRAM_lex_offset)+"."
-    if size > SRAM_max-SRAM_lex_offset-default_lex_size+2: print "This lexicon is too big to add to the default lexicon in Sideways RAM."
-    else: print "You can append to the default lexicon in Sideways RAM (if you don't mind the default one catching things first!) from &"+hex(SRAM_lex_offset+0x8000+default_lex_size-2)[2:]+" in the Sideways RAM bank, but this can't be accessed from BASIC so suggest writing to SP8000 file at offset "+hex(SRAM_lex_offset+default_lex_size-2)+" but then be careful how to load it." # (default load address not suitable if it gets much bigger)
-  print "It might be better to load it into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
+  else: print "In Sideways RAM, the default lexicon starts at &"+hex(SRAM_lex_offset+0x8000)[2:]+" but you can't access this from BASIC so suggest you back up the SP8000 file and write to its offset "+hex(SRAM_lex_offset)+"."
+  if not os.environ.get("SPEECH_DISK",""): print "If you want to append the default lexicon to this one, set SPEECH_DISK to the image of the original Speech disk before running lexconvert, e.g. export SPEECH_DISK=/usr/local/BeebEm3/diskimg/Speech.ssd"
+  print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' to ensure there's a space at the start of the SAY string (bug in Speech?)" # Can't track down which words this does and doesn't apply to.
+  print "It might be better to load your lexicon into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
 
 def main():
     if '--festival-dictionary-to-espeak' in sys.argv:
@@ -819,6 +826,11 @@ def main():
         convert_user_lexicon(fromFormat,toFormat,outFile)
         if toFormat=="bbcmicro": print_bbclex_instructions(fname,outFile.tell())
         outFile.close()
+        if toFormat=="bbcmicro" and bbcStart:
+          pokes = bbcPokes(open(fname).read(),bbcStart)
+          open(fname+".key","w").write(pokes)
+          print "For ease of transfer to emulators etc, a self-contained keystroke file for putting "+fname+" data at &"+bbchex(bbcStart)+" has been written to "+fname+".key (but read the above first!)"
+          if len(pokes) > 32767: print "(This file looks too big for BeebEm to paste though)" # see comments elsewhere
         if toFormat=="espeak": os.system("espeak --compile=en")
     elif '--mac-uk' in sys.argv:
         i=sys.argv.index('--mac-uk')
