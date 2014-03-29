@@ -77,6 +77,7 @@ def Phonemes():
    _, var2_i_as_in_it = variant()
    ear = vowel()
    _, var1_ear = variant()
+   _, var2_ear = variant()
    e_as_in_eat = vowel()
    _, var1_e_as_in_eat = variant()
    j_as_in_jump = consonant()
@@ -247,6 +248,7 @@ def LexFormats():
     ('I2',var2_i_as_in_it,False),
     ('I2;',var2_i_as_in_it,False),
     ('i@',ear),
+    ('i@3',var2_ear),
     ('i:',e_as_in_eat),
     ('i:;',e_as_in_eat,False),
     ('dZ',j_as_in_jump),
@@ -812,6 +814,7 @@ def LexFormats():
     ('IH',i_as_in_it),
     ('IX',var2_i_as_in_it), # (IX sounds to me like a slightly shorter version of IH)
     ('IXAH',ear),
+    ('EER',var2_ear), # e.g. 'hear', 'near' - near enough
     ('EE',e_as_in_eat),
     ('J',j_as_in_jump),
     ('K',k),
@@ -855,6 +858,7 @@ def LexFormats():
     cleanup_regexps=[
       ('KT','CT'), # Speech instructions: "CT as in fact"
       ('DYUW','DUX'), # "DUX as in duke" (TODO: converting that back out? will currently read as D+UX)
+      ('AHR$','AH'), # usually sounds a bit better
     ],
   ),
 
@@ -910,6 +914,7 @@ def LexFormats():
     (u'\u0268',var1_i_as_in_it),
     (u'\u026a\u0259',ear),
     (u'\u026a\u0279',var1_ear),
+    (u'\u026a\u0279\u0259',var2_ear), # ?
     ('i',e_as_in_eat),
     (u'i\u02d0',var1_e_as_in_eat),
     (u'd\u0292',j_as_in_jump),
@@ -1012,6 +1017,7 @@ def LexFormats():
     ('1',var1_i_as_in_it),
     ('I@',ear),
     ('I\\textturnr{}',var1_ear),
+    ('I@\\textturnr{}',var2_ear), # ?
     ('i',e_as_in_eat),
     ('i:',var1_e_as_in_eat),
     ('dZ',j_as_in_jump),
