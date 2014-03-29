@@ -1520,7 +1520,7 @@ def macSayCommand():
 def getInputText(i,prompt):
   txt = ' '.join(sys.argv[i:])
   if not txt:
-    if (not hasattr(sys.stdin,"isatty")) or sys.stdin.isatty(): sys.stderr.write("Enter "+prompt+": ")
+    if (not hasattr(sys.stdin,"isatty")) or sys.stdin.isatty(): sys.stderr.write("Enter "+prompt+" (EOF when done)\n")
     txt = sys.stdin.read()
   return txt
 
