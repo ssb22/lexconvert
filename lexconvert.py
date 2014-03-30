@@ -143,7 +143,67 @@ def LexFormats():
      of the form (string,phoneme) will create entries in
      BOTH directions; one-directional entries are created
      via (string,phoneme,False) or (phoneme,string,False).
-     The makeDic function checks the keys are unique."""
+     The makeDic function checks the keys are unique.
+     
+     First parameter is always a description of the
+     format, then come the phoneme entries as described
+     above, then any additional settings:
+
+       stress_comes_before_vowel (default False means any
+       stress mark goes AFTER the affected vowel; set to
+       True if the format requires stress placed before)
+  
+       space_separates_words_not_phonemes (default False
+       means space is assumed to be required between each
+       phoneme; True means space separates whole words)
+
+       safe_to_drop_characters (default False, can be a
+       string of safe characters or True = all; controls
+       warnings when unrecognised characters are found)
+
+       cleanup_regexps (default none) - optional list of
+       (search,replace) regular expressions to "clean up"
+       after converting INTO this format
+
+       cvtOut_regexps (default none) - optional list of
+       (search,replace) regular expressions to "clean up"
+       before starting to convert OUT of this format
+  
+       inline_format (default "%s") the format string for
+       printing a word with --phones or --phones2phones
+       (can be used to put markup around each word)
+
+       inline_header (default none) a line to print first
+       when outputting from --phones or --phones2phones
+
+       lex_filename - filename of a lexicon file.  If this
+       is not specified, there is no support for writing a
+       lexicon in this format: there can still be READ
+       support if you define lex_read_function to open the
+       lexicon by itself, but otherwise the format can be
+       used only with --phones and --phones2phones.
+
+       lex_entry_format - format string for writing each
+       (word, pronunciation) entry to the lexicon file.
+       This is also needed for lexicon-write support.
+
+       lex_header, lex_footer - optional strings to write
+       at the beginning and at the end of the lexicon file
+
+       lex_word_case - optional "upper" or "lower" to
+       force a particular case for lexicon words (not
+       pronunciations - they're determined by the table).
+       The default is to allow words to be in either case.
+
+       lex_read_function - Python function to READ the
+       lexicon file and return a (word,definition) list.
+       If this is not specified, there's no read support
+       for lexicons in this format (but there can still be
+       write support - see above - and you can still use
+       --phones and --phones2phones).  If lex_filename is
+       specified then this function will be given the open
+       file as a parameter. """
+  
   globals().update(Phonemes())
   return { "festival" : makeDic(
     "Festival's default British voice",
@@ -197,16 +257,13 @@ def LexFormats():
     ('y',y),
     ('z',z),
     ('zh',ge_of_blige_etc),
-    # lex_filename etc not set (handled as special case, taking from ~/.festivalrc, and read-only for now)
-    inline_format = "%s", inline_header="",
-    space_separates_words_not_phonemes=False,
-    stress_comes_before_vowel=False,
+    # lex_filename etc not set (read-only for now)
+    lex_read_function = lambda *args: eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']'),
     safe_to_drop_characters=True, # TODO: really? (could instead give a string of known-safe characters)
-    cleanup_regexps=[],
   ),
 
   "espeak" : makeDic(
-    "eSpeak's default British voice", # but note that eSpeak's phoneme representation is not always that simple, hence the cleanup_regexps and some special-case code later
+    "eSpeak's default British voice", # but eSpeak's phoneme representation isn't always that simple, hence the regexps at the end
     ('%',syllable_separator),
     ("'",primary_stress),
     (',',secondary_stress),
@@ -284,11 +341,9 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     lex_filename = "en_extra",
-    lex_header = "",
     lex_entry_format = "%s %s\n",
-    lex_word_case = any,
-    lex_footer = "",
-    inline_format = "[[%s]]", inline_header="",
+    lex_read_function = lambda lexfile: [x for x in [l.split()[:2] for l in lexfile.readlines()] if len(x)==2 and not '//' in x[0]],
+    inline_format = "[[%s]]",
     space_separates_words_not_phonemes=True,
     stress_comes_before_vowel=True,
     safe_to_drop_characters="_: !",
@@ -305,6 +360,9 @@ def LexFormats():
       # TODO: 'declared' & 'declare' the 'r' after the 'E' sounds a bit 'regional' (but pretty).  but sounds incomplete w/out 'r', and there doesn't seem to be an E2 or E@
       # TODO: consider adding 'g' to words ending in 'N' (if want the 'g' pronounced in '-ng' words) (however, careful of words like 'yankee' where the 'g' would be followed by a 'k'; this may also be a problem going into the next word)
     ],
+     cvtOut_regexps = [
+       ("e@r$","e@"), ("e@r([bdDfghklmnNprsStTvwjzZ])",r"e@\1"), # because the 'r' is implicit in other synths (but DO have it if there's another vowel to follow)
+     ],
   ),
 
   "sapi" : makeDic(
@@ -362,13 +420,8 @@ def LexFormats():
     lex_filename="run-ptts.bat", # write-only for now
     lex_header = "rem  You have to run this file\nrem  with ptts.exe in the same directory\nrem  to add these words to the SAPI lexicon\n\n",
     lex_entry_format='ptts -la %s "%s"\n',
-    lex_word_case = any,
-    lex_footer = "",
-    inline_format = '<pron sym="%s"/>', inline_header="",
-    space_separates_words_not_phonemes=False,
-    stress_comes_before_vowel=False,
+    inline_format = '<pron sym="%s"/>',
     safe_to_drop_characters=True, # TODO: really?
-    cleanup_regexps=[],
   ),
 
   "cepstral" : makeDic(
@@ -421,14 +474,10 @@ def LexFormats():
     ('z',z),
     ('zh',ge_of_blige_etc),
     lex_filename="lexicon.txt",
-    lex_header = "",
     lex_entry_format = "%s 0 %s\n",
+    lex_read_function = lambda lexfile: [(word,pronunc) for word, ignore, pronunc in [l.split(None,2) for l in lexfile.readlines()]],
     lex_word_case = "lower",
-    lex_footer = "",
     inline_format = "<phoneme ph='%s'>p</phoneme>",
-    inline_header = "",
-    space_separates_words_not_phonemes=False,
-    stress_comes_before_vowel=False,
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[(" 1","1"),(" 0","0")],
   ),
@@ -486,14 +535,10 @@ def LexFormats():
     lex_filename="substitute.sh", # write-only for now
     lex_header = "# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed",
     lex_entry_format=' -e "s/%s/[[inpt PHON]]%s[[inpt TEXT]]/g"',
-    lex_word_case = any,
     lex_footer = "\n",
     inline_format = "[[inpt PHON]]%s[[inpt TEXT]]",
-    inline_header = "",
     space_separates_words_not_phonemes=True,
-    stress_comes_before_vowel=False,
     safe_to_drop_characters=True, # TODO: really?
-    cleanup_regexps=[],
   ),
 
   "mac-uk" : makeDic(
@@ -547,7 +592,7 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
-    inline_format = "%s", inline_header = "mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it\n",
+    inline_header = "mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it\n",
     space_separates_words_not_phonemes=True,
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
@@ -633,16 +678,11 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     lex_filename="acapela.txt",
-    lex_header = "",
-    lex_entry_format = "%s"+chr(9)+"#%s"+chr(9)+"UNKNOWN\n", # TODO: may be able to convert part-of-speech (NOUN etc) to/from some other formats e.g. Festival
-    lex_word_case = any,
-    lex_footer = "",
-    inline_format = "%s", # TODO: ?
-    inline_header = "",
+    lex_entry_format = "%s\t#%s\tUNKNOWN\n", # TODO: may be able to convert part-of-speech (NOUN etc) to/from some other formats e.g. Festival
+    lex_read_function=lambda lexfile:[(word,pronunc.lstrip("#")) for word, pronunc, ignore in [l.split(None,2) for l in lexfile.readlines()]],
+    # TODO: inline_format ?
     space_separates_words_not_phonemes=True,
-    stress_comes_before_vowel=False,
     safe_to_drop_characters=True, # TODO: really?
-    cleanup_regexps=[],
   ),
 
   "acapela-uk" : makeDic(
@@ -710,19 +750,14 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     lex_filename="acapela.txt",
-    lex_header = "",
-    lex_entry_format = "%s"+chr(9)+"#%s"+chr(9)+"UNKNOWN\n", # TODO: part-of-speech (as above)
-    lex_word_case = any,
-    lex_footer = "",
-    inline_format = "\\Prn=%s\\", inline_header = "",
-    space_separates_words_not_phonemes=False,
-    stress_comes_before_vowel=False,
+    lex_entry_format = "%s\t#%s\tUNKNOWN\n", # TODO: part-of-speech (as above)
+    lex_read_function=lambda lexfile:[(word,pronunc.lstrip("#")) for word, pronunc, ignore in [l.split(None,2) for l in lexfile.readlines()]],
+    inline_format = "\\Prn=%s\\",
     safe_to_drop_characters=True, # TODO: really?
-    cleanup_regexps=[],
   ),
 
   "cmu" : makeDic(
-    'format of the US-English Carnegie Mellon University Pronouncing Dictionary (contributed by Jan Weiss)', # (http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
+    'format of the US-English Carnegie Mellon University Pronouncing Dictionary (contributed by Jan Weiss)', # http://www.speech.cs.cmu.edu/cgi-bin/cmudict
     ('0',syllable_separator),
     ('1',primary_stress),
     ('2',secondary_stress),
@@ -775,11 +810,7 @@ def LexFormats():
     ('Z ',z),
     ('ZH',ge_of_blige_etc),
     # lex_filename not set (does CMU have a lex file?)
-    inline_format = "%s", inline_header="",
-    space_separates_words_not_phonemes=False,
-    stress_comes_before_vowel=False,
     safe_to_drop_characters=True, # TODO: really?
-    cleanup_regexps=[],
   ),
 
   "bbcmicro" : makeDic(
@@ -846,20 +877,19 @@ def LexFormats():
     ('Z',z),
     ('ZH',ge_of_blige_etc),
     lex_filename="BBCLEX",
-    lex_header = "",
     lex_entry_format="> %s_"+chr(128)+"%s", # (specifying 'whole word' for now; remove the space before or the _ after if you want)
+    lex_read_function = lambda lexfile: [(w[0].lstrip().rstrip('_').lower(),w[1]) for w in filter(lambda x:len(x)==2,[w.split(chr(128)) for w in lexfile.read().split('>')])], # TODO: this reads back the entries we generate, but is unlikely to work well with the wildcards in the default lexicon that would have been added if SPEECH_DISK was set (c.f. trying to read eSpeak's en_rules instead of en_extra)
     lex_word_case = "upper",
     lex_footer = ">**",
     # inline_format not set - handled by special-case code
-    inline_header = "",
     space_separates_words_not_phonemes=True,
-    stress_comes_before_vowel=False,
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[
       ('KT','CT'), # Speech instructions: "CT as in fact"
-      ('DYUW','DUX'), # "DUX as in duke" (TODO: converting that back out? will currently read as D+UX)
+      ('DYUW','DUX'), # "DUX as in duke"
       ('AHR$','AH'), # usually sounds a bit better
     ],
+    cvtOut_regexps=[('DUX','DYUW')], # CT handled above
   ),
 
   "unicode-ipa" : makeDic(
@@ -959,13 +989,10 @@ def LexFormats():
     lex_filename="words-ipa.html", # write-only for now
     lex_header = '<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>',
     lex_entry_format="<tr><td>%s</td><td>%s</td></tr>\n",
-    lex_word_case = any,
     lex_footer = "</table></body></html>\n",
-    inline_format = "%s", inline_header="",
     space_separates_words_not_phonemes=True,
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really? (at least '-' should be safe to drop)
-    cleanup_regexps=[],
   ),
 
   "latex-ipa" : makeDic(
@@ -1061,14 +1088,12 @@ def LexFormats():
     lex_filename="words-ipa.tex", # write-only for now
     lex_header = r'\documentclass[12pt,a4paper]{article} \usepackage[safe]{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}',
     lex_entry_format=r"%s & \textipa{%s}\\"+"\n",
-    lex_word_case = any,
     lex_footer = r"\end{longtable}\end{document}"+"\n",
     inline_format = "\\textipa{%s}",
     inline_header = r"% In preamble, put \usepackage[safe]{tipa}", # (the [safe] part is recommended if you're mixing with other TeX)
     space_separates_words_not_phonemes=True,
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
-    cleanup_regexps=[],
   ),
 
   "pinyin-approx" : makeDic(
@@ -1123,11 +1148,7 @@ def LexFormats():
     lex_filename="words-pinyin-approx.tex", # write-only for now
     lex_header = "Pinyin approxmations (very approximate!)\n----------------------------------------\n",
     lex_entry_format = "%s ~= %s\n",
-    lex_word_case = any,
-    lex_footer = "",
-    inline_format = "%s", inline_header = "",
     space_separates_words_not_phonemes=True,
-    stress_comes_before_vowel=False,
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[
       ("te0ye","tie"),
@@ -1194,6 +1215,8 @@ def makeDic(doc,*args,**kwargs):
     return d
 def getSetting(formatName,settingName):
   return lexFormats[formatName][('settings',settingName)]
+def checkSetting(formatName,settingName,default=""):
+  return lexFormats[formatName].get(('settings',settingName),default)
 lexFormats = LexFormats()
 
 import commands,sys,re,os
@@ -1236,7 +1259,9 @@ def convert(pronunc,source,dest):
     dictionary = make_dictionary(source,dest)
     maxLen=max(len(l) for l in dictionary.keys())
     debugInfo=""
-    safe_to_drop = getSetting(source,"safe_to_drop_characters")
+    safe_to_drop = checkSetting(source,"safe_to_drop_characters")
+    for s,r in checkSetting(source,'cvtOut_regexps'):
+        pronunc=re.sub(s,r,pronunc)
     while pronunc:
         for lettersToTry in range(maxLen,-1,-1):
             if not lettersToTry:
@@ -1247,15 +1272,14 @@ def convert(pronunc,source,dest):
                 debugInfo=" after "+pronunc[:lettersToTry]
                 toAdd=dictionary[pronunc[:lettersToTry]]
                 isStressMark=(toAdd and toAdd in [lexFormats[dest].get(primary_stress,''),lexFormats[dest].get(secondary_stress,''),lexFormats[dest].get(syllable_separator,'')])
-                if isStressMark and not getSetting(dest,"stress_comes_before_vowel"):
-                    if getSetting(source,"stress_comes_before_vowel"): toAdd, toAddAfter = "",toAdd # move stress marks from before vowel to after
+                if isStressMark and not checkSetting(dest,"stress_comes_before_vowel"):
+                    if checkSetting(source,"stress_comes_before_vowel"): toAdd, toAddAfter = "",toAdd # move stress marks from before vowel to after
                     else:
                         # With Cepstral synth, stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
-                        # (not dest in ["espeak","latex-ipa"] because they use 0 as a phoneme; dealt with separately below)
                         r=len(ret)-1
                         while ret[r] in dest_consonants or ret[r].endswith("*added"): r -= 1 # (if that raises IndexError then the input had a stress mark before any vowel) ("*added" condition is there so that implicit vowels don't get the stress)
                         ret.insert(r+1,toAdd) ; toAdd=""
-                elif isStressMark and not getSetting(source,"stress_comes_before_vowel"): # it's a stress mark that should be moved from after the vowel to before it
+                elif isStressMark and not checkSetting(source,"stress_comes_before_vowel"): # it's a stress mark that should be moved from after the vowel to before it
                     i=len(ret)
                     while i and (ret[i-1] in dest_consonants or ret[i-1].endswith("*added")): i -= 1
                     if i: i-=1
@@ -1265,24 +1289,22 @@ def convert(pronunc,source,dest):
                 # attempt to sort out the festival dictionary's (and other's) implicit_vowel_before_NL
                 elif implicit_vowel_before_NL and ret and ret[-1] and toAdd in ['n','l'] and ret[-1] in dest_consonants: ret.append(implicit_vowel_before_NL+'*added')
                 elif len(ret)>2 and ret[-2].endswith('*added') and toAdd and not toAdd in dest_consonants and not toAdd==dest_syllable_sep: del ret[-2]
-                # OK, add it:
                 if toAdd:
-                    toAdd=toAdd.split()
+                    # Add it, but if toAdd is multiple phonemes, try to put toAddAfter after the FIRST phoneme
+                    toAdd=toAdd.split() # TODO: this works only when converting to formats where space_separates_words_not_phonemes==False (doesn't really matter for eSpeak though)
                     ret.append(toAdd[0])
                     if toAddAfter and not toAdd[0] in dest_consonants:
                         ret.append(toAddAfter)
                         toAddAfter=None
                     ret += toAdd[1:]
-                    # TODO: the above few lines make sure that toAddAfter goes after the FIRST phoneme if toAdd is multiple phonemes, but works only when converting from eSpeak to non-eSpeak; it ought to work when converting from non-eSpeak to non-eSpeak also (doesn't matter when converting TO eSpeak)
-                if source=="espeak" and pronunc[:lettersToTry]=="e@" and len(pronunc)>lettersToTry and pronunc[lettersToTry]=="r" and (len(pronunc)==lettersToTry+1 or pronunc[lettersToTry+1] in "bdDfghklmnNprsStTvwjzZ"): lettersToTry += 1 # hack because the 'r' is implicit in other synths (but DO have it if there's another vowel to follow)
                 pronunc=pronunc[lettersToTry:]
                 break
     if toAddAfter: ret.append(toAddAfter)
     if ret and ret[-1]==dest_syllable_sep: del ret[-1] # spurious syllable separator at end
-    if getSetting(dest,'space_separates_words_not_phonemes'): separator = ''
+    if checkSetting(dest,'space_separates_words_not_phonemes'): separator = ''
     else: separator = ' '
     ret=separator.join(ret).replace('*added','')
-    for s,r in getSetting(dest,'cleanup_regexps'):
+    for s,r in checkSetting(dest,'cleanup_regexps'):
       ret=re.sub(s,r,ret)
     return ret
 
@@ -1412,31 +1434,26 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
     return not_output_because_ok
 
 def read_user_lexicon(fromFormat):
-    if fromFormat=="festival": return eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']')
-    lexfile = open(getSetting(fromFormat,"lex_filename"))
-    if fromFormat=="espeak": return filter(lambda x:len(x)==2,[l.split()[:2] for l in lexfile.readlines()])
-    elif fromFormat=="bbcmicro": return [(w[0].lstrip().rstrip('_').lower(),w[1]) for w in filter(lambda x:len(x)==2,[w.split(chr(128)) for w in lexfile.read().split('>')])] # TODO: this reads back the entries we generate, but is unlikely to work well with the wildcards in the default lexicon that would have been added if SPEECH_DISK was set
-    elif fromFormat in ["acapela-uk","x-sampa"]:
-        lex = []
-        for l in lexfile.readlines():
-            word, pronunc, ignore = l.split(None,2)
-            if pronunc.startswith("#"): pronunc=pronunc[1:]
-            lex.append((word,pronunc))
-        return lex
-    elif fromFormat=="cepstral":
-        lex = []
-        for l in lexfile.readlines():
-            word, ignore, pronunc = l.split(None,2)
-            lex.append((word,pronunc))
-        return lex
-    else: raise Exception("Reading from '%s' lexicon file not yet implemented" % (fromFormat,))
+    readFunction = checkSetting(fromFormat,"lex_read_function")
+    if not readFunction: raise Exception("Reading from '%s' lexicon file not yet implemented (no lex_read_function); try using --phones or --phones2phones options instead" % (fromFormat,))
+    try:
+       lexFilename = getSetting(fromFormat,"lex_filename")
+       lexfile = open(lexFilename)
+    except KeyError: lexfile = None # lex_read_function without lex_filename is allowed, if the read function can take null param and fetch the lexicon itself
+    return readFunction(lexfile)
+
+def get_macuk_lexicon(fromFormat):
+    lex = read_user_lexicon(fromFormat) ; ret = []
+    for word, pronunc in lex:
+        pronunc = convert(pronunc,fromFormat,"mac-uk")
+        ret.append((word,pronunc))
+    return ret
 
 def convert_user_lexicon(fromFormat,toFormat,outFile):
     lex = read_user_lexicon(fromFormat)
-    if not toFormat=="mac-uk":
-      outFile.write(getSetting(toFormat,"lex_header"))
-      entryFormat=getSetting(toFormat,"lex_entry_format")
-      wordCase=getSetting(toFormat,"lex_word_case")
+    outFile.write(checkSetting(toFormat,"lex_header"))
+    entryFormat=getSetting(toFormat,"lex_entry_format")
+    wordCase=checkSetting(toFormat,"lex_word_case")
     for word, pronunc in lex:
         pronunc = convert(pronunc,fromFormat,toFormat)
         if type(pronunc)==unicode: pronunc=pronunc.encode('utf-8')
@@ -1446,10 +1463,10 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
           elif wordCase=="lower": word=word.lower()
           outFile.write(entryFormat % (word,pronunc))
     if toFormat=="bbcmicro": bbc_appendDefaultLex(outFile)
-    if not toFormat=="mac-uk": outFile.write(getSetting(toFormat,"lex_footer"))
+    if not toFormat=="mac-uk": outFile.write(checkSetting(toFormat,"lex_footer"))
 
 def write_inlineWord_header(format):
-    h = getSetting(format,"inline_header")
+    h = checkSetting(format,"inline_header")
     if h: print h
 bbc_charsSoFar=0 # hack for bbcmicro
 def markup_inline_word(format,pronunc):
@@ -1464,7 +1481,7 @@ def markup_inline_word(format,pronunc):
       else:
         bbc_charsSoFar += len(pronunc)+1
         return pronunc
-    return getSetting(format,"inline_format") % pronunc
+    return checkSetting(format,"inline_format","%s") % pronunc
 
 def sylcount(festival):
   # we treat @ as counting the same as the previous syllable (e.g. "fire",
@@ -1665,7 +1682,7 @@ def main():
         i=sys.argv.index('--phones2phones')
         format1,format2 = sys.argv[i+1],sys.argv[i+2]
         text=getInputText(i+3,"phones in "+format1+" format")
-        if getSetting(format1,'space_separates_words_not_phonemes'):
+        if checkSetting(format1,'space_separates_words_not_phonemes'):
           for w in text.split(): print markup_inline_word(format2, convert(w,format1,format2))
         else: print markup_inline_word(format2, convert(text,format1,format2))
     elif '--convert' in sys.argv:
@@ -1674,8 +1691,10 @@ def main():
         toFormat = sys.argv[i+2]
         assert not fromFormat==toFormat, "cannot convert a lexicon to its own format (that could result in it being truncated)"
         assert not toFormat=="mac-uk", "Cannot permanently save a Mac-UK lexicon; please use the --mac-uk option to read text"
-        try: fname=getSetting(toFormat,"lex_filename")
-        except KeyError: raise Exception("Write support for lexicons of format '%s' not yet implemented; try using --phones or --phones2phones options instead" % (toFormat,))
+        try:
+           fname=getSetting(toFormat,"lex_filename")
+           getSetting(toFormat,"lex_entry_format") # convert_user_lexicon will need this
+        except KeyError: raise Exception("Write support for lexicons of format '%s' not yet implemented (need at least lex_filename and lex_entry_format); try using --phones or --phones2phones options instead" % (toFormat,))
         if toFormat=="espeak":
             assert fname=="en_extra", "If you changed eSpeak's lex_filename in the table you also need to change the code below"
             try: open("en_list")
@@ -1701,11 +1720,10 @@ def main():
     elif '--mac-uk' in sys.argv:
         i=sys.argv.index('--mac-uk')
         fromFormat = sys.argv[i+1]
-        accum = []
-        convert_user_lexicon(fromFormat,"mac-uk",accum)
+        lex = get_macuk_lexicon(fromFormat)
         m = MacBritish_System_Lexicon(getInputText(i+2,"text"),os.environ.get("MACUK_VOICE","Daniel"))
         try:
-          try: m.read([a[0] for a in accum],[a[1] for a in accum])
+          try: m.read([a[0] for a in lex],[a[1] for a in lex])
           finally: m.close()
         except KeyboardInterrupt:
           sys.stderr.write("Interrupted\n")
