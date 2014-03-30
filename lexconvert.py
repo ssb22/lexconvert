@@ -48,10 +48,6 @@ def Phonemes():
    _, var1_o_as_in_now = variant()
    a_as_in_ago = vowel()
    _, var1_a_as_in_ago = variant()
-   _, var2_a_as_in_ago = variant()
-   _, var3_a_as_in_ago = variant()
-   _, var4_a_as_in_ago = variant()
-   _, var5_a_as_in_ago = variant()
    e_as_in_herd = vowel()
    eye = vowel()
    _, var1_eye = variant()
@@ -206,7 +202,7 @@ def LexFormats():
   
   globals().update(Phonemes())
   return { "festival" : makeDic(
-    "Festival's default British voice",
+    "Festival's British voice",
     ('0',syllable_separator),
     ('1',primary_stress),
     ('2',secondary_stress),
@@ -217,8 +213,6 @@ def LexFormats():
     ('au',o_as_in_now),
     ('@',a_as_in_ago),
     ('@@',e_as_in_herd),
-    ('@1',var2_a_as_in_ago),
-    ('@2',var3_a_as_in_ago),
     ('ai',eye),
     ('b',b),
     ('ch',ch),
@@ -270,9 +264,10 @@ def LexFormats():
     # TODO: glottal_stop? (in regional pronunciations etc)
     ('A:',a_as_in_ah),
     ('A@',a_as_in_ah,False),
-    ('aa',a_as_in_ah,False),
     ('A',var1_a_as_in_ah),
     ('a',a_as_in_apple),
+    ('aa',a_as_in_apple,False),
+    ('a2',a_as_in_apple,False), # TODO: this is actually an a_as_in_apple variant in espeak; festival @1 is not in mrpa PhoneSet
     ('&',a_as_in_apple,False),
     ('V',u_as_in_but),
     ('0',o_as_in_orange),
@@ -281,9 +276,8 @@ def LexFormats():
     ('a#',a_as_in_ago,False), # (TODO: eSpeak sometimes uses a# in 'had' when in a sentence, and this doesn't always sound good on other synths; might sometimes want to convert it to a_as_in_apple; not sure what contexts would call for this though)
     ('3:',e_as_in_herd),
     ('3',var1_a_as_in_ago),
-    ('a2',var2_a_as_in_ago),
-    ('@2',var3_a_as_in_ago),
-    ('@-',var3_a_as_in_ago,False), # (eSpeak @- sounds to me like a shorter version of @, TODO: double-check the relationship between @ and @2 in Festival)
+    ('@2',a_as_in_ago,False),
+    ('@-',a_as_in_ago,False), # (eSpeak @- sounds to me like a shorter version of @, TODO: double-check the relationship between @ and @2 in Festival)
     ('aI',eye),
     ('aI2',eye,False),
     ('aI;',eye,False),
@@ -377,7 +371,6 @@ def LexFormats():
     ('aw',o_as_in_now),
     ('ax',a_as_in_ago),
     ('er',e_as_in_herd),
-    ('@',var4_a_as_in_ago),
     ('ay',eye),
     ('b',b),
     ('ch',ch),
@@ -435,7 +428,6 @@ def LexFormats():
     ('aw',o_as_in_now),
     (a_as_in_ago,'ah',False),
     ('er',e_as_in_herd),
-    ('@',var5_a_as_in_ago),
     ('ay',eye),
     ('b',b),
     ('ch',ch),
@@ -770,8 +762,6 @@ def LexFormats():
     ('AW',o_as_in_now),
     (a_as_in_ago,'AH',False),
     ('ER',e_as_in_herd), # TODO: check this one
-    ('@',var4_a_as_in_ago),
-    (var5_a_as_in_ago,'@',False),
     ('AY',eye),
     ('B ',b),
     ('CH',ch),
@@ -1106,8 +1096,6 @@ def LexFormats():
     ('yo5',o_as_in_orange),
     ('ao5',o_as_in_now),
     (a_as_in_ago,'e5',False),
-    ('wu5',var4_a_as_in_ago),
-    (var5_a_as_in_ago,'wu5',False),
     ('ai5',eye),
     ('bu0',b),
     ('che0',ch),
@@ -1238,7 +1226,7 @@ def make_dictionary(sourceName,destName):
       if not v in dest: v = int(v) # (try the main version of a variant)
       if not v in dest: continue # (haven't got it - will have to ignore or break into parts)
       d[k] = dest[v]
-      if v in consonants: dest_consonants.append(d[k])
+      if int(v) in consonants:dest_consonants.append(d[k])
       if int(v)==e_as_in_herd and (not implicit_vowel_before_NL or v==int(v)): # TODO: or u_as_in_but ?  used by festival and some other synths before words ending 'n' or 'l' (see usage of implicit_vowel_before_NL later)
         implicit_vowel_before_NL = d[k]
     cached_sourceName,cached_destName,cached_dict=sourceName,destName,d
@@ -1647,6 +1635,22 @@ def main():
         i=sys.argv.index('--try')
         espeak = convert(getInputText(i+2,"phones in "+sys.argv[i+1]+" format"),sys.argv[i+1],'espeak')
         os.popen("espeak -x","w").write(markup_inline_word("espeak",espeak))
+    elif '--check-variants' in sys.argv: # undocumented
+        groups = {}
+        for k,v in lexFormats['espeak'].items():
+           if type(k)==str:
+              intV = int(v)
+              if not intV in consonants:
+                 if not intV in groups: groups[intV] = []
+                 groups[intV].append((v,k))
+        i = groups.items() ; i.sort()
+        for k,v in i:
+           if len(v)==1: continue
+           v.sort()
+           while True:
+              print "Group",k
+              os.popen("espeak -x","w").write('\n'.join([markup_inline_word("espeak",w) for _,w in v]))
+              if not input("Again? 1/0: "): break
     elif '--trymac' in sys.argv:
         i=sys.argv.index('--trymac')
         mac = convert(getInputText(i+2,"phones in "+sys.argv[i+1]+" format"),sys.argv[i+1],'mac')
