@@ -33,7 +33,7 @@ def Phonemes():
      'opt_ol_as_in_gold' without having to put them into
      ALL of the formats), and if that still doesn't work
      then we drop a character (with warning depending on
-     the format's setting of safe_to_drop_characters)."""
+     the source format's setting of safe_to_drop)."""
    a_as_in_ah = vowel()
    _, var1_a_as_in_ah = variant()
    _, var2_a_as_in_ah = variant()
@@ -122,7 +122,6 @@ def Phonemes():
    _, primary_stress = variant()
    _, secondary_stress = variant()
    text_sharp = other()
-   text_space = other()
    text_underline = other()
    text_question = other()
    text_exclamation = other()
@@ -809,7 +808,7 @@ def LexFormats():
     # Speech was written by David J. Hoskins and published by Superior Software.  It took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; sounds "retro" by modern standards but quite impressive for the BBC Micro in 1985.  Samples are played by amplitude-modulating the BBC's tone generator.
     # If you use an emulator like BeebEm, you'll need diskimg/Speech.ssd.  This can be made from your original Speech disc, or you might be able to find one but beware of copyright!  Same goes with the Model B ROM images included in BeebEm (you might want to delete the other models).  There has been considerable discussion over whether UK copyright law does or should allow "format-shifting" your own legally-purchased media, and I don't fully understand all the discussion so I don't want to give advice on it here.  The issue is "format-shifting" your legally-purchased BBC Micro ROM code and Speech disc to emulator images; IF this is all right then I suspect downloading someone else's copy is arguably allowed as long as you bought it legally "back in the day", but I'm not a solicitor so I don't know.
     # lexconvert's --phones bbcmicro option creates *SPEAK commands which you can type into the BBC Micro or paste into an emulator, either at the BASIC prompt, or in a listing with line numbers provided by AUTO.  You have to load the Speech program first of course.
-    # To script this on BeebEm, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
+    # To script this on BeebEm, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later; if you prefer to edit the disk image outside of the emulator then change byte 0x106 from 0x33 to 0x03), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
     ('4',primary_stress),
@@ -889,7 +888,6 @@ def LexFormats():
     (u'\u02c8',primary_stress),
     (u'\u02cc',secondary_stress),
     ('#',text_sharp),
-    (' ',text_space),
     ('_',text_underline),
     ('?',text_question),
     ('!',text_exclamation),
@@ -992,7 +990,6 @@ def LexFormats():
     ('"',primary_stress),
     ('\\textsecstress{}',secondary_stress),
     ('\\#',text_sharp),
-    (' ',text_space),
     ('\\_',text_underline),
     ('?',text_question),
     ('!',text_exclamation),
@@ -1192,7 +1189,7 @@ def LexFormats():
     (a_as_in_air,u'\u3048',False), # TODO: really?
     (ear,u'\u3044\u304a',False), # TODO: really?
     (oor_as_in_poor,u'\u304a',False), # TODO: really?
-    (close_to_or,u'\u304a\u304a'), # TODO: really?
+    (close_to_or,u'\u304a\u30fc'), # TODO: really?
     (u'\u3076',b), # bu (with vowel replacements later)
     (u'\u3061\u3047',ch), # chu (ditto)
     (u'\u3065',d), # du (and so on)
@@ -1291,9 +1288,11 @@ E.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.
    txt = getInputText(i+2,"text")
    w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # need to make sure output buffer is big enough (TODO: or use a temp file, or progressive write/read chunks) (as things stand, if bufsize is not big enough, w.close() on the following line can hang, as espeak waits for us to read its output before it can take all of our input)
    w.write(txt) ; w.close()
+   response = r.read()
+   if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
    write_inlineWord_header(format)
-   if format=="bbcmicro": write_bbcmicro_phones(r.read())
-   else: print ", ".join([" ".join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,r.read().split("\n"))])
+   if format=="bbcmicro": write_bbcmicro_phones(response)
+   else: print ", ".join([" ".join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,response.split("\n"))])
 
 def mainopt_check_variants(i):
    # undocumented (won't appear in help text)
@@ -1368,9 +1367,11 @@ def mainopt_syllables(i):
    """[<words>]
 Attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"""
    txt=getInputText(i+1,"word(s)");words=txt.split()
-   w,r=os.popen4("espeak -q -x",bufsize=max(8192,3*len(txt))) # TODO: same as above (bufsize)
+   w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # TODO: same as above (bufsize)
    w.write('\n'.join(words).replace("!","").replace(":","")) ; w.close()
-   rrr = r.read().split("\n")
+   response = r.read()
+   if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
+   rrr = response.split("\n")
    print " ".join([hyphenate(word,sylcount(convert(line,"espeak","festival"))) for word,line in zip(words,filter(lambda x:x,rrr))])
 
 def mainopt_phones2phones(i):
@@ -1778,25 +1779,33 @@ def getInputText(i,prompt):
 def write_bbcmicro_phones(ph):
   """Called by mainopt_phones as a special case because it needs to track the commas to avoid "Line too long"
   (and actually we might as well just put each clause on a separate *SPEAK command, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places)
-  also issue warnings if things get too big (see comments)"""
+  also calls print_bbc_warnings"""
   totalKeystrokes = 0 ; lines = 0
   for line in filter(lambda x:x,ph.split("\n")):
     global bbc_charsSoFar ; bbc_charsSoFar=0
     l=" ".join([markup_inline_word("bbcmicro",convert(word,"espeak","bbcmicro")) for word in line.split()])
     print l.replace(" \n","\n")
     totalKeystrokes += len(l)+1 ; lines += 1
+  print_bbc_warnings(totalKeystrokes,lines)
+def print_bbc_warnings(keyCount,lineCount):
+  "Print any relevant size warnings regarding sending 'keyCount' keys in 'lineCount' lines to the BBC Micro"
   # and warn if it looks too big:
   limits_exceeded = [] ; severe=0
-  if totalKeystrokes >= 32768:
-    severe=1 ; limits_exceeded.append("BeebEm 32K keystroke limit") # At least in version 3, the clipboard is defined in beebwin.h as a char of size 32768 and its bounds are not checked.  Additionally, if you script a second paste before the first has finished (or if you try to use BeebEm's Copy command) then the first paste will be interrupted.  So if you really want to make BeebEm read a long text then I suggest setting a printer destination file, putting a VDU 2,10,3 after each batch of commands, and waiting for that \n to appear in that printer file before sending the next batch, or perhaps write a set of programs to a disk image and have them CHAIN each other or whatever.
-  page=0x1900 # BBC Model B with DFS
+  if keyCount >= 32768:
+    severe=1 ; limits_exceeded.append("BeebEm 32K keystroke limit") # At least in version 3, the clipboard is defined in beebwin.h as a char of size 32768 and its bounds are not checked.  Additionally, if you script a second paste before the first has finished (or if you try to use BeebEm's Copy command) then the first paste will be interrupted.  So if you really want to make BeebEm read more then I suggest setting a printer destination file, putting a VDU 2,10,3 after each batch of commands, and waiting for that \n to appear in that printer file before sending the next batch, or perhaps write a set of programs to a disk image and have them CHAIN each other or whatever.
   himem=0x7c00 # BBC Model B in Mode 7 (which is 40x25 characters = 1000 bytes, by default starting at 7c00 with 24 bytes spare at the top, but the scrolling system uses the full 1024 bytes and can tell the video controller to start rendering at any one of them; if you get Jeremy Ruston's book and program the VIDC yourself then you could fix it at 7c18 if you really want, or just set HIMEM=&8000 and don't touch the screen, but that doesn't give you very much more room)
   speech_loc=0x5500 # unless you've loaded it into Sideways RAM or run RELOCAT to put it somewhere else
-  top=page+totalKeystrokes+lines*3+2 # (4 bytes for each program line, but totalKeystrokes includes 1 extra byte for each line anyway, hence lines*3)
-  if top > speech_loc: limits_exceeded.append("TOP=&5500 limit (Speech program will be overwritten unless relocated)") # and the *SP8000 Sideways RAM version doesn't seem to work on emulators like BeebEm.  The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
-  if top > himem: limits_exceeded.append("Model B Mode 7 HIMEM limit") # unless you overwrite the screen (see above). Not sure what's supposed to happen in BAS128 for the B+(?)/Master, but BeebEm 3 won't run Speech at all unless you set Model B; it reportedly worked on a real Master but who knows about BAS128 compatibility
-  if lines > 32768: limits_exceeded.append("BASIC II line number limit") # and you wouldn't get this far on a 32k computer without filling the memory first
-  elif 10*lines > 32767: limits_exceeded.append("AUTO line number limit (try AUTO 0,1)") # the highest possible line number in BBC BASIC II (for the Model B) is 32767, and the default AUTO increments in steps of 10.  You can use AUTO 0,1 to start at 0 and increment in steps of 1.
+  overhead_per_program_line = 4
+  for page,model,explain in [
+        (0x1900,"Model B",1), # with Acorn DFS (a reasonable assumption although alternate DFS ROMs are different)
+        (0xE00,"Master",0)]: # (the Master's DFS/ADFS knew how to work without taking up 2816 bytes of main RAM; maybe it used one of the extra banks)
+     top = page+keyCount+lineCount*(overhead_per_program_line-1)+2 # the -1 is because keyCount includes a carriage return at the end of each line
+     if explain: x=" (Speech program will be overwritten unless relocated)"
+     else: x="" # don't need to say that for Master if already said it for Model B (which has a lower limit, so if we're going over the Master's limit then we will already have gone over the Model B's and warned about it)
+     if top > speech_loc: limits_exceeded.append(model+" TOP=&5500 limit"+x) # and the *SP8000 Sideways RAM version doesn't seem to work on emulators like BeebEm.  The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
+     if top > himem: limits_exceeded.append(model+" Mode 7 HIMEM limit") # unless you overwrite the screen (see above). Not sure what's supposed to happen in BAS128 for the B+(?)/Master, and/or Tube configurations, but BeebEm 3 won't run Speech at all unless you set Model B; it reportedly worked on a real Master, but I don't know about BAS128 etc
+  if lineCount > 32768: limits_exceeded.append("BBC BASIC line number limit") # and you wouldn't get this far without filling the memory, even with 128k (4 bytes per line)
+  elif 10*lineCount > 32767: limits_exceeded.append("AUTO line number limit (try AUTO 0,1)") # (default AUTO increments in steps of 10; you can use AUTO 0,1 to start at 0 and increment in steps of 1.  BBC BASIC stores its line info in a compact form which allows a range of 0-32767.)
   if severe: warning,after="WARNING: ",""
   else: warning,after="Note: ","It should still work if pasted into BeebEm as immediate commands. "
   after = ". "+after+"See comments in lexconvert for more details.\n"
@@ -1832,16 +1841,19 @@ def print_bbclex_instructions(fname,size):
   SRAM_lex_offset=0x1683
   SRAM_max=0x4000 # 16k
   noSRAM_default_addr=0x5500
-  noSRAM_min_addr=0x1900 # BBC B DFS + no program at all (RELOCAT actually supports going down to E00, but you won't be able to use the disk after this, only tapes)
+  noSRAM_min_addr=0xE00 # minimum supported by RELOCAT
+  page=0x1900 # or 0xE00 for Master (but OK to just leave this at 0x1900 regardless of model; it harmlessly increases the range where special_relocate_instructions 'kick in')
   noSRAM_himem=0x7c00 # unless you do strange tricks with the screen (see comments on himem=0x7c00 above)
   def special_relocate_instructions(reloc_addr):
-    pagemove_min,pagemove_max = max(0xE00,noSRAM_min_addr-0x1E00), noSRAM_min_addr+0xE00 # if relocating to within this range, must move PAGE before loading RELOCAT. RELOCAT's supported range is 0xE00 to 0x5E00, omitting (PAGE-&1E00) to (PAGE+&E00)
+    pagemove_min,pagemove_max = max(0xE00,page-0x1E00), page+0xE00 # if relocating to within this range, must move PAGE before loading RELOCAT. RELOCAT's supported range is 0xE00 to 0x5E00, omitting (PAGE-&1E00) to (PAGE+&E00)
+    if reloc_addr < 0x1900: extra=" On a Model B with Acorn DFS you won't be able to use the disk after relocating below &1900, and you can't run star commands from tape so you have to initialise via CALL." # Should be all right on a Master, but see above re emulation problems.
+    else: extra = ""
     if not pagemove_min<=reloc_addr<pagemove_max:
-      return "" # no special instructions needed
-    page = reloc_addr+0x1E00
+      return extra # no other special instructions needed
+    newpage = reloc_addr+0x1E00
     page_max = min(0x5E00,noSRAM_default_addr-0xE00)
-    if page > page_max: return False # "Unfortunately RELOCAT can't put it at &%X even with PAGE changes." % reloc_addr
-    return " RELOCAT must be run with PAGE in the range of &%X to &%X for this relocation to work." % (page,page_max)
+    if newpage > page_max: return False # "Unfortunately RELOCAT can't put it at &%X even with PAGE changes." % reloc_addr
+    return " Please run RELOCAT with PAGE in the range of &%X to &%X for this relocation to work.%s" % (newpage,page_max,extra)
   if noSRAM_default_addr+noSRAM_lex_offset+size > noSRAM_himem:
     reloc_addr = noSRAM_himem-noSRAM_lex_offset-size
     reloc_addr -= (reloc_addr%256)
@@ -1850,7 +1862,8 @@ def print_bbclex_instructions(fname,size):
       if instr==False: print "This lexicon is too big for Speech in main RAM even with relocation, unless RELOCAT is rewritten to work from files."
       else:
         bbcStart = reloc_addr+noSRAM_lex_offset
-        print "This lexicon is too big for Speech at its default address of &%X, but you could use RELOCAT to put a version at &%X (then do the suggested *SAVE, reset, and run *SP; be sure to set HIMEM=&%X) and then *LOAD %s %X or change the relocated SP file from offset &%X."+instr % (noSRAM_default_addr,reloc_addr,reloc_addr,fname,bbcStart,noSRAM_lex_offset)
+        reloc_call = reloc_addr + 0xB00
+        print "This lexicon is too big for Speech at its default address of &%X, but you could use RELOCAT to put a version at &%X and then initialise it with CALL %s (or do the suggested *SAVE, reset, and run *SP). Be sure to set HIMEM=&%X. Then *LOAD %s %X or change the relocated SP file from offset &%X.%s" % (noSRAM_default_addr,reloc_addr,bbcshortest(reloc_call),reloc_addr,fname,bbcStart,noSRAM_lex_offset,instr)
     else: print "This lexicon is too big for Speech in main RAM even with relocation."
   else:
     bbcStart = noSRAM_default_addr+noSRAM_lex_offset
