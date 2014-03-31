@@ -1671,13 +1671,8 @@ def read_user_lexicon(fromFormat):
     return readFunction(lexfile)
 
 def get_macuk_lexicon(fromFormat):
-    "Converts lexicon from fromFormat and returns lists suitable for MacBritish_System_Lexicon's readWithLex"
-    lex = read_user_lexicon(fromFormat)
-    ret1,ret2 = [],[]
-    for word, pronunc in lex:
-        ret1.append(word)
-        ret2.append(convert(pronunc,fromFormat,"mac-uk"))
-    return ret1,ret2
+    "Converts lexicon from fromFormat and returns a list suitable for MacBritish_System_Lexicon's readWithLex"
+    return [(word,convert(pronunc,fromFormat,"mac-uk")) for word, pronunc in read_user_lexicon(fromFormat)]
 
 def convert_user_lexicon(fromFormat,toFormat,outFile):
     "See mainopt_convert"
