@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.17 - convert between lexicons of different speech synthesizers
+"""lexconvert v0.171 - convert between lexicons of different speech synthesizers
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -28,12 +28,15 @@ def Phonemes():
      as equivalent to the last non-variant we created.
   
      For anything else that does not exist in the
-     destination format, we will first try to break it
-     down into parts (useful for having compounds like
-     'opt_ol_as_in_gold' without having to put them into
-     ALL of the formats), and if that still doesn't work
-     then we drop a character (with warning depending on
-     the source format's setting of safe_to_drop)."""
+     destination format, we will first try to break the
+     source's phoneme into parts (e.g. see the treatment
+     of opt_ol_as_in_gold by eSpeak and bbcmicro), and if
+     that still doesn't work then we drop a character
+     (warning depending on the source format's setting of
+     safe_to_drop_characters).  makeDic does however warn
+     about any non-variant consonants, or non-variant
+     vowels that weren't marked optional, missing from a
+     format. """
    a_as_in_ah = vowel()
    _, var1_a_as_in_ah = variant()
    _, var2_a_as_in_ah = variant()
@@ -89,7 +92,7 @@ def Phonemes():
    _, var1_o_as_in_go = variant()
    _, var2_o_as_in_go = variant()
    _, var3_o_as_in_go = variant()
-   opt_ol_as_in_gold = vowel()
+   opt_ol_as_in_gold = opt_vowel() # see eSpeak / bbcmicro
    oy_as_in_toy = vowel()
    _, var1_oy_as_in_toy = variant()
    p = consonant()
@@ -103,7 +106,7 @@ def Phonemes():
    oor_as_in_poor = vowel()
    _, var1_oor_as_in_poor = variant()
    _, opt_u_as_in_pull = variant()
-   opt_ul_as_in_pull = vowel()
+   opt_ul_as_in_pull = opt_vowel() # see eSpeak / bbcmicro
    oo_as_in_food = vowel()
    _, var1_oo_as_in_food = variant()
    _, var2_oo_as_in_food = variant()
@@ -311,7 +314,7 @@ def LexFormats():
     ('n',n),
     ('N',ng),
     ('oU',o_as_in_go),
-    ('oUl',opt_ol_as_in_gold), # (espeak says "gold" in a slightly 'posh' way though)
+    ('oUl',opt_ol_as_in_gold), # (espeak says "gold" in a slightly 'posh' way though) (if dest format doesn't have opt_ol_as_in_gold, it'll get o_as_in_go + the l)
     ('OI',oy_as_in_toy),
     ('p',p),
     ('r',r),
@@ -323,7 +326,7 @@ def LexFormats():
     ('U@',oor_as_in_poor),
     ('U',opt_u_as_in_pull),
     ('@5',opt_u_as_in_pull,False),
-    ('Ul',opt_ul_as_in_pull),
+    ('Ul',opt_ul_as_in_pull), # if dest format doesn't have this, it'll get opt_u_as_in_pull from the U, then the l
     ('u:',oo_as_in_food),
     ('O:',close_to_or),
     ('O@',var3_close_to_or),
@@ -486,6 +489,7 @@ def LexFormats():
     (o_as_in_orange,'AA',False),
     ('AW',o_as_in_now),
     ('AX',a_as_in_ago),
+    (e_as_in_herd,'AX',False), # TODO: is this really the best approximation?
     ('AY',eye),
     ('b',b),
     ('C',ch),
@@ -845,7 +849,7 @@ def LexFormats():
     ('N',n),
     ('NX',ng),
     ('OW',o_as_in_go),
-    ('OL',opt_ol_as_in_gold),
+    ('OL',opt_ol_as_in_gold), # (if dest format doesn't have this, it'll get o_as_in_orange from the O, then the l)
     ('OY',oy_as_in_toy),
     ('P',p),
     ('R',r),
@@ -857,7 +861,7 @@ def LexFormats():
     ('UH',oor_as_in_poor,False), # TODO: really? (espeak 'U' goes to opt_u_as_in_pull, and eSpeak also used U for the o in good, which sounds best with Speech's default UH4, hence the line below, but where did we get UH->oor_as_in_poor from?  Low-priority though because how often do you convert OUT of bbcmicro format)
     (opt_u_as_in_pull,'UH',False),
     ('/U',opt_u_as_in_pull,False),
-    ('/UL',opt_ul_as_in_pull),
+    ('/UL',opt_ul_as_in_pull), # if dest format doesn't have this, it'll get opt_u_as_in_pull from the /U, then l
     ('UW',oo_as_in_food),
     ('UX',oo_as_in_food,False),
     ('AO',close_to_or),
@@ -1094,6 +1098,7 @@ def LexFormats():
     ('yo5',o_as_in_orange),
     ('ao5',o_as_in_now),
     (a_as_in_ago,'e5',False),
+    (e_as_in_herd,'e5',False),
     ('ai5',eye),
     ('bu0',b),
     ('che0',ch),
@@ -1183,6 +1188,7 @@ def LexFormats():
     (u'\u304a\u3046',o_as_in_go), # ou
     (a_as_in_ah,u'\u3042',False),
     (a_as_in_ago,u'\u3042',False), # TODO: really?
+    (e_as_in_herd,u'\u3042',False), # TODO: really?
     (i_as_in_it,u'\u3044',False), # TODO: really?
     (u_as_in_but,u'\u3046',False), # TODO: really?
     (ar_as_in_year,u'\u3048',False), # TODO: really?
@@ -1401,12 +1407,15 @@ class Counter(object):
 def other():
     "Used by Phonemes() when creating something that is neither a vowel nor a consonant, e.g. a stress mark"
     Counter.c += 1 ; Counter.sc=0 ; return Counter.c
-consonants = []
+consonants = set() ; mainVowels = set()
 def consonant():
     "Used by Phonemes() when creating a consonant"
-    r = other() ; consonants.append(r) ; return r
+    r = other() ; consonants.add(r) ; return r
 def vowel():
     "Used by Phonemes() when creating a vowel"
+    r = other() ; mainVowels.add(r) ; return r
+def opt_vowel():
+    "Used by Phonemes() when creating an optional vowel (one that has no warning issued if some format doesn't support it)"
     return other()
 def variant():
     "Used by Phonemes() when creating a variant of the just-defined vowel/consonant/etc"
@@ -1418,18 +1427,22 @@ def variant():
 
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
-    d = {("settings","doc"):doc}
+    d = {("settings","doc"):doc} ; duplicates = []
     for a in args:
         assert type(a)==tuple and (len(a)==2 or len(a)==3)
         k=a[0]
-        assert not k in d, "Duplicate key "+repr(k) # Python does not do this in {...} notation, just lets you overwrite!
+        if k in d: duplicates.append(k)
         v=a[1] ; d[k] = v
         if len(a)==3: bidir=a[2]
         else: bidir=True
         if bidir:
             # (k,v,True) = both (k,v) and (v,k)
-            assert not v in d, "Duplicate key "+repr(v)+" (did you forget a ,False to suppress bidirectional mapping?)"
+            if v in d: duplicates.append(v)
             d[v] = k
+    missing = [l for l in (list(consonants)+list(mainVowels)) if not l in d]
+    if missing:
+       import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(g for g,val in globals().items() if val==m) for m in missing)+"\n")
+    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(duplicates))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
     for k,v in kwargs.items(): d[('settings',k)] = v
     return d
 def getSetting(formatName,settingName):
@@ -1450,7 +1463,7 @@ def make_dictionary(sourceName,destName):
     source = lexFormats[sourceName]
     dest = lexFormats[destName]
     d = {}
-    global dest_consonants ; dest_consonants = []
+    global dest_consonants ; dest_consonants = set()
     global dest_syllable_sep ; dest_syllable_sep = dest.get(syllable_separator,"")
     global implicit_vowel_before_NL
     implicit_vowel_before_NL = None
@@ -1460,7 +1473,7 @@ def make_dictionary(sourceName,destName):
       if not v in dest: v = int(v) # (try the main version of a variant)
       if not v in dest: continue # (haven't got it - will have to ignore or break into parts)
       d[k] = dest[v]
-      if int(v) in consonants:dest_consonants.append(d[k])
+      if int(v) in consonants: dest_consonants.add(d[k])
       if int(v)==e_as_in_herd and (not implicit_vowel_before_NL or v==int(v)): # TODO: or u_as_in_but ?  used by festival and some other synths before words ending 'n' or 'l' (see usage of implicit_vowel_before_NL later)
         implicit_vowel_before_NL = d[k]
     cached_sourceName,cached_destName,cached_dict=sourceName,destName,d
