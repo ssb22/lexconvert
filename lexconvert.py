@@ -1887,7 +1887,7 @@ def main():
        print "Available pronunciation formats:"
        if html: print "<table>"
        keys=lexFormats.keys() ; keys.sort()
-       for k in keys: print '<tr><td valign="top">'+k+'</td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>"
+       for k in keys: print '<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>"
        print "</table>"
     else: print "Available pronunciation formats: "+", ".join(sorted(lexFormats.keys()))
     print missALine
