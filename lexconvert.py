@@ -1174,9 +1174,11 @@ def LexFormats():
   ),
 
   "kana-approx" : makeDic(
-    "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others)", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx often works better).  Write-only for now.
+    "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better).  Default is hiragana because I find hiragana easier to read than katakana
+    # This format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
     (u'double-',primary_stress),
-    (secondary_stress,'',False), # or for more emphasis you might want to try: (secondary_stress,u'double-',False),
+    (secondary_stress,ifset('KANA_MORE_EMPH',u'double-'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well)
+    # The following Unicode codepoints are hiragana; KANA_TYPE is handled by some special-case code at the end of convert()
     (u'\u3042',a_as_in_apple),
     (u'\u3044',e_as_in_eat),
     (u'\u3046',oo_as_in_food),
@@ -1427,6 +1429,12 @@ def variant():
     # the 0 is so we can say _, name = variant()
     # so as to get some extra indentation
 
+def ifset(var,a,b=""):
+   "Checks the environment variable var; if it is set (non-empty), return a, otherwise return b.  Used in LexFormats to create tables with variations set by the environment."
+   import os
+   if os.environ.get(var,""): return a
+   else: return b
+
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
     d = {("settings","doc"):doc} ; duplicates = []
@@ -1547,7 +1555,16 @@ def convert(pronunc,source,dest):
     ret=separator.join(ret).replace('*added','')
     for s,r in checkSetting(dest,'cleanup_regexps'):
       ret=re.sub(s,r,ret)
+    if dest=="kana-approx" and os.environ.get("KANA_TYPE","").lower().startswith("k"): ret=hiragana_to_katakana(ret)
     return ret
+
+def hiragana_to_katakana(u):
+   "Converts all hiragana characters in unicode string 'u' into katakana"
+   assert type(u)==unicode ; u = list(u)
+   for i in xrange(len(u)):
+      if 0x3041 <= ord(u[i]) <= 0x3096:
+         u[i]=unichr(ord(u[i])+0x60)
+   return u"".join(u)
 
 def espeak_probably_right_already(existing_pronunc,new_pronunc):
     """Used by convert_system_festival_dictionary_to_espeak to compare a "new" pronunciation with eSpeak's existing pronunciation.  As the transcription from OALD to eSpeak is only approximate, it could be that our new pronunciation is not identical to the existing one but the existing one is actually correct; try to detect when this happens by checking if the pronunciations are the same after some simplifications."""
