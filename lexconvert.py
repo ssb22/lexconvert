@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.171 - convert between lexicons of different speech synthesizers
+"""lexconvert v0.172 - convert between lexicons of different speech synthesizers
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -545,10 +545,10 @@ def LexFormats():
     ('A',a_as_in_ah),
     ('@',a_as_in_apple),
     ('$',u_as_in_but),
+    (a_as_in_ago,'$',False),
     ('A+',o_as_in_orange),
     ('a&U',o_as_in_now),
-    ('E0',a_as_in_ago),
-    (e_as_in_herd,'E0',False),
+    ('E0',e_as_in_herd),
     ('a&I',eye),
     ('b',b),
     ('t&S',ch),
@@ -815,6 +815,7 @@ def LexFormats():
     # To script this on BeebEm, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later; if you prefer to edit the disk image outside of the emulator then change byte 0x106 from 0x33 to 0x03), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
+    # If you want to emulate a Master, you might need a *DISK before the *SPEECH, to take it out of ADFS mode.
     ('4',primary_stress),
     ('5',secondary_stress), # (these are pitch numbers on the BBC; normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary and 4=primary; 3 sounds less calm)
     ('AA',a_as_in_ah),
@@ -1246,6 +1247,7 @@ def LexFormats():
        (u"\u305a\u3042",u"\u3056"),(u"\u305a\u3044",u"\u3058"),(u"\u305a\u3046",u"\u305a"),(u"\u305a\u3048",u"\u305c"),(u"\u305a\u304a",u"\u305e"),
        (u"\u308f\u3042",u"\u308f"),(u"\u308f\u3044",u"\u3046\u3043"),(u"\u308f\u3046",u"\u3046"),(u"\u308f\u3048",u"\u3046\u3047"),(u"\u308f\u304a",u"\u3092"),
        (u'\u3046\u3043\u3066\u3085', u'\u3046\u3043\u3065'), # sounds a bit better for words like 'with'
+       (u'\u3050\u3050',u'\u3050'), # gugu -> gu, sometimes comes up with 'gl-' combinations
     ],
   ),
 }
@@ -1806,17 +1808,22 @@ def print_bbc_warnings(keyCount,lineCount):
   limits_exceeded = [] ; severe=0
   if keyCount >= 32768:
     severe=1 ; limits_exceeded.append("BeebEm 32K keystroke limit") # At least in version 3, the clipboard is defined in beebwin.h as a char of size 32768 and its bounds are not checked.  Additionally, if you script a second paste before the first has finished (or if you try to use BeebEm's Copy command) then the first paste will be interrupted.  So if you really want to make BeebEm read more then I suggest setting a printer destination file, putting a VDU 2,10,3 after each batch of commands, and waiting for that \n to appear in that printer file before sending the next batch, or perhaps write a set of programs to a disk image and have them CHAIN each other or whatever.
-  himem=0x7c00 # BBC Model B in Mode 7 (which is 40x25 characters = 1000 bytes, by default starting at 7c00 with 24 bytes spare at the top, but the scrolling system uses the full 1024 bytes and can tell the video controller to start rendering at any one of them; if you get Jeremy Ruston's book and program the VIDC yourself then you could fix it at 7c18 if you really want, or just set HIMEM=&8000 and don't touch the screen, but that doesn't give you very much more room)
+  shadow_himem=0x8000 # if using a 'shadow mode' on the Master/B+/Integra-B (modes 128-135, which leave all main RAM free)
+  mode7_himem=0x7c00 # (40x25 characters = 1000 bytes, by default starting at 7c00 with 24 bytes spare at the top, but the scrolling system uses the full 1024 bytes and can tell the video controller to start rendering at any one of them; if you get Jeremy Ruston's book and program the VIDC yourself then you could fix it at 7c18 if you really want, or just set HIMEM=&8000 and don't touch the screen, but that doesn't give you very much more room)
   speech_loc=0x5500 # unless you've loaded it into Sideways RAM or run RELOCAT to put it somewhere else
   overhead_per_program_line = 4
   for page,model,explain in [
         (0x1900,"Model B",1), # with Acorn DFS (a reasonable assumption although alternate DFS ROMs are different)
-        (0xE00,"Master",0)]: # (the Master's DFS/ADFS knew how to work without taking up 2816 bytes of main RAM; maybe it used one of the extra banks)
+        (0xE00,"Master",0)]: # (the Master has special paged banks for OS workspace so doesn't need 2816 bytes of main RAM for DFS)
      top = page+keyCount+lineCount*(overhead_per_program_line-1)+2 # the -1 is because keyCount includes a carriage return at the end of each line
      if explain: x=" (Speech program will be overwritten unless relocated)"
      else: x="" # don't need to say that for Master if already said it for Model B (which has a lower limit, so if we're going over the Master's limit then we will already have gone over the Model B's and warned about it)
-     if top > speech_loc: limits_exceeded.append(model+" TOP=&5500 limit"+x) # and the *SP8000 Sideways RAM version doesn't seem to work on emulators like BeebEm.  The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
-     if top > himem: limits_exceeded.append(model+" Mode 7 HIMEM limit") # unless you overwrite the screen (see above). Not sure what's supposed to happen in BAS128 for the B+(?)/Master, and/or Tube configurations, but BeebEm 3 won't run Speech at all unless you set Model B; it reportedly worked on a real Master, but I don't know about BAS128 etc
+     if top > speech_loc: limits_exceeded.append(model+" TOP=&5500 limit"+x) # and the SP8000 Sideways RAM version doesn't seem to work on emulators like BeebEm.  The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any non-shadow mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite (non-shadow) screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
+     if top > mode7_himem:
+        if model=="Master":
+           if top > shadow_himem: limits_exceeded.append(model+" 32k HIMEM limit (even for shadow modes)") # I suppose you could try using BAS128 but I doubt it's compatible with Speech.  If you really want to store such a long program on the BBC then you'd better split it into several programs that CHAIN each other (as mentioned above).
+           else: limits_exceeded.append(model+" Mode 7 HIMEM limit (use shadow modes 128-135)")
+        else: limits_exceeded.append(model+" Mode 7 HIMEM limit") # unless you overwrite the screen (see above) - let's assume the Model B hasn't been fitted with shadow modes (although the Integra-B add-on does give them to the Model B, and leaves PAGE at &1900; B+ has shadow modes but I don't know what's supposed to happen to PAGE on it).  65C02 Tube doesn't help much (it'll try to run Speech on the coprocessor instead of the host, and this results in silence because it can't send its sound back across the Tube; don't know if there's a way to make it run on the host in these circumstances or what the host's memory map is like)
   if lineCount > 32768: limits_exceeded.append("BBC BASIC line number limit") # and you wouldn't get this far without filling the memory, even with 128k (4 bytes per line)
   elif 10*lineCount > 32767: limits_exceeded.append("AUTO line number limit (try AUTO 0,1)") # (default AUTO increments in steps of 10; you can use AUTO 0,1 to start at 0 and increment in steps of 1.  BBC BASIC stores its line info in a compact form which allows a range of 0-32767.)
   if severe: warning,after="WARNING: ",""
@@ -1856,10 +1863,10 @@ def print_bbclex_instructions(fname,size):
   noSRAM_default_addr=0x5500
   noSRAM_min_addr=0xE00 # minimum supported by RELOCAT
   page=0x1900 # or 0xE00 for Master (but OK to just leave this at 0x1900 regardless of model; it harmlessly increases the range where special_relocate_instructions 'kick in')
-  noSRAM_himem=0x7c00 # unless you do strange tricks with the screen (see comments on himem=0x7c00 above)
+  noSRAM_himem=0x7c00 # unless you're in a shadow mode or something (see comments on himem above), however leaving this at 0x7c00 is usually harmless (just causes the 'need to relocate' to 'kick in' earlier, although if memory is really full it might say 'too big' 1k too early)
   def special_relocate_instructions(reloc_addr):
     pagemove_min,pagemove_max = max(0xE00,page-0x1E00), page+0xE00 # if relocating to within this range, must move PAGE before loading RELOCAT. RELOCAT's supported range is 0xE00 to 0x5E00, omitting (PAGE-&1E00) to (PAGE+&E00)
-    if reloc_addr < 0x1900: extra=" On a Model B with Acorn DFS you won't be able to use the disk after relocating below &1900, and you can't run star commands from tape so you have to initialise via CALL." # Should be all right on a Master, but see above re emulation problems.
+    if reloc_addr < 0x1900: extra=" On a Model B with Acorn DFS you won't be able to use the disk after relocating below &1900, and you can't run star commands from tape so you have to initialise via CALL. (On a Master, DFS is not affected as it doesn't use &E00-&1900.)"
     else: extra = ""
     if not pagemove_min<=reloc_addr<pagemove_max:
       return extra # no other special instructions needed
@@ -1998,9 +2005,11 @@ class MacBritish_System_Lexicon(object):
         self.textToAvoid = text ; self.restoreDic = {}
         catchSignals()
     def allWords(self):
+        "Returns a list of words that are defined in the system lexicon (which won't be changed, but see allPh)"
         self.dFile.seek(self.wordIndexStart)
         return [x for x in self.dFile.read(self.wordIndexEnd-self.wordIndexStart).split(chr(0)) if x]
     def allPh(self):
+        "Returns a list of (file position, phoneme string) for each of the primary phoneme entries from the system lexicon.  These entries can be changed in-place by writing to the said file position, and then spoken by giving the voice the corresponding word from allWords (but see also usable_words)."
         self.dFile.seek(self.phIndexStart)
         def f(l):
             last = None ; r = [] ; pos = self.phIndexStart
@@ -2012,12 +2021,14 @@ class MacBritish_System_Lexicon(object):
             return r
         return f([x for x in self.dFile.read(self.phIndexEnd-self.phIndexStart).split(chr(0))])
     def usable_words(self,words_ok_to_redefine=[]):
+        "Returns a list of (word,phoneme_file_position,original_phonemes) by combining allWords with allPh, but omitting any words that don't seem 'usable' (for example words that contain spaces, since these lexicon entries don't seem to be actually used by the voice).  Words that occur in self.textToAvoid are also considered non-usable, unless they also occur in words_ok_to_redefine (user lexicon)."
         for word,(pos,phonemes) in zip(self.allWords(),self.allPh()):
             if not re.match("^[a-z0-9]*$",word): continue # it seems words not matching this regexp are NOT used by the engine
             if not (phonemes and 32<ord(phonemes[0])<127): continue # better not touch those, just in case
             if word in self.textToAvoid and not word in words_ok_to_redefine: continue
             yield word,pos,phonemes
     def check_redef(self,wordsAndPhonemes):
+        "Diagnostic function to list on standard error the redefinitions we want to make.  wordsAndPhonemes is a list of (original system-lexicon word, proposed new phonemes).  The old phonemes are also listed, fetched from allPh."
         aw = self.allWords() ; ap = 0
         for w,p in wordsAndPhonemes:
           w = w.lower()
@@ -2035,13 +2046,14 @@ class MacBritish_System_Lexicon(object):
     def readWithLex(self,lex):
         "Reads the text given in the constructor after setting up the lexicon with the given (word,phoneme) list"
         # self.check_redef(lex) # uncomment if you want to know about these
-        tta = ' '+self.textToAvoid+' '
+        tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'")+' '
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
+        nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"])" # see below for why chr(0) is included; (?i) = ignore case
+        nonWordAfter=r"(?=([^A-Za-z']|'[^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s")
         for ww,pp in lex:
-          if re.search(r"(?i)(?<=[^A-Za-z])"+re.escape(ww)+r"(?=[^A-Za-z])",tta):
+          if re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
             words2.append(ww) ; phonemes2.append(pp)
-        for k,v in self.setMultiple(words2,phonemes2).iteritems():
-            tta = re.sub(r"(?i)(?<=[^A-Za-z"+chr(0)+"])"+re.escape(k)+r"(?=[^A-Za-z])",chr(0)+v,tta)
+        for k,v in self.setMultiple(words2,phonemes2).iteritems(): tta = re.sub(nonWordBefore+re.escape(k)+nonWordAfter,chr(0)+v,tta)
         tta = tta.replace(chr(0),'')
         os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta)
     def setMultiple(self,words,phonemes):
