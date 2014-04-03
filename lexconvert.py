@@ -1375,8 +1375,9 @@ In all cases you need to cd to the espeak source directory before running this. 
 def mainopt_syllables(i):
    """[<words>]
 Attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"""
+   # Normally, espeak -x output can't be relied on to always put a space between every input word.  So we put a newline after every input word instead.  This might affect eSpeak's output (not recommended for mainopt_phones, hence no 'interleave words and phonemes' option), but it should be OK for just counting the syllables.  (Also, the assumption that the input words have been taken from song lyrics usefully rules out certain awkward punctuation cases.)
    txt=getInputText(i+1,"word(s)");words=txt.split()
-   w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # TODO: same as above (bufsize)
+   w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # TODO: same TODO as above (bufsize)
    w.write('\n'.join(words).replace("!","").replace(":","")) ; w.close()
    response = r.read()
    if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
@@ -1736,23 +1737,46 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
     if toFormat=="bbcmicro": bbc_appendDefaultLex(outFile)
     outFile.write(checkSetting(toFormat,"lex_footer"))
 
+def bbcMicro_partPhonemeCount(pronunc):
+   """Returns the number of 'part phonemes' (at least that's what I'm calling them) for the BBC Micro phonemes in pronunc.  The *SPEAK command cannot take more than 117 part-phonemes at a time before saying "Line too long", and in some cases it takes less than that (I'm not sure why); 115 is a safer limit."""
+   partCount = 0 ; pronunc0 = pronunc
+   while pronunc:
+      found = 0
+      for p in ' ,AA,AE,AH,AI,AO,AW,AY,B,CH,CT,DH,DUX,D,EE,EH,ER,F,G,/H,IH,IX,IY,J,K,L,M,NX,N,OW,OL,OY,O,P,R,SH,S,TH,T,UH,/UL,/U,UW,UX,V,W,Y,ZH,Z'.split(','): # phonemes and space count, but pitch numbers do not count
+         if pronunc.startswith(p):
+            partCount += {
+               # *SPEAK can take 117 of most single-letter phonemes, or 116 (limited by the 232+6-character input limit) of most 2-letter phonemes
+               'AW':2,'IY':2,'OW':2,'OL':2,'UW':2,'/UL':2, # *SPEAK can take 58 of these
+               'DUX':3,'AY':3,'CH':3,'J':3,'OY':3, # *SPEAK can take 39 of these
+               'CT':4, # *SPEAK can take 29 of these
+            }.get(p,1)
+            pronunc=pronunc[len(p):] ; found=1 ; break
+      if not found:
+         assert pronunc[0] in '12345678',"Unrecognised BBC Micro phoneme at "+pronunc+" in "+pronunc0
+         pronunc=pronunc[1:]
+   return partCount
+
 def write_inlineWord_header(format):
     "Checks the format for inline_header, prints if so"
     h = checkSetting(format,"inline_header")
     if h: print h
-bbc_charsSoFar=0 # hack for bbcmicro
+bbc_partsSoFar=bbc_charsSoFar=0 # hack for bbcmicro
 def markup_inline_word(format,pronunc):
     "Returns pronunc with any necessary markup for putting it in a text (using the inline_format setting).  Contains special-case code for bbcmicro (beginning a new *SPEAK command when necessary)"
     if type(pronunc)==unicode: pronunc=pronunc.encode('utf-8') # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
     if format=="bbcmicro":
-      global bbc_charsSoFar
-      if not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 165: # 238 is max len of the immediate BASIC prompt, but get a "Line too long" message from Speech if go over 165 including the '*SPEAK ' (158 excluding it).
+      global bbc_partsSoFar,bbc_charsSoFar
+      thisPartCount = bbcMicro_partPhonemeCount(pronunc)
+      if (not bbc_partsSoFar or bbc_partsSoFar+thisPartCount > 115) or (not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 238): # 238 is max len of the immediate BASIC prompt; re other limit see bbcMicro_partPhonemeCount
         if bbc_charsSoFar: r="\n"
         else: r=""
-        bbc_charsSoFar = 7+len(pronunc)+1 # +1 for the space after this word.
-        return r+"*SPEAK "+pronunc
+        cmd="*SPEAK" # (could add a space if want to make it more readable, at the expense of an extra keystroke in the paste buffer; by the way, when not using the ROM version you must use *SPEAK not OS.("SPEAK"), at least on a Model B; seems OSCLI doesn't go through quite the same vectors as star)
+        bbc_charsSoFar = len(cmd)+len(pronunc)+1 # +1 for the space that'll be after this word if we don't start a new line
+        bbc_partsSoFar = thisPartCount+1 # ditto
+        return r+cmd+pronunc
       else:
         bbc_charsSoFar += len(pronunc)+1
+        bbc_partsSoFar += thisPartCount+1
         return pronunc
     return checkSetting(format,"inline_format","%s") % pronunc
 
