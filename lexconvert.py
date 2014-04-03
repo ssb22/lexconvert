@@ -1885,51 +1885,41 @@ def bbcshortest(n):
   """Convert integer n into the shortest possible number of BBC Micro keystrokes; prefer hex if and only if the extra '&' keystroke won't make it any longer than its decimal equivalent"""
   if len(str(n)) < len('&%X'%n): return str(n)
   else: return '&%X'%n
-def bbcPokes(data,start):
-  "Return BBC BASIC keystrokes to put data into RAM starting at address start; doesn't mind overwriting the end by up to 3 bytes"
-  i=0 ; ret=[] ; hadPpercent=False ; thisLine = ""
+def bbcKeystrokes(data,start):
+  "Return BBC BASIC keystrokes to put data into RAM starting at address start.  Uses BBC assembler instructions, which usually saves keystrokes compared with ! operators.  Keystrokes are limited to ASCII for easier copy/paste."
+  i=0 ; ret=[] ; thisLine = ""
   while i<len(data):
-    while i+4>len(data): data+=chr(0) # pad
-    thisNum = ord(data[i])+(ord(data[i+1])<<8)+(ord(data[i+2])<<16)+(ord(data[i+3])<<24)
     bbc_max_line_len = 238
-    if thisLine: # we're using the assembler
-       def lookahead_EQUS(i,max):
-          j=i
-          while j<len(data) and j-i<max-len(':EQUS""') and 32<=ord(data[j])<127 and not data[j]=='"': j += 1 # the <127 isn't actually necessary for the BBC, but it might help copy/paste to make sure the key file is all ASCII
-          return j
-       j=lookahead_EQUS(i,bbc_max_line_len-len(thisLine))
-       if j-i >= 4: # (actually it depends; see also bbcEQUD doc string; however >=4 is near enough for now)
-          thisLine += ':EQUS"'+data[i:j]+'"'
-          start += j-i ; i = j ; continue
-       if lookahead_EQUS(i+1,bbc_max_line_len)-(i+1)>=4:
-          # looks like it might make more sense to have an EQUB for just this byte and then go back to EQUS, rather than using EQUD (again this is not an exact optimisation but near enough)
-          o=ord(data[i]) ; pl=1
-          thisI = ':'+{0:"BRK",8:"PHP",0x18:"CLC",0x88:"DEY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xa8:"TAY",0xaa:"TAX",0xb8:"CLV",0xba:"TSX",0xc8:"INY",0xca:"DEX",0xd8:"CLD",0xe8:"INX",0xea:"NOP",0xf8:"SED"}.get(o,"EQUB"+str(o)) # (the opcodes for these shorter-than-EQUB tokens won't occur in a lexicon (unless you patch Speech to recognise one of them instead of its 0x80), but might occur if we ever want to save extra code.  Ignoring instructions that are in ASCII range e.g. PLP=0x28 SEC=0x38; also ignoring 0xda:"PHX" as it's not available on all models)
-       else:
-          thisI = ":EQUD"+bbcshortest(thisNum) ; pl = 4
-       if len(thisLine)+len(thisI) <= bbc_max_line_len:
-          thisLine += thisI
-          i += pl ; start += pl ; continue
-       else:
-          ret.append(thisLine) ; thisLine = ""
-    if not thisLine and bbcEQUD(len(bbcshortest(start)),(len(data)-i)/4,hadPpercent):
-       if not hadPpercent:
-          ret.append("P%="+bbcshortest(start))
-          hadPpercent = True
-       thisLine = "[OPT2" ; continue # (or OPT1 if you want to see on the screen what it did, but that takes more processing)
-    hadPpercent = False
-    ret.append('!'+bbcshortest(start)+'='+bbcshortest(thisNum))
-    i += 4 ; start += 4
+    def equdParam(): return bbcshortest(ord(data[i])+(ord(data[i+1])<<8)+(ord(data[i+2])<<16)+(ord(data[i+3])<<24))
+    def canEQUS(j): return 32<=ord(data[j])<127 and not data[j]=='"' # there aren't any escape sequences to worry about in EQUS strings.  (Delete the <127 if not worried about limiting keystrokes to ASCII.)
+    def equsCount(i,lineLeft):
+       j=i
+       while j<len(data) and j-i<lineLeft-len(':EQUS""') and canEQUS(j): j += 1
+       return j-i
+    if not thisLine:
+       if i==len(data)-4 and not all(canEQUS(j) for j in range(i,len(data))): # finish it off with a pling - it'll be quicker than another "[OPT2:EQUD"
+          thisLine='!'+bbcshortest(start)+'='+equdParam()
+          break
+       elif i==len(data)-1: # ditto with ?
+          thisLine='?'+bbcshortest(start)+'='+str(ord(data[i]))
+          break
+       else: # start the assembler (need a [OPT at the start of each and every line when in immediate mode)
+          if not ret: ret.append("P%="+bbcshortest(start))
+          thisLine = "[OPT2" # (or OPT1 if you want to see on the screen what it did, but that takes more processing)
+    add = equsCount(i,bbc_max_line_len-len(thisLine))
+    if add >= 4 or (add >= 2 and len(data)-i < 4): # (a good-enough approximation of when it'll be better to EQUS)
+       thisI = ':EQUS"'+data[i:i+add]+'"'
+    elif len(data)-i < 4 or equsCount(i+1,bbc_max_line_len) >= 4: # (ditto for EQUB)
+       o=ord(data[i]) ; add = 1
+       thisI = ':'+{0:"BRK",0x48:"PHA",0x68:"PLA",8:"PHP",0x28:"PLP",0x38:"SEC",0x18:"CLC",0xf8:"SED",0xd8:"CLD",0xe8:"INX",0xca:"DEX",0xc8:"INY",0x88:"DEY",0xaa:"TAX",0xa8:"TAY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xba:"TSX",0xb8:"CLV",0xea:"NOP",0x40:"RTI"}.get(o,"EQUB"+str(o)) # (omit Master-only instructions like 0xda:"PHX") (in extremely rare cases, generating 2, 3 or 4 bytes might just be quicker with opcode+operand than EQUD, e.g. "ROL1:ROL1" vs "EQUD&1260126", but we won't worry about that; anyway most of this stuff will never occur in lexicons and is here only in case bbcKeystrokes ends up being used for something else e.g. the Speech code itself)
+    else:
+       thisI = ":EQUD"+equdParam() ; add = 4
+    if len(thisLine)+len(thisI) <= bbc_max_line_len:
+       thisLine += thisI ; i += add ; start += add
+    else: # instruction won't fit on current line
+       ret.append(thisLine) ; thisLine = "" # and recalculate the instruction on the next loop iter (might then be able to fit more into an EQUS or something)
   if thisLine: ret.append(thisLine)
   return '\n'.join(ret)+'\n'
-def bbcEQUD(addrLen,numWords,hadPpercent):
-  "Used by bbcPokes to guess if it's likely to take fewer keystrokes to start using BBC BASIC's inline assembler instead of repeated use of the ! operator.  The only way to know for sure would be to try both ways (due to digit boundaries in bbcshortest, use of EQUS, etc), but this guess is close enough.  Saving keystrokes means the keystroke file is less likely to be too big for BeebEm's paste." # (see comments elsewhere re BeebEm paste limit)
-  # TODO: do we really need this?  EQUD almost always 'wins' with any sizeable amount of data (and given that we don't paste into page 0 etc), especially now that we have EQUS
-  EQUD_keystrokes = len("[OPT2") + len(":EQUD")*numWords
-  if not hadPpercent:
-     EQUD_keystrokes += len("P%=") + addrLen + 1
-  pling_keystrokes = (1+addrLen+1)*numWords + (numWords-1)
-  return EQUD_keystrokes <= pling_keystrokes
 def print_bbclex_instructions(fname,size):
  """Print suitable instructions for a BBC Micro lexicon of the given filename and size (the exact nature of the instructions depends on the size).  If appropriate, create a .key file containing keystrokes for transferring to an emulator."""
  if os.environ.get("MAKE_SPEECH_ROM",0): print "%s (%d bytes, hex %X) can now installed on an emulator (set in Roms.cfg or whatever), or loaded onto a chip.  The sound quality of this might be worse than that of the main-RAM version." % (fname,size,size) # (at least on emulation - see comment on sound quality above)
@@ -1968,10 +1958,10 @@ def print_bbclex_instructions(fname,size):
     bbcStart = noSRAM_default_addr+noSRAM_lex_offset
     print "You can load this lexicon by *LOAD %s %X or change the SPEECH file from offset &%X. Suggest you also set HIMEM=&%X for safety." % (fname,bbcStart,noSRAM_lex_offset,noSRAM_default_addr)
   if bbcStart: # we managed to fit it into main RAM
-     pokes = bbcPokes(open(fname).read(),bbcStart)
-     open(fname+".key","w").write(pokes)
+     keys = bbcKeystrokes(open(fname).read(),bbcStart)
+     open(fname+".key","w").write(keys)
      print "For ease of transfer to emulators etc, a self-contained keystroke file for putting %s data at &%X has been written to %s.key" % (fname,bbcStart,fname)
-     if len(pokes) > 32767: print "(This file looks too big for BeebEm to paste though)" # see comments elsewhere
+     if len(keys) > 32767: print "(This file looks too big for BeebEm to paste though)" # see comments elsewhere
   # Instructions for replacing lex in SRAM:
   if size > SRAM_max-SRAM_lex_offset: print "This lexicon is too big for Speech in Sideways RAM." # unless you can patch Speech to run in SRAM but read its lexicon from main RAM
   else: print "You can load this lexicon into Sideways RAM by *SRLOAD %s %X 7 (or whichever bank number you're using), or change the SP8000 file from offset &%X." % (fname,SRAM_lex_offset+0x8000,SRAM_lex_offset)
