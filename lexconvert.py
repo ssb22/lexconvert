@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.172 - convert between lexicons of different speech synthesizers
+"""lexconvert v0.173 - convert between lexicons of different speech synthesizers
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -129,7 +129,7 @@ def Phonemes():
    text_question = other()
    text_exclamation = other()
    text_comma = other()
-   return locals()
+   del _ ; return locals()
 
 def LexFormats():
   """Makes the phoneme conversion tables of each format.
@@ -203,7 +203,7 @@ def LexFormats():
        specified then this function will be given the open
        file as a parameter. """
   
-  globals().update(Phonemes())
+  phonemes = Phonemes() ; globals().update(phonemes)
   return { "festival" : makeDic(
     "Festival's British voice",
     ('0',syllable_separator),
@@ -815,7 +815,7 @@ def LexFormats():
     # To script this on BeebEm, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later; if you prefer to edit the disk image outside of the emulator then change byte 0x106 from 0x33 to 0x03), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
-    # If you want to emulate a Master, you might need a *DISK before the *SPEECH, to take it out of ADFS mode.
+    # If you want to emulate a Master, you might need a *DISK before the *SPEECH (to take it out of ADFS mode)
     ('4',primary_stress),
     ('5',secondary_stress), # (these are pitch numbers on the BBC; normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary and 4=primary; 3 sounds less calm)
     ('AA',a_as_in_ah),
@@ -871,7 +871,7 @@ def LexFormats():
     ('Y',y),
     ('Z',z),
     ('ZH',ge_of_blige_etc),
-    lex_filename="BBCLEX",
+    lex_filename=ifset("MAKE_SPEECH_ROM","SPEECH.ROM","BBCLEX"),
     lex_entry_format="> %s_"+chr(128)+"%s", # (specifying 'whole word' for now; remove the space before or the _ after if you want)
     lex_read_function = lambda lexfile: [(w[0].lstrip().rstrip('_').lower(),w[1]) for w in filter(lambda x:len(x)==2,[w.split(chr(128)) for w in lexfile.read().split('>')])], # TODO: this reads back the entries we generate, but is unlikely to work well with the wildcards in the default lexicon that would have been added if SPEECH_DISK was set (c.f. trying to read eSpeak's en_rules instead of en_extra)
     lex_word_case = "upper",
@@ -1174,10 +1174,10 @@ def LexFormats():
   ),
 
   "kana-approx" : makeDic(
-    "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better).  Default is hiragana because I find hiragana easier to read than katakana
-    # This format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
+    "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better).  Default is hiragana because I find hiragana easier to read than katakana.  Mac OS 10.7+'s Korean voices (Yuna and Narae) can also read kana, and you could try doing a makeVariantDic and adding in some Korean jamo letters for them (you'd be pushed to represent everything in jamo but kana+jamo seems more hopeful in theory), but again some words work better than others (not all phonetic combinations are supported and some words aren't clear at all).
+    # This kana-approx format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
     (u'double-',primary_stress),
-    (secondary_stress,ifset('KANA_MORE_EMPH',u'double-'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well)
+    (secondary_stress,ifset('KANA_MORE_EMPH',u'double-'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well; if it did, I'd put this line in a makeVariantDic called kana-approx-moreEmph or something)
     # The following Unicode codepoints are hiragana; KANA_TYPE is handled by some special-case code at the end of convert()
     (u'\u3042',a_as_in_apple),
     (u'\u3044',e_as_in_eat),
@@ -1252,6 +1252,9 @@ def LexFormats():
        (u'\u3050\u3050',u'\u3050'), # gugu -> gu, sometimes comes up with 'gl-' combinations
     ],
   ),
+  "names" : makeDic(
+    "Lexconvert internal phoneme names (sometimes useful with the --phones option while developing new formats)",
+     *[(phName,phVal) for phName,phVal in phonemes.items()]),
 }
 
 # The mainopt() functions are the main options
@@ -1349,13 +1352,9 @@ E.g.: python lexconvert.py --convert festival cepstral"""
       outFile=open(fname,"w")
    print "Writing lexicon entries to",fname
    convert_user_lexicon(fromFormat,toFormat,outFile)
-   if toFormat=="bbcmicro": print_bbclex_instructions(fname,outFile.tell())
+   fileLen = outFile.tell()
    outFile.close()
-   if toFormat=="bbcmicro" and bbcStart:
-      pokes = bbcPokes(open(fname).read(),bbcStart)
-      open(fname+".key","w").write(pokes)
-      print "For ease of transfer to emulators etc, a self-contained keystroke file for putting %s data at &%X has been written to %s.key (but read the above first!)" % (fname,bbcStart,fname)
-      if len(pokes) > 32767: print "(This file looks too big for BeebEm to paste though)" # see comments elsewhere
+   if toFormat=="bbcmicro": print_bbclex_instructions(fname,fileLen)
    if toFormat=="espeak": os.system("espeak --compile=en")
 
 def mainopt_festival_dictionary_to_espeak(i):
@@ -1454,7 +1453,19 @@ def makeDic(doc,*args,**kwargs):
        import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(g for g,val in globals().items() if val==m) for m in missing)+"\n")
     assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(duplicates))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
     for k,v in kwargs.items(): d[('settings',k)] = v
+    global lastDictionaryMade ; lastDictionaryMade = d
     return d
+def makeVariantDic(doc,*args,**kwargs):
+    "Like makeDic but create a new 'variant' version of the last-made dictionary, modifying some phonemes and settings (and giving it a new doc string) but keeping everything else the same.  Any list settings (e.g. cleanup_regexps) are ADDED to by the variant; other settings and phonemes are REPLACED if they are specified in the variant."
+    toUpdate = lastDictionaryMade.copy()
+    global mainVowels,consonants
+    oldV,oldC = mainVowels,consonants
+    mainVowels,consonants = [],[] # so makeDic doesn't complain if some vowels/consonants are missing
+    d = makeDic(doc,*args,**kwargs)
+    mainVowels,consonants = oldV,oldC
+    for k,v in toUpdate.items():
+       if type(v)==list and k in d: d[k] = v+d[k]
+    toUpdate.update(d) ; return toUpdate
 def getSetting(formatName,settingName):
   "Gets a setting from lexFormats, exception if not there"
   return lexFormats[formatName][('settings',settingName)]
@@ -1555,12 +1566,14 @@ def convert(pronunc,source,dest):
     ret=separator.join(ret).replace('*added','')
     for s,r in checkSetting(dest,'cleanup_regexps'):
       ret=re.sub(s,r,ret)
-    if dest=="kana-approx" and os.environ.get("KANA_TYPE","").lower().startswith("k"): ret=hiragana_to_katakana(ret)
+    if type(ret)==unicode and os.environ.get("KANA_TYPE","").lower().startswith("k"): ret=hiragana_to_katakana(ret)
     return ret
 
 def hiragana_to_katakana(u):
    "Converts all hiragana characters in unicode string 'u' into katakana"
-   assert type(u)==unicode ; u = list(u)
+   assert type(u)==unicode
+   if not re.search(u'[\u3041-\u3096]',u): return u
+   u = list(u)
    for i in xrange(len(u)):
       if 0x3041 <= ord(u[i]) <= 0x3096:
          u[i]=unichr(ord(u[i])+0x60)
@@ -1710,6 +1723,7 @@ def get_macuk_lexicon(fromFormat):
 def convert_user_lexicon(fromFormat,toFormat,outFile):
     "See mainopt_convert"
     lex = read_user_lexicon(fromFormat)
+    if toFormat=="bbcmicro": bbc_prepDefaultLex(outFile)
     outFile.write(checkSetting(toFormat,"lex_header"))
     entryFormat=getSetting(toFormat,"lex_entry_format")
     wordCase=checkSetting(toFormat,"lex_word_case")
@@ -1827,15 +1841,15 @@ def print_bbc_warnings(keyCount,lineCount):
     severe=1 ; limits_exceeded.append("BeebEm 32K keystroke limit") # At least in version 3, the clipboard is defined in beebwin.h as a char of size 32768 and its bounds are not checked.  Additionally, if you script a second paste before the first has finished (or if you try to use BeebEm's Copy command) then the first paste will be interrupted.  So if you really want to make BeebEm read more then I suggest setting a printer destination file, putting a VDU 2,10,3 after each batch of commands, and waiting for that \n to appear in that printer file before sending the next batch, or perhaps write a set of programs to a disk image and have them CHAIN each other or whatever.
   shadow_himem=0x8000 # if using a 'shadow mode' on the Master/B+/Integra-B (modes 128-135, which leave all main RAM free)
   mode7_himem=0x7c00 # (40x25 characters = 1000 bytes, by default starting at 7c00 with 24 bytes spare at the top, but the scrolling system uses the full 1024 bytes and can tell the video controller to start rendering at any one of them; if you get Jeremy Ruston's book and program the VIDC yourself then you could fix it at 7c18 if you really want, or just set HIMEM=&8000 and don't touch the screen, but that doesn't give you very much more room)
-  speech_loc=0x5500 # unless you've loaded it into Sideways RAM or run RELOCAT to put it somewhere else
+  default_speech_loc=0x5500
   overhead_per_program_line = 4
-  for page,model,explain in [
-        (0x1900,"Model B",1), # with Acorn DFS (a reasonable assumption although alternate DFS ROMs are different)
-        (0xE00,"Master",0)]: # (the Master has special paged banks for OS workspace so doesn't need 2816 bytes of main RAM for DFS)
+  for page,model in [
+        (0x1900,"Model B"), # with Acorn DFS (a reasonable assumption although alternate DFS ROMs are different)
+        (0xE00,"Master")]: # (the Master has 8k of special paged-in "filing system RAM", so doesn't need 2816 bytes of main RAM for DFS)
      top = page+keyCount+lineCount*(overhead_per_program_line-1)+2 # the -1 is because keyCount includes a carriage return at the end of each line
-     if explain: x=" (Speech program will be overwritten unless relocated)"
-     else: x="" # don't need to say that for Master if already said it for Model B (which has a lower limit, so if we're going over the Master's limit then we will already have gone over the Model B's and warned about it)
-     if top > speech_loc: limits_exceeded.append(model+" TOP=&5500 limit"+x) # and the SP8000 Sideways RAM version doesn't seem to work on emulators like BeebEm.  The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any non-shadow mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite (non-shadow) screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
+     if model=="Master": x=" (use Speech's Sideways RAM version instead, e.g. *SRLOAD SP8000 8000 7 and reset, but sound quality might be worse)" # I don't know why but SP8000 can play higher and more distorted than SPEECH, at least on emulation.  Re bank numbers, by default banks 4 to 7 are Sideways RAM (4*16k=64k) and I suppose filling up from 7 makes sense because banks 8-F are ROMs (ANFS,DFS,ViewSheet,Edit,BASIC,ADFS,View,Terminal; OS is a separate 16k so there's scope for 144k of supplied ROM).  Banks 0-3 are ROM expansion slots.  The "128" in the name "Master 128" comes from 32k main RAM, 64k Sideways RAM, 20k shadow RAM (for screen modes 128-135), 4k OS "private RAM" (paged on top of 8000-8FFF) and 8k filing system RAM (paged on top of C000-DFFF) = 128k.  Not sure what happened on the B+.
+     else: x=" (Speech program will be overwritten unless relocated)" # (could use Sideways RAM for it instead if you have it fitted, see above)
+     if top > default_speech_loc: limits_exceeded.append("%s TOP=&%X limit%s" % (model,default_speech_loc,x)) # The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any non-shadow mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite (non-shadow) screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
      if top > mode7_himem:
         if model=="Master":
            if top > shadow_himem: limits_exceeded.append(model+" 32k HIMEM limit (even for shadow modes)") # I suppose you could try using BAS128 but I doubt it's compatible with Speech.  If you really want to store such a long program on the BBC then you'd better split it into several programs that CHAIN each other (as mentioned above).
@@ -1848,7 +1862,15 @@ def print_bbc_warnings(keyCount,lineCount):
   after = ". "+after+"See comments in lexconvert for more details.\n"
   if len(limits_exceeded)>1: sys.stderr.write(warning+"this text may be too big for the BBC Micro. The following limits were exceeded: "+", ".join(limits_exceeded)+after)
   elif limits_exceeded: sys.stderr.write(warning+"this text may be too big for the BBC Micro because it exceeds the "+limits_exceeded[0]+after)
-def bbc_appendDefaultLex(outFile):
+def bbc_prepDefaultLex(outFile):
+  """If SPEECH_DISK and MAKE_SPEECH_ROM is set, then read the ROM code from SPEECH_DISK and write to outFile (meant to go before the lexicon, to make a modified BBC Micro Speech ROM with custom lexicon)"""
+  if not os.environ.get("MAKE_SPEECH_ROM",0): return
+  d=open(os.environ['SPEECH_DISK']).read() # if this fails, SPEECH_DISK was not set or was set incorrectly (it's required for MAKE_SPEECH_ROM)
+  i=d.index('LO\x80LP\x80\x82\x11') # start of SP8000 file (if this fails, it wasn't a Speech disk)
+  j=d.index('>OUS_',i) # start of lexicon (ditto)
+  assert j-i==0x1683, "Is this really an original disk image?"
+  outFile.write(d[i:j])
+def bbc_appendDefaultLex(outFile,romCode=False):
   """If SPEECH_DISK is set, read Speech's default lexicon from it and append this to outFile (without the terminating >** which is supplied anyway by convert_user_lexicon)"""
   if not os.environ.get("SPEECH_DISK",""): return
   d=open(os.environ['SPEECH_DISK']).read()
@@ -1857,23 +1879,63 @@ def bbc_appendDefaultLex(outFile):
   assert j-i==2201, "Lexicon on SPEECH_DISK is wrong size (%d). Is this really an original disk image?" % (j-i)
   outFile.write(d[i:j])
   # TODO: can we compress the BBC lexicon?  i.e. detect if a rule will happen anyway due to subsequent wildcard rules, and delete it if so (don't know how many bytes that would save)
+  assert not os.environ.get("MAKE_SPEECH_ROM",0) or outFile.tell()+3 <= 16384, "Speech ROM file got too big"
 
 def bbcshortest(n):
   """Convert integer n into the shortest possible number of BBC Micro keystrokes; prefer hex if and only if the extra '&' keystroke won't make it any longer than its decimal equivalent"""
   if len(str(n)) < len('&%X'%n): return str(n)
   else: return '&%X'%n
 def bbcPokes(data,start):
-  "Return BBC BASIC keystrokes to put data into RAM starting at address start"
-  while len(data)%4: data+=chr(0) # pad to mult of 4
-  i=0 ; ret=[]
+  "Return BBC BASIC keystrokes to put data into RAM starting at address start; doesn't mind overwriting the end by up to 3 bytes"
+  i=0 ; ret=[] ; hadPpercent=False ; thisLine = ""
   while i<len(data):
-    ret.append('!'+bbcshortest(start)+'='+bbcshortest(ord(data[i])+(ord(data[i+1])<<8)+(ord(data[i+2])<<16)+(ord(data[i+3])<<24)))
+    while i+4>len(data): data+=chr(0) # pad
+    thisNum = ord(data[i])+(ord(data[i+1])<<8)+(ord(data[i+2])<<16)+(ord(data[i+3])<<24)
+    bbc_max_line_len = 238
+    if thisLine: # we're using the assembler
+       def lookahead_EQUS(i,max):
+          j=i
+          while j<len(data) and j-i<max-len(':EQUS""') and 32<=ord(data[j])<127 and not data[j]=='"': j += 1 # the <127 isn't actually necessary for the BBC, but it might help copy/paste to make sure the key file is all ASCII
+          return j
+       j=lookahead_EQUS(i,bbc_max_line_len-len(thisLine))
+       if j-i >= 4: # (actually it depends; see also bbcEQUD doc string; however >=4 is near enough for now)
+          thisLine += ':EQUS"'+data[i:j]+'"'
+          start += j-i ; i = j ; continue
+       if lookahead_EQUS(i+1,bbc_max_line_len)-(i+1)>=4:
+          # looks like it might make more sense to have an EQUB for just this byte and then go back to EQUS, rather than using EQUD (again this is not an exact optimisation but near enough)
+          o=ord(data[i]) ; pl=1
+          thisI = ':'+{0:"BRK",8:"PHP",0x18:"CLC",0x88:"DEY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xa8:"TAY",0xaa:"TAX",0xb8:"CLV",0xba:"TSX",0xc8:"INY",0xca:"DEX",0xd8:"CLD",0xe8:"INX",0xea:"NOP",0xf8:"SED"}.get(o,"EQUB"+str(o)) # (the opcodes for these shorter-than-EQUB tokens won't occur in a lexicon (unless you patch Speech to recognise one of them instead of its 0x80), but might occur if we ever want to save extra code.  Ignoring instructions that are in ASCII range e.g. PLP=0x28 SEC=0x38; also ignoring 0xda:"PHX" as it's not available on all models)
+       else:
+          thisI = ":EQUD"+bbcshortest(thisNum) ; pl = 4
+       if len(thisLine)+len(thisI) <= bbc_max_line_len:
+          thisLine += thisI
+          i += pl ; start += pl ; continue
+       else:
+          ret.append(thisLine) ; thisLine = ""
+    if not thisLine and bbcEQUD(len(bbcshortest(start)),(len(data)-i)/4,hadPpercent):
+       if not hadPpercent:
+          ret.append("P%="+bbcshortest(start))
+          hadPpercent = True
+       thisLine = "[OPT2" ; continue # (or OPT1 if you want to see on the screen what it did, but that takes more processing)
+    hadPpercent = False
+    ret.append('!'+bbcshortest(start)+'='+bbcshortest(thisNum))
     i += 4 ; start += 4
+  if thisLine: ret.append(thisLine)
   return '\n'.join(ret)+'\n'
+def bbcEQUD(addrLen,numWords,hadPpercent):
+  "Used by bbcPokes to guess if it's likely to take fewer keystrokes to start using BBC BASIC's inline assembler instead of repeated use of the ! operator.  The only way to know for sure would be to try both ways (due to digit boundaries in bbcshortest, use of EQUS, etc), but this guess is close enough.  Saving keystrokes means the keystroke file is less likely to be too big for BeebEm's paste." # (see comments elsewhere re BeebEm paste limit)
+  # TODO: do we really need this?  EQUD almost always 'wins' with any sizeable amount of data (and given that we don't paste into page 0 etc), especially now that we have EQUS
+  EQUD_keystrokes = len("[OPT2") + len(":EQUD")*numWords
+  if not hadPpercent:
+     EQUD_keystrokes += len("P%=") + addrLen + 1
+  pling_keystrokes = (1+addrLen+1)*numWords + (numWords-1)
+  return EQUD_keystrokes <= pling_keystrokes
 def print_bbclex_instructions(fname,size):
-  """Print suitable instructions for a BBC Micro lexicon of the given filename and size (the exact nature of the instructions depends on the size)"""
+ """Print suitable instructions for a BBC Micro lexicon of the given filename and size (the exact nature of the instructions depends on the size).  If appropriate, create a .key file containing keystrokes for transferring to an emulator."""
+ if os.environ.get("MAKE_SPEECH_ROM",0): print "%s (%d bytes, hex %X) can now installed on an emulator (set in Roms.cfg or whatever), or loaded onto a chip.  The sound quality of this might be worse than that of the main-RAM version." % (fname,size,size) # (at least on emulation - see comment on sound quality above)
+ else:
   print "The size of this lexicon is %d bytes (hex %X)" % (size,size)
-  global bbcStart ; bbcStart=None
+  bbcStart=None
   noSRAM_lex_offset=0x155F # (on the BBC Micro, SRAM means Sideways RAM, not Static RAM as it does elsewhere; for clarity we'd better say "Sideways RAM" in all output)
   SRAM_lex_offset=0x1683
   SRAM_max=0x4000 # 16k
@@ -1905,12 +1967,18 @@ def print_bbclex_instructions(fname,size):
   else:
     bbcStart = noSRAM_default_addr+noSRAM_lex_offset
     print "You can load this lexicon by *LOAD %s %X or change the SPEECH file from offset &%X. Suggest you also set HIMEM=&%X for safety." % (fname,bbcStart,noSRAM_lex_offset,noSRAM_default_addr)
+  if bbcStart: # we managed to fit it into main RAM
+     pokes = bbcPokes(open(fname).read(),bbcStart)
+     open(fname+".key","w").write(pokes)
+     print "For ease of transfer to emulators etc, a self-contained keystroke file for putting %s data at &%X has been written to %s.key" % (fname,bbcStart,fname)
+     if len(pokes) > 32767: print "(This file looks too big for BeebEm to paste though)" # see comments elsewhere
   # Instructions for replacing lex in SRAM:
   if size > SRAM_max-SRAM_lex_offset: print "This lexicon is too big for Speech in Sideways RAM." # unless you can patch Speech to run in SRAM but read its lexicon from main RAM
-  else: print "In Sideways RAM, the default lexicon starts at &"+hex(SRAM_lex_offset+0x8000)[2:]+" but you can't access this from BASIC so suggest you back up the SP8000 file and write to its offset "+hex(SRAM_lex_offset)+"."
+  else: print "You can load this lexicon into Sideways RAM by *SRLOAD %s %X 7 (or whichever bank number you're using), or change the SP8000 file from offset &%X." % (fname,SRAM_lex_offset+0x8000,SRAM_lex_offset)
   if not os.environ.get("SPEECH_DISK",""): print "If you want to append the default lexicon to this one, set SPEECH_DISK to the image of the original Speech disk before running lexconvert, e.g. export SPEECH_DISK=/usr/local/BeebEm3/diskimg/Speech.ssd"
-  print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' to ensure there's a space at the start of the SAY string (bug in Speech?)" # Can't track down which words this does and doesn't apply to.
-  print "It might be better to load your lexicon into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
+  print "You can also set MAKE_SPEECH_ROM=1 (along with SPEECH_DISK) to create a SPEECH.ROM file instead"
+ print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' to ensure there's a space at the start of the SAY string (bug in Speech?)" # Can't track down which words this does and doesn't apply to.
+ print "It might be better to load your lexicon into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
 
 def main():
     """Introspect the module to find the mainopt_ functions, and either call one of them or print the help.  Returns the error code to send back to the OS."""
@@ -1928,13 +1996,18 @@ def main():
     if html: missALine = "<p>"
     else: missALine = ""
     print missALine
-    if html:
+    if '--formats' in sys.argv: # non-HTML mode only (format descriptions are included in HTML anyway)
+       print "Available pronunciation formats:"
+       keys=lexFormats.keys() ; keys.sort()
+       for k in keys:print "\n"+k+"\n"+getSetting(k,"doc")
+       return 0
+    elif html:
        print "Available pronunciation formats:"
        if html: print "<table>"
        keys=lexFormats.keys() ; keys.sort()
        for k in keys: print '<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>"
        print "</table>"
-    else: print "Available pronunciation formats: "+", ".join(sorted(lexFormats.keys()))
+    else: print "Available pronunciation formats: "+", ".join(sorted(lexFormats.keys()))+"\n(Use --formats to see their descriptions)"
     print missALine
     print "Program options:"
     print missALine
