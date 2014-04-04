@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.173 - convert between lexicons of different speech synthesizers
+"""lexconvert v0.18 - convert between lexicons of different speech synthesisers
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -102,7 +102,7 @@ def Phonemes():
    sh = consonant()
    t = consonant()
    _, var1_t = variant()
-   th = consonant()
+   th_as_in_think = consonant()
    oor_as_in_poor = vowel()
    _, var1_oor_as_in_poor = variant()
    _, opt_u_as_in_pull = variant()
@@ -151,10 +151,10 @@ def LexFormats():
        stress_comes_before_vowel (default False means any
        stress mark goes AFTER the affected vowel; set to
        True if the format requires stress placed before)
-  
-       space_separates_words_not_phonemes (default False
-       means space is assumed to be required between each
-       phoneme; True means space separates whole words)
+
+       word_separator (default same as phoneme_separator)
+       phoneme_separator (default " ")
+       clause_separator (default newline)
 
        safe_to_drop_characters (default False, can be a
        string of safe characters or True = all; controls
@@ -244,7 +244,7 @@ def LexFormats():
     ('s',s),
     ('sh',sh),
     ('t',t),
-    ('th',th),
+    ('th',th_as_in_think),
     ('u@',oor_as_in_poor),
     ('u',opt_u_as_in_pull),
     ('uu',oo_as_in_food),
@@ -322,7 +322,7 @@ def LexFormats():
     ('s',s),
     ('S',sh),
     ('t',t),
-    ('T',th),
+    ('T',th_as_in_think),
     ('U@',oor_as_in_poor),
     ('U',opt_u_as_in_pull),
     ('@5',opt_u_as_in_pull,False),
@@ -341,7 +341,7 @@ def LexFormats():
     lex_entry_format = "%s %s\n",
     lex_read_function = lambda lexfile: [x for x in [l.split()[:2] for l in lexfile.readlines()] if len(x)==2 and not '//' in x[0]],
     inline_format = "[[%s]]",
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters="_: !",
     cleanup_regexps=[
@@ -403,7 +403,7 @@ def LexFormats():
     ('s',s),
     ('sh',sh),
     ('t',t),
-    ('th',th),
+    ('th',th_as_in_think),
     ('uh',oor_as_in_poor),
     ('uw',oo_as_in_food),
     ('AO',close_to_or),
@@ -459,7 +459,7 @@ def LexFormats():
     ('s',s),
     ('sh',sh),
     ('t',t),
-    ('th',th),
+    ('th',th_as_in_think),
     ('uh',oor_as_in_poor),
     ('uw',oo_as_in_food),
     ('ao',close_to_or),
@@ -519,7 +519,7 @@ def LexFormats():
     ('s',s),
     ('S',sh),
     ('t',t),
-    ('T',th),
+    ('T',th_as_in_think),
     ('UH',oor_as_in_poor),
     ('UW',oo_as_in_food),
     ('AO',close_to_or),
@@ -533,7 +533,7 @@ def LexFormats():
     lex_entry_format=' -e "s/%s/[[inpt PHON]]%s[[inpt TEXT]]/g"',
     lex_footer = "\n",
     inline_format = "[[inpt PHON]]%s[[inpt TEXT]]",
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
   ),
 
@@ -541,7 +541,7 @@ def LexFormats():
     "Scansoft/Nuance British voices for Mac OS 10.7+ (system lexicon editing required, see --mac-uk option)",
     ('.',syllable_separator),
     ("'",primary_stress),
-    ('',secondary_stress),
+    (secondary_stress,'',False),
     ('A',a_as_in_ah),
     ('@',a_as_in_apple),
     ('$',u_as_in_but),
@@ -577,7 +577,7 @@ def LexFormats():
     ('s',s),
     ('S',sh),
     ('t',t),
-    ('T',th),
+    ('T',th_as_in_think),
     ('O',oor_as_in_poor),
     ('U',opt_u_as_in_pull),
     (oo_as_in_food,'U',False),
@@ -589,7 +589,7 @@ def LexFormats():
     ('Z',ge_of_blige_etc),
     # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
     inline_header = "mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it\n",
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[(r'o\&U\.Ol', r'o\&Ul')],
@@ -657,7 +657,7 @@ def LexFormats():
     ('s',s),
     ('S',sh),
     ('t',t),
-    ('T',th),
+    ('T',th_as_in_think),
     ('U@',oor_as_in_poor),
     ('Ur\\',var1_oor_as_in_poor),
     ('U',opt_u_as_in_pull),
@@ -677,7 +677,7 @@ def LexFormats():
     lex_entry_format = "%s\t#%s\tUNKNOWN\n", # TODO: may be able to convert part-of-speech (NOUN etc) to/from some other formats e.g. Festival
     lex_read_function=lambda lexfile:[(word,pronunc.lstrip("#")) for word, pronunc, ignore in [l.split(None,2) for l in lexfile.readlines()]],
     # TODO: inline_format ?
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
   ),
 
@@ -733,7 +733,7 @@ def LexFormats():
     ('s',s),
     ('S',sh),
     ('t',t),
-    ('T',th),
+    ('T',th_as_in_think),
     ('U@',oor_as_in_poor),
     ('U r',var1_oor_as_in_poor),
     ('U',opt_u_as_in_pull),
@@ -794,7 +794,7 @@ def LexFormats():
     ('S ',s),
     ('SH',sh),
     ('T ',t),
-    ('TH',th),
+    ('TH',th_as_in_think),
     ('UH',oor_as_in_poor),
     ('UW',oo_as_in_food),
     ('AO',close_to_or),
@@ -805,6 +805,67 @@ def LexFormats():
     ('ZH',ge_of_blige_etc),
     # lex_filename not set (does CMU have a lex file?)
     safe_to_drop_characters=True, # TODO: really?
+  ),
+
+  "apollo" : makeDic(
+    'Dolphin Apollo 2 serial-port and parallel-port hardware synthesisers (in case anybody still uses those)',
+    (syllable_separator,'',False), # I don't think the Apollo had anything to mark stress; TODO: control the pitch instead like bbcmicro ?
+    ('_QQ',syllable_separator,False), # a slight pause
+    ('_AA',a_as_in_apple),
+    ('_AI',a_as_in_ate),
+    ('_AR',a_as_in_ah),
+    ('_AW',close_to_or),
+     (oor_as_in_poor,'_AW',False),
+    ('_A',a_as_in_ago),
+    ('_B',b),
+    ('_CH',ch),
+    ('_D',d),
+    ('_DH',th_as_in_them),
+    ('_EE',e_as_in_eat),
+    ('_EI',a_as_in_air),
+    ('_ER',e_as_in_herd),
+     (ar_as_in_year,'_ER',False),
+    ('_E',e_as_in_them),
+    ('_F',f),
+    ('_G',g),
+    ('_H',h),
+    ('_IA',ear),
+    ('_IE',eye),
+    ('_I',i_as_in_it),
+    ('_J',j_as_in_jump),
+    ('_K',k),
+    ('_KK',k,False), # sCHool
+    ('_L',l),
+    ('_M',m),
+    ('_NG',ng),
+    ('_N',n),
+    ('_OA',o_as_in_go),
+    ('_OO',opt_u_as_in_pull),
+    ('_OR',var3_close_to_or),
+    ('_OW',o_as_in_now),
+    ('_OY',oy_as_in_toy),
+    ('_O',o_as_in_orange),
+    ('_P',p),
+    ('_PP',p,False), # sPeech (a stronger P ?)
+    # _Q = k w - done by cleanup_regexps below
+    ('_R',r),
+    ('_SH',sh),
+    ('_S',s),
+    ('_TH',th_as_in_think),
+    ('_T',t), ('_TT',t,False),
+    ('_UU',oo_as_in_food),
+    ('_U',u_as_in_but),
+    ('_V',v),
+    ('_W',w),
+    # _X = k s - done by cleanup_regexps below
+    ('_Y',y),
+    ('_ZH',ge_of_blige_etc),
+    ('_Z',z),
+    # lex_filename not set (the hardware doesn't have one; HAL has an "exceptions dictionary" but I don't know much about it)
+    safe_to_drop_characters=True, # TODO: really?
+    word_separator=" ",phoneme_separator="",
+    cleanup_regexps=[('_K_W','_Q'),('_K_S','_X')],
+    cvtOut_regexps=[('_Q','_K_W'),('_X','_K_S')],
   ),
 
   "bbcmicro" : makeDic(
@@ -857,7 +918,7 @@ def LexFormats():
     ('S',s),
     ('SH',sh),
     ('T',t),
-    ('TH',th),
+    ('TH',th_as_in_think),
     ('AOR',oor_as_in_poor),
     ('UH',oor_as_in_poor,False), # TODO: really? (espeak 'U' goes to opt_u_as_in_pull, and eSpeak also used U for the o in good, which sounds best with Speech's default UH4, hence the line below, but where did we get UH->oor_as_in_poor from?  Low-priority though because how often do you convert OUT of bbcmicro format)
     (opt_u_as_in_pull,'UH',False),
@@ -877,7 +938,7 @@ def LexFormats():
     lex_word_case = "upper",
     lex_footer = ">**",
     # inline_format not set - handled by special-case code
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[
       ('KT','CT'), # Speech instructions: "CT as in fact"
@@ -885,6 +946,200 @@ def LexFormats():
       ('AHR$','AH'), # usually sounds a bit better
     ],
     cvtOut_regexps=[('DUX','DYUW')], # CT handled above
+  ),
+
+  "amiga" : makeDic(
+    'AmigaOS speech synthesiser (American English)', # shipped with the 1985 Amiga release; developed by SoftVoice Inc
+    # All I had to go by for this was a screenshot on Marcos Miranda's blog.  I once saw this synth demonstrated but never tried it.  My early background was the BBC Micro, not Amigas etc.  But I know some people are keen on Amigas so I might as well include it.
+    (syllable_separator,'',False),
+    ('4',primary_stress),('3',secondary_stress),
+    ('/H',h),
+    ('EH',e_as_in_them),
+    ('L',l),
+    ('OW',o_as_in_go),
+    ('AY',eye),
+    ('AE',a_as_in_apple),
+    ('M',m),
+    ('DH',th_as_in_them),
+    ('IY',e_as_in_eat),
+    ('AH',a_as_in_ago),
+    ('G',g),
+    ('K',k),
+    ('U',u_as_in_but),
+    ('P',p),
+    ('Y',y),
+    ('UW',oo_as_in_food),
+    ('T',t),
+    ('ER',var1_a_as_in_ago),
+    ('IH',i_as_in_it),
+    ('S',s),
+    ('Z',z),
+    ('AW',o_as_in_now),
+    ('AA',a_as_in_ah),
+    ('R',r),
+    ('D',d),('F',f),('N',n),('NX',ng),('J',j_as_in_jump),
+    ('B',b),('V',v),('TH',th_as_in_think),
+    ('OH',close_to_or),('EY',a_as_in_ate),
+    # The following consonants were not on the screenshot
+    # (or at least I couldn't find them) so I'm guessing.
+    # I think this should work given the way the other
+    # consonants work in this table.
+    ('W',w),('CH',ch),('SH',sh),
+    # The following vowels were not in the screenshot and
+    # we just have to hope this guess is right - when
+    # someone tries it on an Amiga and says it doesn't
+    # work, maybe we can update this....
+    ('O',o_as_in_orange),('OY',oy_as_in_toy),
+    # and these ones we can approximate to ones we already know (given that we're having to approximate British to an American voice anyway, it can't hurt TOO much more)
+     (a_as_in_air,'EH',False),
+     (e_as_in_herd,'ER',False),
+     (ar_as_in_year,'ER',False),
+     (ear,'IYAH',False), # or try IYER, or there might be a phoneme for it
+     (ge_of_blige_etc,'J',False),
+     (oor_as_in_poor,'OH',False),
+    # lex_filename not set (I have no idea how the Amiga lexicon worked)
+    safe_to_drop_characters=True, # TODO: really?
+    word_separator=" ",phoneme_separator="",
+  ),
+
+  "speakjet" : makeDic(
+    'Allophone codes for the American English "SpeakJet" speech synthesis chip (the conversion from phonemes to allophones might sometimes need tweaking).  Set the SPEAKJET_SYM environment variable to use mnemonics, otherwise numbers are used (set SPEAKJET_BINARY for binary output).',
+    (syllable_separator,'',False), # TODO: instead of having emphasis, it has a 'faster' code for all NON-emphasized syllables
+    (speakjet('IY',128),e_as_in_eat),
+    (speakjet('IH',129),i_as_in_it),
+    (speakjet('EY',130),a_as_in_ate),
+    (speakjet('EH',131),e_as_in_them),
+    (speakjet('AY',132),a_as_in_apple),
+    (speakjet('AX',133),a_as_in_ago),
+    (speakjet('UX',134),u_as_in_but),
+    (speakjet('OH',135),o_as_in_orange),
+    (speakjet('AW',136),a_as_in_ah),
+    (speakjet('OW',137),o_as_in_go),
+    (speakjet('UH',138),opt_u_as_in_pull),
+    (speakjet('UW',139),oo_as_in_food),
+    (speakjet('MM',140),m),
+    (speakjet('NE',141),n,False),
+    (speakjet('NO',142),n),
+    (speakjet('NGE',143),ng,False),
+    (speakjet('NGO',144),ng),
+    (speakjet('LE',145),l,False),
+    (speakjet('LO',146),l),
+    (speakjet('WW',147),w),
+    (speakjet('RR',148),r),
+    (speakjet('IYRR',149),ear),
+    (speakjet('EYRR',150),a_as_in_air),
+    (speakjet('AXRR',151),e_as_in_herd),
+     (ar_as_in_year,speakjet('AXRR',151),False),
+    (speakjet('AWRR',152),a_as_in_ah,False),
+    (speakjet('OWRR',153),close_to_or),
+     (oor_as_in_poor,speakjet('OWRR',153),False),
+    (speakjet('EYIY',154),a_as_in_ate,False),
+    (speakjet('OHIY',155),eye),
+    (speakjet('OWIY',156),oy_as_in_toy),
+    (speakjet('OHIH',157),eye,False),
+    (speakjet('IYEH',158),y),
+    (speakjet('EHLL',159),l,False),
+    (speakjet('IYUW',160),oo_as_in_food,False),
+    (speakjet('AXUW',161),o_as_in_now),
+    (speakjet('IHUW',162),oo_as_in_food,False),
+    # TODO: 163 AYWW = o_as_in_now a_as_in_ago ? handle in cleanup_regexps + cvtOut_regexps ?
+    (speakjet('OWWW',164),o_as_in_go,False),
+    (speakjet('JH',165),j_as_in_jump),
+    (speakjet('VV',166),v),
+    (speakjet('ZZ',167),z),
+    (speakjet('ZH',168),ge_of_blige_etc),
+    (speakjet('DH',169),th_as_in_them),
+    # TODO: get cleanup_regexps to clean up some of these according to what's coming next etc:
+    (speakjet('BE',170),b,False),
+    (speakjet('BO',171),b),
+    (speakjet('EB',172),b,False),
+    (speakjet('OB',173),b,False),
+    (speakjet('DE',174),d,False),
+    (speakjet('DO',175),d),
+    (speakjet('ED',176),d,False),
+    (speakjet('OD',177),d,False),
+    (speakjet('GE',178),g,False),
+    (speakjet('GO',179),g),
+    (speakjet('EG',180),g,False),
+    (speakjet('OG',181),g,False),
+    (speakjet('CH',182),ch),
+    (speakjet('HE',183),h,False),
+    (speakjet('HO',184),h),
+    (speakjet('WH',185),w,False),
+    (speakjet('FF',186),f),
+    (speakjet('SE',187),s,False),
+    (speakjet('SO',188),s),
+    (speakjet('SH',189),sh),
+    (speakjet('TH',190),th_as_in_think),
+    (speakjet('TT',191),t),
+    (speakjet('TU',192),t,False),
+    # TODO: 193 TS in cleanup_regexps and cvtOut_regexps
+    (speakjet('KE',194),k,False),
+    (speakjet('KO',195),k),
+    (speakjet('EK',196),k,False),
+    (speakjet('OK',197),k,False),
+    (speakjet('PE',198),p,False),
+    (speakjet('PO',199),p),
+    # lex_filename not set (I think the front-end software might have one, but don't know if it's accessible; chip itself just takes phonemes)
+    word_separator=ifset('SPEAKJET_BINARY',""," "),
+    phoneme_separator=ifset('SPEAKJET_BINARY',""," "),
+    clause_separator=ifset('SPEAKJET_BINARY',"","\n"), # TODO: is there a pause code?
+    safe_to_drop_characters=True, # TODO: really?
+  ),
+
+  "rsynth" : makeDic(
+    'rsynth text-to-speech C library (American English)', # TODO: test
+    (syllable_separator,'',False), # TODO: emphasis?
+    ("i:",e_as_in_eat),
+    ("I",i_as_in_it),
+    ("eI",a_as_in_ate),
+    ("E",e_as_in_them),
+    ("{",a_as_in_apple),
+    ("V",u_as_in_but),
+    ("Q",o_as_in_orange),
+    ("A:",a_as_in_ah),
+    ("oU",o_as_in_go),
+     (a_as_in_ago,'oU',False),
+    ("U",opt_u_as_in_pull),
+    ("u:",oo_as_in_food),
+    ("m",m),
+    ("n",n),
+    ("N",ng),
+    ("l",l),
+    ("w",w),
+    ("r",r),
+    ("I@",ear),
+    ("e@",a_as_in_air),
+    ("3:",e_as_in_herd),
+     (ar_as_in_year,"3:",False),
+    ("Qr",close_to_or),
+     (oor_as_in_poor,"Qr",False),
+    ("OI",oy_as_in_toy),
+    ("aI",eye),
+    ("j",y),
+    ("U@",oo_as_in_food,False),
+    ("aU",o_as_in_now),
+    ("@U",o_as_in_go,False),
+    ("dZ",j_as_in_jump),
+    ("v",v),
+    ("z",z),
+    ("Z",ge_of_blige_etc),
+    ("D",th_as_in_them),
+    ("b",b),
+    ("d",d),
+    ("g",g),
+    ("tS",ch),
+    ("h",h),
+    ("f",f),
+    ("s",s),
+    ("S",sh),
+    ("T",th_as_in_think),
+    ("t",t),
+    ("k",k),
+    ("p",p),
+    # lex_filename not set (TODO: check what sort of lexicon is used by rsynth's "say" front-end)
+    safe_to_drop_characters=True, # TODO: really?
+    word_separator=" ",phoneme_separator="",
   ),
 
   "unicode-ipa" : makeDic(
@@ -963,7 +1218,7 @@ def LexFormats():
     (u'\u0283',sh),
     ('t',t),
     (u'\u027e',var1_t),
-    (u'\u03b8',th),
+    (u'\u03b8',th_as_in_think),
     (u'\u028a\u0259',oor_as_in_poor),
     (u'\u028a\u0279',var1_oor_as_in_poor),
     (u'\u028a',opt_u_as_in_pull),
@@ -984,7 +1239,7 @@ def LexFormats():
     lex_header = '<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>',
     lex_entry_format="<tr><td>%s</td><td>%s</td></tr>\n",
     lex_footer = "</table></body></html>\n",
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really? (at least '-' should be safe to drop)
   ),
@@ -1061,7 +1316,7 @@ def LexFormats():
     ('S',sh),
     ('t',t),
     ('R',var1_t),
-    ('T',th),
+    ('T',th_as_in_think),
     ('U@',oor_as_in_poor),
     ('U\\textturnr{}',var1_oor_as_in_poor),
     ('U',opt_u_as_in_pull),
@@ -1084,7 +1339,7 @@ def LexFormats():
     lex_footer = r"\end{longtable}\end{document}"+"\n",
     inline_format = "\\textipa{%s}",
     inline_header = r"% In preamble, put \usepackage[safe]{tipa}", # (the [safe] part is recommended if you're mixing with other TeX)
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
   ),
@@ -1128,7 +1383,7 @@ def LexFormats():
     ('se0',s),
     ('she0',sh),
     ('te0',t),
-    (th,'zhe0',False),
+    (th_as_in_think,'zhe0',False),
     (oor_as_in_poor,'wu5',False),
     ('yu5',oo_as_in_food),
     ('huo5',close_to_or),
@@ -1140,7 +1395,7 @@ def LexFormats():
     lex_filename="words-pinyin-approx.txt", # write-only for now
     lex_header = "Pinyin approxmations (very approximate!)\n----------------------------------------\n",
     lex_entry_format = "%s ~= %s\n",
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     cleanup_regexps=[
       ("te0ye","tie"),
       ("e0e5","e5"),("([^aeiou][uo])0e(5)",r"\1\2"),
@@ -1202,7 +1457,7 @@ def LexFormats():
     (u'\u3076',b), # bu (with vowel replacements later)
     (u'\u3061\u3047',ch), # chu (ditto)
     (u'\u3065',d), # du (and so on)
-    (u'\u3066\u3085',th), (th_as_in_them,u'\u3066\u3085',False),
+    (u'\u3066\u3085',th_as_in_think), (th_as_in_them,u'\u3066\u3085',False),
     (u'\u3075',f),
     (u'\u3050',g),
     (u'\u306f',h), # ha (as hu == fu)
@@ -1223,7 +1478,7 @@ def LexFormats():
     lex_filename="words-kana-approx.txt", # write-only for now
     lex_header = "Kana approxmations (very approximate!)\n--------------------------------------\n",
     lex_entry_format = "%s ~= %s\n",
-    space_separates_words_not_phonemes=True,
+    word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     cleanup_regexps=[
        (u'double-(.)',ur'\1\u30fc'),
@@ -1296,7 +1551,7 @@ def mainopt_phones(i):
    """*<format> [<words>]
 Use eSpeak to convert text to phonemes, and then convert the phonemes to format 'format'.
 E.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.
-(Some commercial speech synthesizers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)"""
+(Some commercial speech synthesisers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)"""
    format=sys.argv[i+1]
    txt = getInputText(i+2,"text")
    w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # need to make sure output buffer is big enough (TODO: or use a temp file, or progressive write/read chunks) (as things stand, if bufsize is not big enough, w.close() on the following line can hang, as espeak waits for us to read its output before it can take all of our input)
@@ -1305,7 +1560,7 @@ E.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.
    if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
    write_inlineWord_header(format)
    if format=="bbcmicro": write_bbcmicro_phones(response)
-   else: print ", ".join([" ".join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,response.split("\n"))])
+   else: print checkSetting(format,"clause_separator","\n").join([wordSeparator(format).join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,response.split("\n"))])
 
 def mainopt_check_variants(i):
    # undocumented (won't appear in help text)
@@ -1324,6 +1579,25 @@ def mainopt_check_variants(i):
          print "Group",k
          os.popen("espeak -x","w").write('\n'.join([markup_inline_word("espeak",w) for _,w in v]))
          if not input("Again? 1/0: "): break
+
+def mainopt_check_for_similar_formats(i):
+   # undocumented (won't appear in help text)
+   items = lexFormats.items() ; r = []
+   while items:
+      k1,dic1 = items[0] ; diff=0
+      for k2,dic2 in items[1:]:
+         for kk,vv in dic1.items():
+            if not type(kk)==int: continue
+            if kk==syllable_separator: continue
+            if not dic2.get(kk,"")==vv: diff += 1
+         r.append((diff,k1,k2))
+      items = items[1:]
+   r.sort() ; had = set()
+   for diffs,format1,format2 in r:
+      if format1 in had and format2 in had: continue
+      had.add(format1) ; had.add(format2)
+      if "names" in had: break
+      print "Only",diffs,"differences between",format1,"and",format2
 
 def mainopt_convert(i):
    """*<from-format> <to-format>
@@ -1384,14 +1658,25 @@ Attempt to break 'words' into syllables for music lyrics (uses espeak to determi
    rrr = response.split("\n")
    print " ".join([hyphenate(word,sylcount(convert(line,"espeak","festival"))) for word,line in zip(words,filter(lambda x:x,rrr))])
 
+def wordSeparator(format):
+   """Returns the effective word separator of format (remembering that it defaults to same as phoneme_separator"""
+   return checkSetting(format,"word_separator",checkSetting(format,"phoneme_separator"," "))
+
 def mainopt_phones2phones(i):
    """*<format1> <format2> [<phonemes in format1>]
 Perform a one-off conversion of phonemes from format1 to format2"""
    format1,format2 = sys.argv[i+1],sys.argv[i+2]
    text=getInputText(i+3,"phonemes in "+format1+" format")
-   if checkSetting(format1,'space_separates_words_not_phonemes'):
-      for w in text.split(): print markup_inline_word(format2, convert(w,format1,format2))
-   else: print markup_inline_word(format2, convert(text,format1,format2))
+   wordSep = checkSetting(format1,"word_separator") # don't use wordSeparator() here - we're splitting, not joining, so we don't want it to default to phoneme_separator
+   clauseSep = checkSetting(format1,"clause_separator","\n")
+   if clauseSep: clauses = text.split(clauseSep)
+   else: clauses = [text]
+   r = []
+   for clause in clauses:
+      if wordSep: words = clause.split(wordSep)
+      else: words = [clause]
+      r.append(wordSeparator(format2).join(markup_inline_word(format2, convert(w,format1,format2)) for w in words))
+   print checkSetting(format2,"clause_separator","\n").join(r)
 
 def mainopt_mac_uk(i):
    """<from-format> [<text>]
@@ -1435,25 +1720,36 @@ def ifset(var,a,b=""):
    if os.environ.get(var,""): return a
    else: return b
 
+def speakjet(symbol,opcode):
+   "Special-case function for the Speakjet table"
+   if ifset('SPEAKJET_BINARY',1):
+      assert not ifset('SPEAKJET_SYM',1), "Cannot set both SPEAKJET_SYM and SPEAKJET_BINARY"
+      return chr(opcode)
+   else: return ifset('SPEAKJET_SYM',symbol,str(opcode))
+
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
-    d = {("settings","doc"):doc} ; duplicates = []
+    d = {("settings","doc"):doc} ; duplicates = set()
     for a in args:
         assert type(a)==tuple and (len(a)==2 or len(a)==3)
         k=a[0]
-        if k in d: duplicates.append(k)
+        if k in d: duplicates.add(k)
         v=a[1] ; d[k] = v
         if len(a)==3: bidir=a[2]
         else: bidir=True
         if bidir:
             # (k,v,True) = both (k,v) and (v,k)
-            if v in d: duplicates.append(v)
+            if v in d: duplicates.add(v)
             d[v] = k
     missing = [l for l in (list(consonants)+list(mainVowels)) if not l in d]
     if missing:
        import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(g for g,val in globals().items() if val==m) for m in missing)+"\n")
-    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(duplicates))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
+    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(list(duplicates)))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
     for k,v in kwargs.items(): d[('settings',k)] = v
+    wsep = d.get(('settings','word_separator'),None)
+    psep = d.get(('settings','phoneme_separator'),' ')
+    if not wsep==None: assert not wsep in d, "word_separator duplicates with a key in "+repr(doc)
+    if not psep==None: assert not psep in d, "phoneme_separator duplicates with a key (did you forget to change the default, or to add a ,False somewhere?) in "+repr(doc)
     global lastDictionaryMade ; lastDictionaryMade = d
     return d
 def makeVariantDic(doc,*args,**kwargs):
@@ -1518,6 +1814,7 @@ def convert(pronunc,source,dest):
     dictionary = make_dictionary(source,dest)
     maxLen=max(len(l) for l in dictionary.keys())
     debugInfo=""
+    separator = checkSetting(dest,'phoneme_separator',' ')
     safe_to_drop = checkSetting(source,"safe_to_drop_characters")
     for s,r in checkSetting(source,'cvtOut_regexps'):
         pronunc=re.sub(s,r,pronunc)
@@ -1552,7 +1849,8 @@ def convert(pronunc,source,dest):
                 elif len(ret)>2 and ret[-2].endswith('*added') and toAdd and not toAdd in dest_consonants and not toAdd==dest_syllable_sep: del ret[-2]
                 if toAdd:
                     # Add it, but if toAdd is multiple phonemes, try to put toAddAfter after the FIRST phoneme
-                    toAdd=toAdd.split() # TODO: this works only when converting to formats where space_separates_words_not_phonemes==False (doesn't really matter for eSpeak though)
+                    if separator: toAdd=toAdd.split(separator)
+                    else: toAdd = [toAdd] # TODO: won't work for formats that don't have a phoneme separator (doesn't really matter for eSpeak though)
                     ret.append(toAdd[0])
                     if toAddAfter and not toAdd[0] in dest_consonants:
                         ret.append(toAddAfter)
@@ -1562,8 +1860,6 @@ def convert(pronunc,source,dest):
                 break
     if toAddAfter: ret.append(toAddAfter)
     if ret and ret[-1]==dest_syllable_sep: del ret[-1] # spurious syllable separator at end
-    if checkSetting(dest,'space_separates_words_not_phonemes'): separator = ''
-    else: separator = ' '
     ret=separator.join(ret).replace('*added','')
     for s,r in checkSetting(dest,'cleanup_regexps'):
       ret=re.sub(s,r,ret)
@@ -1847,7 +2143,7 @@ def getInputText(i,prompt):
   return txt
 
 def write_bbcmicro_phones(ph):
-  """Called by mainopt_phones as a special case because it needs to track the commas to avoid "Line too long"
+  """Called by mainopt_phones as a special case because it needs to track clause_separator to avoid "Line too long"
   (and actually we might as well just put each clause on a separate *SPEAK command, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places)
   also calls print_bbc_warnings"""
   totalKeystrokes = 0 ; lines = 0
@@ -1871,7 +2167,7 @@ def print_bbc_warnings(keyCount,lineCount):
         (0x1900,"Model B"), # with Acorn DFS (a reasonable assumption although alternate DFS ROMs are different)
         (0xE00,"Master")]: # (the Master has 8k of special paged-in "filing system RAM", so doesn't need 2816 bytes of main RAM for DFS)
      top = page+keyCount+lineCount*(overhead_per_program_line-1)+2 # the -1 is because keyCount includes a carriage return at the end of each line
-     if model=="Master": x=" (use Speech's Sideways RAM version instead, e.g. *SRLOAD SP8000 8000 7 and reset, but sound quality might be worse)" # I don't know why but SP8000 can play higher and more distorted than SPEECH, at least on emulation.  Re bank numbers, by default banks 4 to 7 are Sideways RAM (4*16k=64k) and I suppose filling up from 7 makes sense because banks 8-F are ROMs (ANFS,DFS,ViewSheet,Edit,BASIC,ADFS,View,Terminal; OS is a separate 16k so there's scope for 144k of supplied ROM).  Banks 0-3 are ROM expansion slots.  The "128" in the name "Master 128" comes from 32k main RAM, 64k Sideways RAM, 20k shadow RAM (for screen modes 128-135), 4k OS "private RAM" (paged on top of 8000-8FFF) and 8k filing system RAM (paged on top of C000-DFFF) = 128k.  Not sure what happened on the B+.
+     if model=="Master": x=" (use Speech's Sideways RAM version instead, e.g. *SRLOAD SP8000 8000 7 and reset, but sound quality might be worse)" # I don't know why but SP8000 can play higher and more distorted than SPEECH, at least on emulation (and changing the emulation speed doesn't help, because that setting, at least in BeebEm3, just controls extra usleep every frame; it doesn't actually slow down the 6502 *between* frames).  Re bank numbers, by default banks 4 to 7 are Sideways RAM (4*16k=64k) and I suppose filling up from 7 makes sense because banks 8-F are ROMs (ANFS,DFS,ViewSheet,Edit,BASIC,ADFS,View,Terminal; OS is a separate 16k so there's scope for 144k of supplied ROM).  Banks 0-3 are ROM expansion slots.  The "128" in the name "Master 128" comes from 32k main RAM, 64k Sideways RAM, 20k shadow RAM (for screen modes 128-135), 4k OS "private RAM" (paged on top of 8000-8FFF) and 8k filing system RAM (paged on top of C000-DFFF) = 128k.  Not sure what happened on the B+.
      else: x=" (Speech program will be overwritten unless relocated)" # (could use Sideways RAM for it instead if you have it fitted, see above)
      if top > default_speech_loc: limits_exceeded.append("%s TOP=&%X limit%s" % (model,default_speech_loc,x)) # The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any non-shadow mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite (non-shadow) screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
      if top > mode7_himem:
@@ -1935,7 +2231,7 @@ def bbcKeystrokes(data,start):
        thisI = ':EQUS"'+data[i:i+add]+'"'
     elif len(data)-i < 4 or equsCount(i+1,bbc_max_line_len) >= 4: # (ditto for EQUB)
        o=ord(data[i]) ; add = 1
-       thisI = ':'+{0:"BRK",0x48:"PHA",0x68:"PLA",8:"PHP",0x28:"PLP",0x38:"SEC",0x18:"CLC",0xf8:"SED",0xd8:"CLD",0xe8:"INX",0xca:"DEX",0xc8:"INY",0x88:"DEY",0xaa:"TAX",0xa8:"TAY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xba:"TSX",0xb8:"CLV",0xea:"NOP",0x40:"RTI"}.get(o,"EQUB"+str(o)) # (omit Master-only instructions like 0xda:"PHX") (in extremely rare cases, generating 2, 3 or 4 bytes might just be quicker with opcode+operand than EQUD, e.g. "ROL1:ROL1" vs "EQUD&1260126", but we won't worry about that; anyway most of this stuff will never occur in lexicons and is here only in case bbcKeystrokes ends up being used for something else e.g. the Speech code itself)
+       thisI = ':'+{0:"BRK",0x48:"PHA",0x68:"PLA",8:"PHP",0x28:"PLP",0x38:"SEC",0x18:"CLC",0xf8:"SED",0xd8:"CLD",0xe8:"INX",0xca:"DEX",0xc8:"INY",0x88:"DEY",0xaa:"TAX",0xa8:"TAY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xba:"TSX",0xb8:"CLV",0xea:"NOP",0x60:"RTS",0x40:"RTI"}.get(o,"EQUB"+str(o)) # (omit Master-only instructions like 0xda:"PHX") (in extremely rare cases, generating 2, 3 or 4 bytes might just be quicker with opcode+operand than EQUD, e.g. "ROL1:ROL1" vs "EQUD&1260126", but we won't worry about that; anyway most of this stuff will never occur in lexicons and is here only in case bbcKeystrokes ends up being used for something else e.g. the Speech code itself)
     else:
        thisI = ":EQUD"+equdParam() ; add = 4
     if len(thisLine)+len(thisI) <= bbc_max_line_len:
@@ -1991,7 +2287,7 @@ def print_bbclex_instructions(fname,size):
   else: print "You can load this lexicon into Sideways RAM by *SRLOAD %s %X 7 (or whichever bank number you're using), or change the SP8000 file from offset &%X." % (fname,SRAM_lex_offset+0x8000,SRAM_lex_offset)
   if not os.environ.get("SPEECH_DISK",""): print "If you want to append the default lexicon to this one, set SPEECH_DISK to the image of the original Speech disk before running lexconvert, e.g. export SPEECH_DISK=/usr/local/BeebEm3/diskimg/Speech.ssd"
   print "You can also set MAKE_SPEECH_ROM=1 (along with SPEECH_DISK) to create a SPEECH.ROM file instead"
- print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' to ensure there's a space at the start of the SAY string (bug in Speech?)" # Can't track down which words this does and doesn't apply to.
+ print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' (this seems to be a Speech bug)" # - can't track down which words it does and doesn't apply to
  print "It might be better to load your lexicon into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
 
 def main():
