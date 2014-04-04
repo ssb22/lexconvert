@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.182 - convert between lexicons of different speech synthesizers
+"""lexconvert v0.183 - convert between lexicons of different speech synthesizers
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -156,6 +156,12 @@ def LexFormats():
        phoneme_separator (default " ")
        clause_separator (default newline)
 
+       (For a special case, clause_separator can also be
+        set to a function.  If that happens, the function
+        will be called whenever lexconvert needs to output
+        a list of (lists of words) in this format.  See
+        bbcmicro for an example function clause_separator)
+
        safe_to_drop_characters (default False, can be a
        string of safe characters or True = all; controls
        warnings when unrecognised characters are found)
@@ -171,6 +177,8 @@ def LexFormats():
        inline_format (default "%s") the format string for
        printing a word with --phones or --phones2phones
        (can be used to put markup around each word)
+       (can also be a function taking the phonetic word
+        and returning the resulting string, e.g. bbcmicro)
 
        inline_header (default none) a line to print first
        when outputting from --phones or --phones2phones
@@ -951,9 +959,9 @@ def LexFormats():
     lex_read_function = lambda lexfile: [(w[0].lstrip().rstrip('_').lower(),w[1]) for w in filter(lambda x:len(x)==2,[w.split(chr(128)) for w in lexfile.read().split('>')])], # TODO: this reads back the entries we generate, but is unlikely to work well with the wildcards in the default lexicon that would have been added if SPEECH_DISK was set (c.f. trying to read eSpeak's en_rules instead of en_extra)
     lex_word_case = "upper",
     lex_footer = ">**",
-    # inline_format not set - handled by special-case code
+    inline_format = markup_bbcMicro_word,
     word_separator=" ",phoneme_separator="",
-    clause_separator=None, # we'll special-case it
+    clause_separator=write_bbcmicro_phones, # special case
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[
       ('KT','CT'), # Speech instructions: "CT as in fact"
@@ -1588,9 +1596,7 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats."""
    for format in formats:
     if len(formats)>1: writeFormatHeader(format)
     write_inlineWord_header(format)
-    clauses = filter(lambda x:x,response.split("\n"))
-    if format=="bbcmicro": write_bbcmicro_phones(clauses)
-    else: print checkSetting(format,"clause_separator","\n").join([wordSeparator(format).join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in clauses])
+    output_clauses(format,convert(parseIntoWordsAndClauses("espeak",response),"espeak",format))
 
 def pipeThroughEspeak(inpt):
    "Writes inpt to espeak -q -x (in chunks if necessary) and returns the result"
@@ -1726,26 +1732,29 @@ Perform a one-off conversion of phonemes from format1 to format2 (format2 can be
    format1,format2 = sys.argv[i+1],sys.argv[i+2]
    if not format1 in lexFormats: return "No such format "+repr(format1)+" (use --formats to see a list of formats)"
    if not format2 in lexFormats and not format2=="all": return "No such format "+repr(format2)+" (use --formats to see a list of formats)"
-   if format1=="example" and len(sys.argv)<=i+3 and stdin_is_terminal():
-      clauses=[x[1] for x in getSetting('example','lex_read_function')()] ; wordSep = None
-   else:
-      text=getInputText(i+3,"phonemes in "+format1+" format")
-      wordSep = checkSetting(format1,"word_separator") # don't use wordSeparator() here - we're splitting, not joining, so we don't want it to default to phoneme_separator
-      clauseSep = checkSetting(format1,"clause_separator","\n")
-      if clauseSep: clauses = text.split(clauseSep)
-      else: clauses = [text]
+   if format1=="example" and len(sys.argv)<=i+3 and stdin_is_terminal(): clauses=[[x[1]] for x in getSetting('example','lex_read_function')()]
+   else: clauses = parseIntoWordsAndClauses(format1,getInputText(i+3,"phonemes in "+format1+" format"))
    if format2=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
    else: formats = [format2]
    for format2 in formats:
      if len(formats)>1: writeFormatHeader(format2)
-     r = []
-     for clause in clauses:
-       if wordSep: words = clause.split(wordSep)
-       else: words = [clause]
-       if format2=="bbcmicro": r.append(" ".join(convert(w,format1,"espeak") for w in words))
-       else: r.append(wordSeparator(format2).join(markup_inline_word(format2, convert(w,format1,format2)) for w in words))
-     if format2=="bbcmicro": write_bbcmicro_phones(r)
-     else: print checkSetting(format2,"clause_separator","\n").join(r)
+     output_clauses(format2,convert(clauses,format1,format2))
+
+def parseIntoWordsAndClauses(format,phones):
+   "Returns list of clauses, each of which is a list of words, assuming 'phones' are in format 'format'"
+   wordSep = checkSetting(format,"word_separator") # don't use wordSeparator() here - we're splitting, not joining, so we don't want it to default to phoneme_separator
+   clauseSep = checkSetting(format,"clause_separator","\n")
+   def s(sep):
+      if sep==" ": return None # " " means ANY whitespace (TODO: document this?)
+      else: return sep
+   if clauseSep and type(clauseSep) in [str,unicode]:
+      clauses = phones.split(s(clauseSep))
+   else: clauses = [phones]
+   for i in range(len(clauses)):
+      if wordSep: clauses[i]=clauses[i].split(s(wordSep))
+      else: clauses[i] = [clauses[i]]
+      clauses[i] = filter(lambda x:x, clauses[i])
+   return filter(lambda x:x,clauses)
 
 def mainopt_mac_uk(i):
    """<from-format> [<text>]
@@ -1868,8 +1877,9 @@ def make_dictionary(sourceName,destName):
 
 warnedAlready = set()
 def convert(pronunc,source,dest):
-    "Convert pronunc from source to dest"
+    "Convert pronunc from source to dest.  pronunc can be a string or a list; if a list then we'll recurse on each of the list elements and return a new list (this is meant for batch-converting clauses etc)"
     if source==dest: return pronunc # essential for --try experimentation with codes not yet supported by lexconvert
+    if type(pronunc)==list: return [convert(p,source,dest) for p in pronunc]
     if source=="unicode-ipa":
         # try to decode it
         if "\\u" in pronunc and not '"' in pronunc: # maybe \uNNNN copied from Gecko on X11, can just evaluate it to get the unicode
@@ -2125,25 +2135,30 @@ def write_inlineWord_header(format):
     "Checks the format for inline_header, prints if so"
     h = checkSetting(format,"inline_header")
     if h: print h
-bbc_partsSoFar=bbc_charsSoFar=0 # hack for bbcmicro
 def markup_inline_word(format,pronunc):
-    "Returns pronunc with any necessary markup for putting it in a text (using the inline_format setting).  Contains special-case code for bbcmicro (beginning a new *SPEAK command when necessary)"
+    "Returns pronunc with any necessary markup for putting it in a text (using the inline_format setting)"
     if type(pronunc)==unicode: pronunc=pronunc.encode('utf-8') # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
-    if format=="bbcmicro":
-      global bbc_partsSoFar,bbc_charsSoFar
-      thisPartCount = bbcMicro_partPhonemeCount(pronunc)
-      if (not bbc_partsSoFar or bbc_partsSoFar+thisPartCount > 115) or (not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 238): # 238 is max len of the immediate BASIC prompt; re other limit see bbcMicro_partPhonemeCount
-        if bbc_charsSoFar: r="\n"
-        else: r=""
-        cmd="*SPEAK" # (could add a space if want to make it more readable, at the expense of an extra keystroke in the paste buffer; by the way, when not using the ROM version you must use *SPEAK not OS.("SPEAK"), at least on a Model B; seems OSCLI doesn't go through quite the same vectors as star)
-        bbc_charsSoFar = len(cmd)+len(pronunc)+1 # +1 for the space that'll be after this word if we don't start a new line
-        bbc_partsSoFar = thisPartCount+1 # ditto
-        return r+cmd+pronunc
-      else:
-        bbc_charsSoFar += len(pronunc)+1
-        bbc_partsSoFar += thisPartCount+1
-        return pronunc
-    return checkSetting(format,"inline_format","%s") % pronunc
+    format = checkSetting(format,"inline_format","%s")
+    if type(format) in [str,unicode]:
+       if type(format)==unicode: format=format.encode('utf-8') # see above
+       return format % pronunc
+    else: return format(pronunc)
+def markup_bbcMicro_word(pronunc):
+   "Special case of markup_inline_word for BBC Micro that begins a new *SPEAK command when necessary.  See also write_bbcmicro_phones."
+   global bbc_partsSoFar,bbc_charsSoFar
+   thisPartCount = bbcMicro_partPhonemeCount(pronunc)
+   if (not bbc_partsSoFar or bbc_partsSoFar+thisPartCount > 115) or (not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 238): # 238 is max len of the immediate BASIC prompt; re other limit see bbcMicro_partPhonemeCount
+      if bbc_charsSoFar: r="\n"
+      else: r=""
+      cmd="*SPEAK" # (could add a space if want to make it more readable, at the expense of an extra keystroke in the paste buffer; by the way, when not using the ROM version you must use *SPEAK not OS.("SPEAK"), at least on a Model B; seems OSCLI doesn't go through quite the same vectors as star)
+      bbc_charsSoFar = len(cmd)+len(pronunc)+1 # +1 for the space that'll be after this word if we don't start a new line
+      bbc_partsSoFar = thisPartCount+1 # ditto
+      return r+cmd+pronunc
+   else:
+      bbc_charsSoFar += len(pronunc)+1
+      bbc_partsSoFar += thisPartCount+1
+      return pronunc
+bbc_partsSoFar=bbc_charsSoFar=0
 
 def sylcount(festival):
   """Tries to count the number of syllables in a Festival string (see mainopt_syllables).  We treat @ as counting the same as the previous syllable (e.g. "fire", "power"), but this can vary in different songs, so the result will likely need a bit of proofreading."""
@@ -2215,14 +2230,17 @@ def getInputText(i,prompt):
     txt = sys.stdin.read()
   return txt
 
-def write_bbcmicro_phones(espeak_clauses):
-  """Called by mainopt_phones and mainopt_phones2phones as a special case because it needs to track clause_separator to avoid "Line too long"
-  (and actually we might as well just put each clause on a separate *SPEAK command, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places)
-  also calls print_bbc_warnings"""
+def output_clauses(format,clauses):
+   "Writes out clauses and words in format 'format' (clauses is a list of lists of words in the phones of 'format').  By default, calls markup_inline_word and join as appropriate.  If however the format's 'clause_separator' has been set to a special case, calls that."
+   clause_sep = checkSetting(format,"clause_separator","\n")
+   if type(clause_sep) in [str,unicode]: print clause_sep.join(wordSeparator(format).join(markup_inline_word(format,word) for word in clause) for clause in clauses)
+   else: clause_sep(clauses)
+def write_bbcmicro_phones(clauses):
+  """Must be a special case because it needs to track any extra keystrokes to avoid "Line too long".  And while we're at it, we might as well start a new *SPEAK command with each clause, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places.  Also calls print_bbc_warnings"""
   totalKeystrokes = 0 ; lines = 0
-  for line in espeak_clauses:
+  for clause in clauses:
     global bbc_charsSoFar ; bbc_charsSoFar=0
-    l=" ".join([markup_inline_word("bbcmicro",convert(word,"espeak","bbcmicro")) for word in line.split()])
+    l=" ".join([markup_inline_word("bbcmicro",word) for word in clause])
     print l.replace(" \n","\n")
     totalKeystrokes += len(l)+1 ; lines += 1
   print_bbc_warnings(totalKeystrokes,lines)
