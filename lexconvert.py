@@ -196,6 +196,10 @@ def LexFormats():
 
        lex_header, lex_footer - optional strings to write
        at the beginning and at the end of the lexicon file
+       (can also be functions that take the open file as a
+        parameter, e.g. for bbcmicro; lex_footer is
+        allowed to close the file if it needs to do
+        something with it afterwards)
 
        lex_word_case - optional "upper" or "lower" to
        force a particular case for lexicon words (not
@@ -359,6 +363,7 @@ def LexFormats():
     lex_filename = "en_extra",
     lex_entry_format = "%s %s\n",
     lex_read_function = lambda lexfile: [x for x in [l.split()[:2] for l in lexfile.readlines()] if len(x)==2 and not '//' in x[0]],
+    lex_footer=lambda f:(f.close(),os.system("espeak --compile=en")), # see also a bit of special-case code in mainopt_convert
     inline_format = "[[%s]]",
     word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
@@ -958,7 +963,8 @@ def LexFormats():
     lex_entry_format="> %s_"+chr(128)+"%s", # (specifying 'whole word' for now; remove the space before or the _ after if you want)
     lex_read_function = lambda lexfile: [(w[0].lstrip().rstrip('_').lower(),w[1]) for w in filter(lambda x:len(x)==2,[w.split(chr(128)) for w in lexfile.read().split('>')])], # TODO: this reads back the entries we generate, but is unlikely to work well with the wildcards in the default lexicon that would have been added if SPEECH_DISK was set (c.f. trying to read eSpeak's en_rules instead of en_extra)
     lex_word_case = "upper",
-    lex_footer = ">**",
+    lex_header = bbc_prepDefaultLex,
+    lex_footer = bbc_appendDefaultLex, # + ">**"
     inline_format = markup_bbcMicro_word,
     word_separator=" ",phoneme_separator="",
     clause_separator=write_bbcmicro_phones, # special case
@@ -1692,10 +1698,6 @@ E.g.: python lexconvert.py --convert festival cepstral"""
       outFile=open(fname,"w")
    print "Writing %s lexicon entries to %s" % (fromFormat,fname)
    convert_user_lexicon(fromFormat,toFormat,outFile)
-   fileLen = outFile.tell()
-   outFile.close()
-   if toFormat=="bbcmicro": print_bbclex_instructions(fname,fileLen)
-   if toFormat=="espeak": os.system("espeak --compile=en")
 
 def mainopt_festival_dictionary_to_espeak(i):
    """<location>
@@ -2099,8 +2101,9 @@ def get_macuk_lexicon(fromFormat):
 def convert_user_lexicon(fromFormat,toFormat,outFile):
     "See mainopt_convert"
     lex = read_user_lexicon(fromFormat)
-    if toFormat=="bbcmicro": bbc_prepDefaultLex(outFile)
-    outFile.write(checkSetting(toFormat,"lex_header"))
+    lex_header = checkSetting(toFormat,"lex_header")
+    if type(lex_header)==str: outFile.write(lex_header)
+    else: lex_header(outFile)
     entryFormat=getSetting(toFormat,"lex_entry_format")
     wordCase=checkSetting(toFormat,"lex_word_case")
     for word, pronunc in lex:
@@ -2109,8 +2112,9 @@ def convert_user_lexicon(fromFormat,toFormat,outFile):
         if wordCase=="upper": word=word.upper()
         elif wordCase=="lower": word=word.lower()
         outFile.write(entryFormat % (word,pronunc))
-    if toFormat=="bbcmicro": bbc_appendDefaultLex(outFile)
-    outFile.write(checkSetting(toFormat,"lex_footer"))
+    footer = checkSetting(toFormat,"lex_footer")
+    if type(footer)==str: outFile.write(footer)
+    else: footer(outFile)
 
 def bbcMicro_partPhonemeCount(pronunc):
    """Returns the number of 'part phonemes' (at least that's what I'm calling them) for the BBC Micro phonemes in pronunc.  The *SPEAK command cannot take more than 117 part-phonemes at a time before saying "Line too long", and in some cases it takes less than that (I'm not sure why); 115 is a safer limit."""
@@ -2144,7 +2148,7 @@ def markup_inline_word(format,pronunc):
        return format % pronunc
     else: return format(pronunc)
 def markup_bbcMicro_word(pronunc):
-   "Special case of markup_inline_word for BBC Micro that begins a new *SPEAK command when necessary.  See also write_bbcmicro_phones."
+   "Special-case function set as inline_format in bbcmicro.  Begins a new *SPEAK command when necessary.  See also write_bbcmicro_phones."
    global bbc_partsSoFar,bbc_charsSoFar
    thisPartCount = bbcMicro_partPhonemeCount(pronunc)
    if (not bbc_partsSoFar or bbc_partsSoFar+thisPartCount > 115) or (not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 238): # 238 is max len of the immediate BASIC prompt; re other limit see bbcMicro_partPhonemeCount
@@ -2236,7 +2240,7 @@ def output_clauses(format,clauses):
    if type(clause_sep) in [str,unicode]: print clause_sep.join(wordSeparator(format).join(markup_inline_word(format,word) for word in clause) for clause in clauses)
    else: clause_sep(clauses)
 def write_bbcmicro_phones(clauses):
-  """Must be a special case because it needs to track any extra keystrokes to avoid "Line too long".  And while we're at it, we might as well start a new *SPEAK command with each clause, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places.  Also calls print_bbc_warnings"""
+  """Special-case function set as clause_separator in bbcmicro format.  Must be a special case because it needs to track any extra keystrokes to avoid "Line too long".  And while we're at it, we might as well start a new *SPEAK command with each clause, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places.  Also calls print_bbc_warnings"""
   totalKeystrokes = 0 ; lines = 0
   for clause in clauses:
     global bbc_charsSoFar ; bbc_charsSoFar=0
@@ -2274,23 +2278,27 @@ def print_bbc_warnings(keyCount,lineCount):
   if len(limits_exceeded)>1: sys.stderr.write(warning+"this text may be too big for the BBC Micro. The following limits were exceeded: "+", ".join(limits_exceeded)+after)
   elif limits_exceeded: sys.stderr.write(warning+"this text may be too big for the BBC Micro because it exceeds the "+limits_exceeded[0]+after)
 def bbc_prepDefaultLex(outFile):
-  """If SPEECH_DISK and MAKE_SPEECH_ROM is set, then read the ROM code from SPEECH_DISK and write to outFile (meant to go before the lexicon, to make a modified BBC Micro Speech ROM with custom lexicon)"""
+  """Special-case function set as lex_header in bbcmicro format.  If SPEECH_DISK and MAKE_SPEECH_ROM is set, then read the ROM code from SPEECH_DISK and write to outFile (meant to go before the lexicon, to make a modified BBC Micro Speech ROM with custom lexicon)"""
   if not os.environ.get("MAKE_SPEECH_ROM",0): return
   d=open(os.environ['SPEECH_DISK']).read() # if this fails, SPEECH_DISK was not set or was set incorrectly (it's required for MAKE_SPEECH_ROM)
   i=d.index('LO\x80LP\x80\x82\x11') # start of SP8000 file (if this fails, it wasn't a Speech disk)
   j=d.index('>OUS_',i) # start of lexicon (ditto)
   assert j-i==0x1683, "Is this really an original disk image?"
   outFile.write(d[i:j])
-def bbc_appendDefaultLex(outFile,romCode=False):
-  """If SPEECH_DISK is set, read Speech's default lexicon from it and append this to outFile (without the terminating >** which is supplied anyway by convert_user_lexicon)"""
-  if not os.environ.get("SPEECH_DISK",""): return
-  d=open(os.environ['SPEECH_DISK']).read()
-  i=d.index('>OUS_') # if this fails, it wasn't a Speech disk
-  j=d.index(">**",i)
-  assert j-i==2201, "Lexicon on SPEECH_DISK is wrong size (%d). Is this really an original disk image?" % (j-i)
-  outFile.write(d[i:j])
-  # TODO: can we compress the BBC lexicon?  i.e. detect if a rule will happen anyway due to subsequent wildcard rules, and delete it if so (don't know how many bytes that would save)
-  assert not os.environ.get("MAKE_SPEECH_ROM",0) or outFile.tell()+3 <= 16384, "Speech ROM file got too big"
+def bbc_appendDefaultLex(outFile):
+  """Special-case function set as lex_footer in bbcmicro format.  If SPEECH_DISK is set, read Speech's default lexicon from it and append this to outFile.  Otherwise just write a terminating >** to outFile.  In either case, check for exceeding 16k if we're MAKE_SPEECH_ROM, close the file and call print_bbclex_instructions."""
+  if os.environ.get("SPEECH_DISK",""):
+     d=open(os.environ['SPEECH_DISK']).read()
+     i=d.index('>OUS_') # if this fails, it wasn't a Speech disk
+     j=d.index(">**",i)
+     assert j-i==2201, "Lexicon on SPEECH_DISK is wrong size (%d). Is this really an original disk image?" % (j-i)
+     outFile.write(d[i:j])
+     # TODO: can we compress the BBC lexicon?  i.e. detect if a rule will happen anyway due to subsequent wildcard rules, and delete it if so (don't know how many bytes that would save)
+  outFile.write(">**")
+  fileLen = outFile.tell()
+  assert not os.environ.get("MAKE_SPEECH_ROM",0) or fileLen <= 16384, "Speech ROM file got too big"
+  outFile.close()
+  print_bbclex_instructions(getSetting("bbcmicro","lex_filename"),fileLen)
 
 def bbcshortest(n):
   """Convert integer n into the shortest possible number of BBC Micro keystrokes; prefer hex if and only if the extra '&' keystroke won't make it any longer than its decimal equivalent"""
