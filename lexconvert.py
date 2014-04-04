@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.18 - convert between lexicons of different speech synthesisers
+"""lexconvert v0.182 - convert between lexicons of different speech synthesizers
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -194,6 +194,9 @@ def LexFormats():
        pronunciations - they're determined by the table).
        The default is to allow words to be in either case.
 
+       lex_type (default "") - used by the --formats
+       option when summarising the support for each format
+
        lex_read_function - Python function to READ the
        lexicon file and return a (word,definition) list.
        If this is not specified, there's no read support
@@ -258,6 +261,14 @@ def LexFormats():
     lex_read_function = lambda *args: eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']'),
     safe_to_drop_characters=True, # TODO: really? (could instead give a string of known-safe characters)
   ),
+
+  "example" : makeVariantDic(
+    "A small built-in example lexicon for testing when you don't have your full custom lexicon to hand.  Use --convert to write it in one of the other formats and see if your synth can import it.",
+    lex_read_function = lambda *args: [
+       ("Shadrach","shei1drak"),
+       ("Meshach","mii1shak"),
+       ("Abednego","@be1dniigou"),
+    ]),
 
   "espeak" : makeDic(
     "eSpeak's default British voice", # but eSpeak's phoneme representation isn't always that simple, hence the regexps at the end
@@ -529,6 +540,7 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     lex_filename="substitute.sh", # write-only for now
+    lex_type = "substitution script",
     lex_header = "# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed",
     lex_entry_format=' -e "s/%s/[[inpt PHON]]%s[[inpt TEXT]]/g"',
     lex_footer = "\n",
@@ -588,7 +600,7 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
-    inline_header = "mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it\n",
+    inline_header = "(mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it)",
     word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
@@ -683,6 +695,7 @@ def LexFormats():
 
   "acapela-uk" : makeDic(
     'Acapela-optimised X-SAMPA for UK English voices (e.g. "Peter"), contributed by Jan Weiss',
+    ('.',syllable_separator),('"',primary_stress),('%',secondary_stress), # copied from "x-sampa", not tested
     ('A:',a_as_in_ah),
     ('{',a_as_in_apple),
     ('V',u_as_in_but),
@@ -808,7 +821,7 @@ def LexFormats():
   ),
 
   "apollo" : makeDic(
-    'Dolphin Apollo 2 serial-port and parallel-port hardware synthesisers (in case anybody still uses those)',
+    'Dolphin Apollo 2 serial-port and parallel-port hardware synthesizers (in case anybody still uses those)',
     (syllable_separator,'',False), # I don't think the Apollo had anything to mark stress; TODO: control the pitch instead like bbcmicro ?
     ('_QQ',syllable_separator,False), # a slight pause
     ('_AA',a_as_in_apple),
@@ -877,6 +890,7 @@ def LexFormats():
     # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
     # If you want to emulate a Master, you might need a *DISK before the *SPEECH (to take it out of ADFS mode)
+    (syllable_separator,'',False),
     ('4',primary_stress),
     ('5',secondary_stress), # (these are pitch numbers on the BBC; normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary and 4=primary; 3 sounds less calm)
     ('AA',a_as_in_ah),
@@ -939,6 +953,7 @@ def LexFormats():
     lex_footer = ">**",
     # inline_format not set - handled by special-case code
     word_separator=" ",phoneme_separator="",
+    clause_separator=None, # we'll special-case it
     safe_to_drop_characters=True, # TODO: really?
     cleanup_regexps=[
       ('KT','CT'), # Speech instructions: "CT as in fact"
@@ -949,7 +964,7 @@ def LexFormats():
   ),
 
   "amiga" : makeDic(
-    'AmigaOS speech synthesiser (American English)', # shipped with the 1985 Amiga release; developed by SoftVoice Inc
+    'AmigaOS speech synthesizer (American English)', # shipped with the 1985 Amiga release; developed by SoftVoice Inc
     # All I had to go by for this was a screenshot on Marcos Miranda's blog.  I once saw this synth demonstrated but never tried it.  My early background was the BBC Micro, not Amigas etc.  But I know some people are keen on Amigas so I might as well include it.
     (syllable_separator,'',False),
     ('4',primary_stress),('3',secondary_stress),
@@ -1236,6 +1251,7 @@ def LexFormats():
     (u'\u0292',ge_of_blige_etc),
     (u'\u0294',glottal_stop),
     lex_filename="words-ipa.html", # write-only for now
+    lex_type = "HTML",
     lex_header = '<html><head><meta name="mobileoptimized" content="0"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body><table>',
     lex_entry_format="<tr><td>%s</td><td>%s</td></tr>\n",
     lex_footer = "</table></body></html>\n",
@@ -1334,12 +1350,14 @@ def LexFormats():
     ('Z',ge_of_blige_etc),
     ('P',glottal_stop),
     lex_filename="words-ipa.tex", # write-only for now
+    lex_type = "document",
     lex_header = r'\documentclass[12pt,a4paper]{article} \usepackage[safe]{tipa} \usepackage{longtable} \begin{document} \begin{longtable}{ll}',
     lex_entry_format=r"%s & \textipa{%s}\\"+"\n",
     lex_footer = r"\end{longtable}\end{document}"+"\n",
     inline_format = "\\textipa{%s}",
     inline_header = r"% In preamble, put \usepackage[safe]{tipa}", # (the [safe] part is recommended if you're mixing with other TeX)
     word_separator=" ",phoneme_separator="",
+    clause_separator=r"\\"+"\n",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
   ),
@@ -1393,6 +1411,7 @@ def LexFormats():
     (z,'ze0',False),
     (ge_of_blige_etc,'zhe0',False),
     lex_filename="words-pinyin-approx.txt", # write-only for now
+    lex_type = "text",
     lex_header = "Pinyin approxmations (very approximate!)\n----------------------------------------\n",
     lex_entry_format = "%s ~= %s\n",
     word_separator=" ",phoneme_separator="",
@@ -1475,7 +1494,8 @@ def LexFormats():
     (u'\u308f',w), # use 'wa' (as 'wu' == 'u')
     (u'\u3086',y),
     (u'\u305a',z),
-    lex_filename="words-kana-approx.txt", # write-only for now
+    lex_filename="words-kana-approx.txt",
+    lex_type = "text",
     lex_header = "Kana approxmations (very approximate!)\n--------------------------------------\n",
     lex_entry_format = "%s ~= %s\n",
     word_separator=" ",phoneme_separator="",
@@ -1509,8 +1529,7 @@ def LexFormats():
   ),
   "names" : makeDic(
     "Lexconvert internal phoneme names (sometimes useful with the --phones option while developing new formats)",
-     *[(phName,phVal) for phName,phVal in phonemes.items()]),
-}
+     *[(phName,phVal) for phName,phVal in phonemes.items()])}
 
 # The mainopt() functions are the main options
 # (if you implement a new one, main() will detect it);
@@ -1527,19 +1546,25 @@ Convert input from <format> into eSpeak and try it out.
 (Requires the 'espeak' command.)
 E.g.: python lexconvert.py --try festival h @0 l ou1
  or: python lexconvert.py --try unicode-ipa '\\u02c8\\u0279\\u026adn\\u0329' (for Unicode put '\\uNNNN' or UTF-8)"""
-   espeak = convert(getInputText(i+2,"phonemes in "+sys.argv[i+1]+" format"),sys.argv[i+1],'espeak')
+   format = sys.argv[i+1]
+   if not format in lexFormats: return "No such format "+repr(format)+" (use --formats to see a list of formats)"
+   espeak = convert(getInputText(i+2,"phonemes in "+format+" format"),format,'espeak')
    os.popen("espeak -x","w").write(markup_inline_word("espeak",espeak))
 
 def mainopt_trymac(i):
    """*<format> [<pronunciation>]
 Convert phonemes from <format> into Mac and try it using the Mac OS 'say' command"""
-   mac = convert(getInputText(i+2,"phonemes in "+sys.argv[i+1]+" format"),sys.argv[i+1],'mac')
+   format = sys.argv[i+1]
+   if not format in lexFormats: return "No such format "+repr(format)+" (use --formats to see a list of formats)"
+   mac = convert(getInputText(i+2,"phonemes in "+format+" format"),format,'mac')
    os.popen(macSayCommand()+" -v Vicki","w").write(markup_inline_word("mac",mac)) # Need to specify a voice because the default voice might not be able to take Apple phonemes.  Vicki has been available since 10.3, as has the 'say' command (previous versions need osascript, see Gradint's code)
 
 def mainopt_trymac_uk(i):
    """*<format> [<pronunciation>]
 Convert phonemes from <format> and try it with Mac OS British voices (see --mac-uk for details)"""
-   macuk = convert(getInputText(i+2,"phonemes in "+sys.argv[i+1]+" format"),sys.argv[i+1],'mac-uk')
+   format = sys.argv[i+1]
+   if not format in lexFormats: return "No such format "+repr(format)+" (use --formats to see a list of formats)"
+   macuk = convert(getInputText(i+2,"phonemes in "+format+" format"),format,'mac-uk')
    m = MacBritish_System_Lexicon("",os.environ.get("MACUK_VOICE","Daniel"))
    try:
       try: m.speakPhones(macuk.split())
@@ -1551,16 +1576,48 @@ def mainopt_phones(i):
    """*<format> [<words>]
 Use eSpeak to convert text to phonemes, and then convert the phonemes to format 'format'.
 E.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.
-(Some commercial speech synthesisers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)"""
-   format=sys.argv[i+1]
-   txt = getInputText(i+2,"text")
-   w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # need to make sure output buffer is big enough (TODO: or use a temp file, or progressive write/read chunks) (as things stand, if bufsize is not big enough, w.close() on the following line can hang, as espeak waits for us to read its output before it can take all of our input)
-   w.write(txt) ; w.close()
-   response = r.read()
+(Some commercial speech synthesizers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)
+Set format to 'all' if you want to see the phonemes in ALL supported formats."""
+   format = sys.argv[i+1]
+   if format=="example": return "The 'example' format cannot be used with --phones; try --convert, or did you mean --phones festival" # could allow example anyway as it's basically Festival, but save confusion as eSpeak might not generate the same phonemes if our example words haven't been installed in the system's eSpeak.  (Still allow it to be used in --try etc though.)
+   if not format in lexFormats and not format=="all": return "No such format "+repr(format)+" (use --formats to see a list of formats)"
+   response = pipeThroughEspeak(getInputText(i+2,"text"))
    if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
-   write_inlineWord_header(format)
-   if format=="bbcmicro": write_bbcmicro_phones(response)
-   else: print checkSetting(format,"clause_separator","\n").join([wordSeparator(format).join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in filter(lambda x:x,response.split("\n"))])
+   if format=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
+   else: formats = [format]
+   for format in formats:
+    if len(formats)>1: writeFormatHeader(format)
+    write_inlineWord_header(format)
+    clauses = filter(lambda x:x,response.split("\n"))
+    if format=="bbcmicro": write_bbcmicro_phones(clauses)
+    else: print checkSetting(format,"clause_separator","\n").join([wordSeparator(format).join([markup_inline_word(format,convert(word,"espeak",format)) for word in line.split()]) for line in clauses])
+
+def pipeThroughEspeak(inpt):
+   "Writes inpt to espeak -q -x (in chunks if necessary) and returns the result"
+   bufsize = 8192 # careful not to set this too big, as the OS might limit it (TODO can we check?)
+   ret = []
+   while len(inpt) > bufsize:
+      splitAt = inpt.rfind('\n',0,bufsize)+1
+      if not splitAt: # no newline, try to split on space
+         splitAt = inpt.rfind(' ',0,bufsize)+1
+         if not splitAt:
+            sys.stderr.write("Note: had to split eSpeak input and couldn't find a newline or space to do it on\n")
+            splitAt = bufsize
+      response = pipeThroughEspeak(inpt[:splitAt])
+      if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
+      ret.append(response) ; inpt=inpt[splitAt:]
+   w,r=os.popen4("espeak -q -x",bufsize=bufsize)
+   w.write(inpt) ; w.close()
+   return "\n".join(ret) + r.read()
+
+def writeFormatHeader(format):
+   "Writes a header for 'format' when outputting in all formats.  Assumes the output MIGHT end up being more than one line."
+   global writeFormatHeader_called
+   if writeFormatHeader_called: print
+   print format
+   print '-'*len(format)
+   writeFormatHeader_called = True
+writeFormatHeader_called = False
 
 def mainopt_check_variants(i):
    # undocumented (won't appear in help text)
@@ -1608,6 +1665,9 @@ E.g.: python lexconvert.py --convert festival cepstral"""
    toFormat = sys.argv[i+2]
    if fromFormat==toFormat: return "Cannot convert a lexicon to its own format (that could result in it being truncated)"
    if toFormat=="mac-uk": return "Cannot permanently save a Mac-UK lexicon; please use the --mac-uk option to read text"
+   if toFormat=="example": return "Cannot overwrite the built-in example lexicon"
+   for f in [fromFormat,toFormat]:
+      if not f in lexFormats: return "No such format "+repr(f)+" (use --formats to see a list of formats)"
    try:
       fname=getSetting(toFormat,"lex_filename")
       getSetting(toFormat,"lex_entry_format") # convert_user_lexicon will need this
@@ -1624,7 +1684,7 @@ E.g.: python lexconvert.py --convert festival cepstral"""
       except: pass
       assert not l, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)" # (if you run with python -O then this is ignored, as are some other checks so be careful)
       outFile=open(fname,"w")
-   print "Writing lexicon entries to",fname
+   print "Writing %s lexicon entries to %s" % (fromFormat,fname)
    convert_user_lexicon(fromFormat,toFormat,outFile)
    fileLen = outFile.tell()
    outFile.close()
@@ -1651,9 +1711,7 @@ def mainopt_syllables(i):
 Attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)"""
    # Normally, espeak -x output can't be relied on to always put a space between every input word.  So we put a newline after every input word instead.  This might affect eSpeak's output (not recommended for mainopt_phones, hence no 'interleave words and phonemes' option), but it should be OK for just counting the syllables.  (Also, the assumption that the input words have been taken from song lyrics usefully rules out certain awkward punctuation cases.)
    txt=getInputText(i+1,"word(s)");words=txt.split()
-   w,r=os.popen4("espeak -q -x",bufsize=max(8192,4*len(txt))) # TODO: same TODO as above (bufsize)
-   w.write('\n'.join(words).replace("!","").replace(":","")) ; w.close()
-   response = r.read()
+   response = pipeThroughEspeak('\n'.join(words).replace("!","").replace(":",""))
    if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
    rrr = response.split("\n")
    print " ".join([hyphenate(word,sylcount(convert(line,"espeak","festival"))) for word,line in zip(words,filter(lambda x:x,rrr))])
@@ -1664,24 +1722,36 @@ def wordSeparator(format):
 
 def mainopt_phones2phones(i):
    """*<format1> <format2> [<phonemes in format1>]
-Perform a one-off conversion of phonemes from format1 to format2"""
+Perform a one-off conversion of phonemes from format1 to format2 (format2 can be 'all' if you want)""" # If format1 is 'example' and you don't specify phonemes, we take the words from the example lexicon.  But don't say that in the help string because it might confuse the issue about phonemes being optional on the command line and prompted for if not specified and stdin is not piped in all formats other than 'example'.
    format1,format2 = sys.argv[i+1],sys.argv[i+2]
-   text=getInputText(i+3,"phonemes in "+format1+" format")
-   wordSep = checkSetting(format1,"word_separator") # don't use wordSeparator() here - we're splitting, not joining, so we don't want it to default to phoneme_separator
-   clauseSep = checkSetting(format1,"clause_separator","\n")
-   if clauseSep: clauses = text.split(clauseSep)
-   else: clauses = [text]
-   r = []
-   for clause in clauses:
-      if wordSep: words = clause.split(wordSep)
-      else: words = [clause]
-      r.append(wordSeparator(format2).join(markup_inline_word(format2, convert(w,format1,format2)) for w in words))
-   print checkSetting(format2,"clause_separator","\n").join(r)
+   if not format1 in lexFormats: return "No such format "+repr(format1)+" (use --formats to see a list of formats)"
+   if not format2 in lexFormats and not format2=="all": return "No such format "+repr(format2)+" (use --formats to see a list of formats)"
+   if format1=="example" and len(sys.argv)<=i+3 and stdin_is_terminal():
+      clauses=[x[1] for x in getSetting('example','lex_read_function')()] ; wordSep = None
+   else:
+      text=getInputText(i+3,"phonemes in "+format1+" format")
+      wordSep = checkSetting(format1,"word_separator") # don't use wordSeparator() here - we're splitting, not joining, so we don't want it to default to phoneme_separator
+      clauseSep = checkSetting(format1,"clause_separator","\n")
+      if clauseSep: clauses = text.split(clauseSep)
+      else: clauses = [text]
+   if format2=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
+   else: formats = [format2]
+   for format2 in formats:
+     if len(formats)>1: writeFormatHeader(format2)
+     r = []
+     for clause in clauses:
+       if wordSep: words = clause.split(wordSep)
+       else: words = [clause]
+       if format2=="bbcmicro": r.append(" ".join(convert(w,format1,"espeak") for w in words))
+       else: r.append(wordSeparator(format2).join(markup_inline_word(format2, convert(w,format1,format2)) for w in words))
+     if format2=="bbcmicro": write_bbcmicro_phones(r)
+     else: print checkSetting(format2,"clause_separator","\n").join(r)
 
 def mainopt_mac_uk(i):
    """<from-format> [<text>]
 Speak text in Mac OS 10.7+ British voices while using a lexicon converted in from <from-format>. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually. Text speaking needs to be under lexconvert's control because it usually has to change the input words to make them fit the available space in the binary lexicon.) By default the Daniel voice is used; Emily or Serena can be selected by setting the MACUK_VOICE environment variable."""
    fromFormat = sys.argv[i+1]
+   if not fromFormat in lexFormats: return "No such format "+repr(fromFormat)+" (use --formats to see a list of formats)"
    lex = get_macuk_lexicon(fromFormat)
    m = MacBritish_System_Lexicon(getInputText(i+2,"text"),os.environ.get("MACUK_VOICE","Daniel"))
    try:
@@ -1769,7 +1839,6 @@ def getSetting(formatName,settingName):
 def checkSetting(formatName,settingName,default=""):
   "Gets a setting from lexFormats, default if not there"
   return lexFormats[formatName].get(('settings',settingName),default)
-lexFormats = LexFormats()
 
 import commands,sys,re,os
 
@@ -2134,20 +2203,24 @@ def macSayCommand():
   if s: return s
   else: return "say"
 
+def stdin_is_terminal():
+   "Returns True if it seems the standard input is connected to a terminal (rather than piped from a file etc)"
+   return (not hasattr(sys.stdin,"isatty")) or sys.stdin.isatty()
+
 def getInputText(i,prompt):
   """Gets text either from the command line or from standard input.  Issue prompt if there's nothing on the command line and standard input is connected to a tty instead of a pipe or file."""
   txt = ' '.join(sys.argv[i:])
   if not txt:
-    if (not hasattr(sys.stdin,"isatty")) or sys.stdin.isatty(): sys.stderr.write("Enter "+prompt+" (EOF when done)\n")
+    if stdin_is_terminal(): sys.stderr.write("Enter "+prompt+" (EOF when done)\n")
     txt = sys.stdin.read()
   return txt
 
-def write_bbcmicro_phones(ph):
-  """Called by mainopt_phones as a special case because it needs to track clause_separator to avoid "Line too long"
+def write_bbcmicro_phones(espeak_clauses):
+  """Called by mainopt_phones and mainopt_phones2phones as a special case because it needs to track clause_separator to avoid "Line too long"
   (and actually we might as well just put each clause on a separate *SPEAK command, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places)
   also calls print_bbc_warnings"""
   totalKeystrokes = 0 ; lines = 0
-  for line in filter(lambda x:x,ph.split("\n")):
+  for line in espeak_clauses:
     global bbc_charsSoFar ; bbc_charsSoFar=0
     l=" ".join([markup_inline_word("bbcmicro",convert(word,"espeak","bbcmicro")) for word in line.split()])
     print l.replace(" \n","\n")
@@ -2155,7 +2228,7 @@ def write_bbcmicro_phones(ph):
   print_bbc_warnings(totalKeystrokes,lines)
 def print_bbc_warnings(keyCount,lineCount):
   "Print any relevant size warnings regarding sending 'keyCount' keys in 'lineCount' lines to the BBC Micro"
-  # and warn if it looks too big:
+  sys.stdout.flush() # try to keep in sync if someone's doing 2>&1 | less
   limits_exceeded = [] ; severe=0
   if keyCount >= 32768:
     severe=1 ; limits_exceeded.append("BeebEm 32K keystroke limit") # At least in version 3, the clipboard is defined in beebwin.h as a char of size 32768 and its bounds are not checked.  Additionally, if you script a second paste before the first has finished (or if you try to use BeebEm's Copy command) then the first paste will be interrupted.  So if you really want to make BeebEm read more then I suggest setting a printer destination file, putting a VDU 2,10,3 after each batch of commands, and waiting for that \n to appear in that printer file before sending the next batch, or perhaps write a set of programs to a disk image and have them CHAIN each other or whatever.
@@ -2306,10 +2379,21 @@ def main():
     if html: missALine = "<p>"
     else: missALine = ""
     print missALine
-    if '--formats' in sys.argv: # non-HTML mode only (format descriptions are included in HTML anyway)
-       print "Available pronunciation formats:"
+    if '--formats' in sys.argv: # non-HTML mode only (format descriptions are included in HTML anyway, and don't worry about the capability summary)
+       print "Available pronunciation formats (and support levels):"
        keys=lexFormats.keys() ; keys.sort()
-       for k in keys:print "\n"+k+"\n"+getSetting(k,"doc")
+       for k in keys:
+          types = []
+          if not k=="example": types.append("phones")
+          if k=="mac-uk": types.append("speaking")
+          else:
+             if checkSetting(k,"lex_read_function"): types.append("lex-read")
+             if checkSetting(k,"lex_filename") and checkSetting(k,"lex_entry_format"):
+                ltype = checkSetting(k,"lex_type")
+                if ltype: ltype=" as "+ltype
+                types.append("lex-write"+ltype)
+          print "\n"+k+" ("+", ".join(types)+")"
+          print getSetting(k,"doc")
        return 0
     elif html:
        print "Available pronunciation formats:"
@@ -2498,5 +2582,7 @@ class MacBritish_System_Lexicon(object):
         del MacBritish_System_Lexicon.instances[self.voice]
         assert not os.system("rm -f /tmp/"+self.voice+".PCMWave.lock")
         if self.restoreDic: sys.stderr.write("... lexicon for '"+self.voice+"' restored to normal\n")
+
+lexFormats = LexFormats() # at end, in case it refers to anything that was defined later
 
 if __name__ == "__main__": sys.exit(main())
