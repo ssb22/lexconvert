@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.183 - convert between lexicons of different speech synthesizers
+"""lexconvert v0.19 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -169,6 +169,8 @@ def LexFormats():
        cleanup_regexps (default none) - optional list of
        (search,replace) regular expressions to "clean up"
        after converting INTO this format
+       cleanup_func (default none) - optional special-case
+       function to pass result through after cleanup_regexps
 
        cvtOut_regexps (default none) - optional list of
        (search,replace) regular expressions to "clean up"
@@ -270,7 +272,7 @@ def LexFormats():
     ('z',z),
     ('zh',ge_of_blige_etc),
     # lex_filename etc not set (read-only for now)
-    lex_read_function = lambda *args: eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']'),
+    lex_read_function = read_festival_lexicon,
     safe_to_drop_characters=True, # TODO: really? (could instead give a string of known-safe characters)
   ),
 
@@ -1032,7 +1034,7 @@ def LexFormats():
   ),
 
   "speakjet" : makeDic(
-    'Allophone codes for the American English "SpeakJet" speech synthesis chip (the conversion from phonemes to allophones might sometimes need tweaking).  Set the SPEAKJET_SYM environment variable to use mnemonics, otherwise numbers are used (set SPEAKJET_BINARY for binary output).',
+    'Allophone codes for the American English "SpeakJet" speech synthesis chip (the conversion from phonemes to allophones might need tweaking).  Set the SPEAKJET_SYM environment variable to use mnemonics, otherwise numbers are used (set SPEAKJET_BINARY for binary output).',
     (syllable_separator,'',False), # TODO: instead of having emphasis, it has a 'faster' code for all NON-emphasized syllables
     (speakjet('IY',128),e_as_in_eat),
     (speakjet('IH',129),i_as_in_it),
@@ -1172,7 +1174,7 @@ def LexFormats():
   ),
 
   "unicode-ipa" : makeDic(
-    "Unicode IPA (as used in an increasing number of dictionary programs, websites etc)",
+    "IPA symbols in Unicode, as used by an increasing number of dictionary programs, websites etc",
     ('.',syllable_separator,False),
     (u'\u02c8',primary_stress),
     (u'\u02cc',secondary_stress),
@@ -1185,7 +1187,7 @@ def LexFormats():
     (u'\u02d0',var2_a_as_in_ah),
     (u'\u0251\u02d0',var3_a_as_in_ah),
     (u'\u0251\u0279',var4_a_as_in_ah),
-    ('a\\u02d0',var5_a_as_in_ah),
+    ('a\u02d0',var5_a_as_in_ah),
     (u'\xe6',a_as_in_apple),
     ('a',a_as_in_apple,False),
     (u'\u028c',u_as_in_but),
@@ -1274,8 +1276,104 @@ def LexFormats():
     safe_to_drop_characters=True, # TODO: really? (at least '-' should be safe to drop)
   ),
 
+  "braille-ipa" : makeDic(
+    "IPA symbols in Braille (2008 BANA standard).  By default Braille ASCII is output; if you prefer to see the Braille dots via Unicode, set the BRAILLE_UNICODE environment variable.", # BANA = Braille Authority of North America.  TODO: check if the UK accepted this standard.
+    # TODO: add Unicode IPA signs that aren't used in English IPA, so we can do a general IPA conversion
+    ('_B',primary_stress),
+    ('_2',secondary_stress),
+    ('*',a_as_in_ah),
+    ('3',var2_a_as_in_ah),
+    ('*3',var3_a_as_in_ah),
+    ('*#',var4_a_as_in_ah),
+    ('A3',var5_a_as_in_ah),
+    ('%',a_as_in_apple),
+    ('A',a_as_in_apple,False),
+    ('+',u_as_in_but),
+    ('4*',o_as_in_orange),
+    (var1_o_as_in_orange,'*',False),
+    ('<',var2_o_as_in_orange),
+    ('A(',o_as_in_now),
+    ('%<',var1_o_as_in_now),
+    ('5',a_as_in_ago),
+    ('53',e_as_in_herd),
+    ('5"R.',var1_a_as_in_ago),
+    ('A/',eye),
+    ('*E',var1_eye),
+    ('B',b),
+    ('T:',ch),
+    ('T":.',ch,False),
+    ('D',d),
+    (']',th_as_in_them),
+    ('>',e_as_in_them),
+    ('E',var1_e_as_in_them),
+    ('4>3',ar_as_in_year), # (from \u025c\u02d0; TODO: check what happens to \u025d)
+    ('>5',a_as_in_air),
+    ('>#',var1_a_as_in_air),
+    ('E3',var2_a_as_in_air),
+    ('>3',var3_a_as_in_air),
+    ('E5',var4_a_as_in_air),
+    ('E/',a_as_in_ate),
+    ('%/',var1_a_as_in_ate),
+    ('F',f),
+    ('G',g),
+    ('H',h),
+    ('/',i_as_in_it),
+    ('0I',var1_i_as_in_it),
+    ('/5',ear),
+    ('/#',var1_ear),
+    ('/#5',var2_ear), # ?
+    ('I',e_as_in_eat),
+    ('I3',var1_e_as_in_eat),
+    ('D!',j_as_in_jump),
+    ('K',k),
+    ('X',opt_scottish_loch),
+    ('L',l),
+    ('D6L',var1_l),
+    ('M',m),
+    ('N',n),
+    ('$',ng),
+    ('5(',o_as_in_go),
+    ('O',var1_o_as_in_go),
+    ('O(',var2_o_as_in_go),
+    ('50U',var3_o_as_in_go),
+    ('</',oy_as_in_toy),
+    ('O/',var1_oy_as_in_toy),
+    ('P',p),
+    ('#',r),
+    (var1_r,'R',False),
+    ('S',s),
+    (':',sh),
+    ('T',t),
+    ('6R',var1_t),
+    ('.?',th_as_in_think),
+    ('(5',oor_as_in_poor),
+    ('(#',var1_oor_as_in_poor),
+    ('(',opt_u_as_in_pull),
+    ('0U3',oo_as_in_food),
+    ('U3',var1_oo_as_in_food),
+    ('U',var2_oo_as_in_food),
+    ('<3',close_to_or),
+    (var1_close_to_or,'<',False),
+    ('O3',var2_close_to_or),
+    ('V',v),
+    ('W',w),
+    ('6W',var1_w),
+    ('J',y),
+    ('Z',z),
+    ('!',ge_of_blige_etc),
+    ('2',glottal_stop),
+    lex_filename=ifset("BRAILLE_UNICODE","words-ipa.txt","words-ipa.brl"), # write-only for now
+    lex_type = "document",
+    # inline_format=",7%s7'", # -> do this in cleanup_func so it's included in BRAILLE_UNICODE if necessary
+    lex_entry_format="%s = %s\n", # ditto with the markers
+    word_separator=" ",phoneme_separator="",
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # TODO: really?
+    cleanup_func=lambda r:ifset("BRAILLE_UNICODE",ascii_braille_to_unicode,lambda x:x)(",7"+r+"7'"),
+  ),
+  
   "latex-ipa" : makeDic(
-    "LaTeX IPA package (in case you need to typeset your custom pronunciations in an academic paper or something)",
+    'IPA symbols for typesetting in LaTeX using the "tipa" package',
     ('.',syllable_separator,False),
     ('"',primary_stress),
     ('\\textsecstress{}',secondary_stress),
@@ -1466,7 +1564,7 @@ def LexFormats():
     # This kana-approx format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
     (u'double-',primary_stress),
     (secondary_stress,ifset('KANA_MORE_EMPH',u'double-'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well; if it did, I'd put this line in a makeVariantDic called kana-approx-moreEmph or something)
-    # The following Unicode codepoints are hiragana; KANA_TYPE is handled by some special-case code at the end of convert()
+    # The following Unicode codepoints are hiragana; KANA_TYPE is handled by cleanup_func below
     (u'\u3042',a_as_in_apple),
     (u'\u3044',e_as_in_eat),
     (u'\u3046',oo_as_in_food),
@@ -1540,19 +1638,21 @@ def LexFormats():
        (u'\u3046\u3043\u3066\u3085', u'\u3046\u3043\u3065'), # sounds a bit better for words like 'with'
        (u'\u3050\u3050',u'\u3050'), # gugu -> gu, sometimes comes up with 'gl-' combinations
     ],
+    cleanup_func = hiragana_to_katakana
   ),
   "names" : makeDic(
     "Lexconvert internal phoneme names (sometimes useful with the --phones option while developing new formats)",
      *[(phName,phVal) for phName,phVal in phonemes.items()])}
 
-# The mainopt() functions are the main options
+# The mainopt_...() functions are the main options
 # (if you implement a new one, main() will detect it);
 # 1st line of doc string should be parameter summary
 # (start the doc string with \n if no parameters); if 1st
 # character of doc string is * then this function is put
 # among the first in the help (otherwise alphabetically).
 # If function returns a string, that's taken to be a
-# message to be printed with error exit.
+# message to be printed with error exit.  Same if it raises
+# an exception of type Message.
 
 def mainopt_try(i):
    """*<format> [<pronunciation>]
@@ -1670,10 +1770,15 @@ def mainopt_check_for_similar_formats(i):
       if "names" in had: break
       print "Only",diffs,"differences between",format1,"and",format2
 
+def read_festival_lexicon(*args):
+  "The lex_read_function for the festival format.  Reads from ~/.festivalrc (Unix required)"
+  if not os.path.exists(os.environ["HOME"]+"/.festivalrc"):
+    raise Message("Cannot find ~/.festivalrc")
+  return eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']')
+
 def mainopt_convert(i):
    """*<from-format> <to-format>
-Convert a user lexicon file.  Expects Festival's .festivalrc to be in the home directory, or eSpeak's en_extra or Cepstral's lexicon.txt to be in the current directory.
-For InfoVox/acapela, export the lexicon to acapela.txt in the current directory.
+Convert a user lexicon (generally from its default filename; if this cannot be found then lexconvert will tell you what it should be).
 E.g.: python lexconvert.py --convert festival cepstral"""
    fromFormat = sys.argv[i+1]
    toFormat = sys.argv[i+2]
@@ -1689,7 +1794,7 @@ E.g.: python lexconvert.py --convert festival cepstral"""
    if toFormat=="espeak":
       assert fname=="en_extra", "If you changed eSpeak's lex_filename in the table you also need to change the code below"
       try: open("en_list")
-      except: return "You should cd to the espeak source directory before running this"
+      except: return "You should cd to the espeak source directory before converting a lexicon to espeak"
       os.system("mv en_extra en_extra~ ; grep \" // \" en_extra~ > en_extra") # keep the commented entries, so can incrementally update the user lexicon only
       outFile=open(fname,"a")
    else:
@@ -1698,8 +1803,11 @@ E.g.: python lexconvert.py --convert festival cepstral"""
       except: pass
       assert not l, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)" # (if you run with python -O then this is ignored, as are some other checks so be careful)
       outFile=open(fname,"w")
-   print "Writing %s lexicon entries to %s" % (fromFormat,fname)
-   convert_user_lexicon(fromFormat,toFormat,outFile)
+   print "Writing %s lexicon entries to %s file %s" % (fromFormat,toFormat,fname)
+   try: convert_user_lexicon(fromFormat,toFormat,outFile)
+   except Message:
+     print " - error, deleting",fname
+     os.remove(fname) ; raise
 
 def mainopt_festival_dictionary_to_espeak(i):
    """<location>
@@ -1736,7 +1844,11 @@ Perform a one-off conversion of phonemes from format1 to format2 (format2 can be
    format1,format2 = sys.argv[i+1],sys.argv[i+2]
    if not format1 in lexFormats: return "No such format "+repr(format1)+" (use --formats to see a list of formats)"
    if not format2 in lexFormats and not format2=="all": return "No such format "+repr(format2)+" (use --formats to see a list of formats)"
-   if format1=="example" and len(sys.argv)<=i+3 and stdin_is_terminal(): clauses=[[x[1]] for x in getSetting('example','lex_read_function')()]
+   if format1=="example" and len(sys.argv)<=i+3:
+     if stdin_is_terminal(): txt=""
+     else: txt=sys.stdin.read() # and it might still be ""
+     if txt: parseIntoWordsAndClauses(format1,txt)
+     else: clauses=[[x[1]] for x in getSetting('example','lex_read_function')()]
    else: clauses = parseIntoWordsAndClauses(format1,getInputText(i+3,"phonemes in "+format1+" format"))
    if format2=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
    else: formats = [format2]
@@ -1946,13 +2058,19 @@ def convert(pronunc,source,dest):
     ret=separator.join(ret).replace('*added','')
     for s,r in checkSetting(dest,'cleanup_regexps'):
       ret=re.sub(s,r,ret)
-    if type(ret)==unicode and os.environ.get("KANA_TYPE","").lower().startswith("k"): ret=hiragana_to_katakana(ret)
-    return ret
+    func = checkSetting(dest,'cleanup_func')
+    if func: return func(ret)
+    else: return ret
+
+def ascii_braille_to_unicode(a):
+  "Special-case cleanup_func for braille-ipa (set by braille-ipa if BRAILLE_UNICODE is set).  Converts Braille ASCII to Unicode dot patterns."
+  d=dict(zip(list(" A1B'K2L@CIF/MSP\"E3H9O6R^DJG>NTQ,*5<-U8V.%[$+X!&;:4\\0Z7(_?W]#Y)="),[unichr(c) for c in range(0x2800,0x2840)]))
+  return u''.join(d.get(c,c) for c in list(a))
 
 def hiragana_to_katakana(u):
-   "Converts all hiragana characters in unicode string 'u' into katakana"
+   "Special-case cleanup_func for kana-approx; converts all hiragana characters in unicode string 'u' into katakana if KANA_TYPE is set to anything beginning with a 'k'"
    assert type(u)==unicode
-   if not re.search(u'[\u3041-\u3096]',u): return u
+   if not os.environ.get("KANA_TYPE","").lower().startswith("k"): return u
    u = list(u)
    for i in xrange(len(u)):
       if 0x3041 <= ord(u[i]) <= 0x3096:
@@ -1993,6 +2111,7 @@ def parse_festival_dict(festival_location):
         if pos not in ['n','v','a','cc','dt','in','j','k','nil','prp','uh']: continue # two or more words
         yield (word.lower(), pos, pronunc)
 
+class Message(Exception): pass
 def convert_system_festival_dictionary_to_espeak(festival_location,check_existing_pronunciation,add_user_dictionary_also):
     "See mainopt_festival_dictionary_to_espeak"
     os.system("mv en_extra en_extra~") # start with blank 'extra' dictionary
@@ -2089,11 +2208,13 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
 def read_user_lexicon(fromFormat):
     "Calls the appropriate lex_read_function, opening lex_filename first if supplied"
     readFunction = checkSetting(fromFormat,"lex_read_function")
-    if not readFunction: raise Exception("Reading from '%s' lexicon file not yet implemented (no lex_read_function); try using --phones or --phones2phones options instead" % (fromFormat,))
+    if not readFunction: raise Message("Reading from '%s' lexicon file not yet implemented (no lex_read_function); try using --phones or --phones2phones options instead" % (fromFormat,))
     try:
        lexFilename = getSetting(fromFormat,"lex_filename")
        lexfile = open(lexFilename)
+       print "Reading from",lexFilename
     except KeyError: lexfile = None # lex_read_function without lex_filename is allowed, if the read function can take null param and fetch the lexicon itself
+    except IOError: raise Message(fromFormat+"'s lexicon is expected to be in a file called "+lexFilename+" which could not be read - please fix and try again")
     return readFunction(lexfile)
 
 def get_macuk_lexicon(fromFormat):
@@ -2330,9 +2451,11 @@ def bbcKeystrokes(data,start):
     add = equsCount(i,bbc_max_line_len-len(thisLine))
     if add >= 4 or (add >= 2 and len(data)-i < 4): # (a good-enough approximation of when it'll be better to EQUS)
        thisI = ':EQUS"'+data[i:i+add]+'"'
+    elif len(data)-i==2 or (len(data)-i>2 and not canEQUS(i+1) and equsCount(i+2,bbc_max_line_len) >= 4): # (ditto for EQUW)
+       thisI = ":EQUW"+bbcshortest(ord(data[i])+(ord(data[i+1])<<8)) ; add = 2
     elif len(data)-i < 4 or equsCount(i+1,bbc_max_line_len) >= 4: # (ditto for EQUB)
        o=ord(data[i]) ; add = 1
-       thisI = ':'+{0:"BRK",0x48:"PHA",0x68:"PLA",8:"PHP",0x28:"PLP",0x38:"SEC",0x18:"CLC",0xf8:"SED",0xd8:"CLD",0xe8:"INX",0xca:"DEX",0xc8:"INY",0x88:"DEY",0xaa:"TAX",0xa8:"TAY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xba:"TSX",0xb8:"CLV",0xea:"NOP",0x60:"RTS",0x40:"RTI"}.get(o,"EQUB"+str(o)) # (omit Master-only instructions like 0xda:"PHX") (in extremely rare cases, generating 2, 3 or 4 bytes might just be quicker with opcode+operand than EQUD, e.g. "ROL1:ROL1" vs "EQUD&1260126", but we won't worry about that; anyway most of this stuff will never occur in lexicons and is here only in case bbcKeystrokes ends up being used for something else e.g. the Speech code itself)
+       thisI = ':'+{0:"BRK",0x48:"PHA",0x68:"PLA",8:"PHP",0x28:"PLP",0x38:"SEC",0x18:"CLC",0xf8:"SED",0xd8:"CLD",0xe8:"INX",0xca:"DEX",0xc8:"INY",0x88:"DEY",0xaa:"TAX",0xa8:"TAY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xba:"TSX",0xb8:"CLV",0xea:"NOP",0x60:"RTS",0x40:"RTI"}.get(o,"EQUB"+str(o)) # (omit Master-only instructions like 0xda:"PHX") (in extremely rare cases, generating 2, 3 or 4 bytes might just be quicker with opcode+operand than EQUD, e.g. "ROL1:ROL1" vs "EQUD&1260126", but we won't worry about that - this function is complex enough already - anyway most of this stuff will never occur in lexicons and is here only in case bbcKeystrokes ends up being used for something else e.g. the Speech code itself)
     else:
        thisI = ":EQUD"+equdParam() ; add = 4
     if len(thisLine)+len(thisI) <= bbc_max_line_len:
@@ -2396,8 +2519,10 @@ def main():
     def funcToOpt(n): return "--"+n[n.index("_")+1:].replace("_","-")
     for k,v in globals().items():
         if k.startswith('mainopt_') and funcToOpt(k) in sys.argv:
-           msg = v(sys.argv.index(funcToOpt(k)))
+           try: msg = v(sys.argv.index(funcToOpt(k)))
+           except Message,e: msg=e.message
            if msg:
+              sys.stdout.flush()
               sys.stderr.write(msg+"\n") ; return 1
            else: return 0
     html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
