@@ -275,7 +275,7 @@ def LexFormats():
   ),
 
   "example" : makeVariantDic(
-    "A small built-in example lexicon for testing when you don't have your full custom lexicon to hand.  Use --convert to write it in one of the other formats and see if your synth can import it.",
+    "A small built-in example lexicon for testing when you don't have your full custom lexicon to hand.  Use --convert to write it in one of the other formats and see if a synth can import it.",
     lex_read_function = lambda *args: [
        ("Shadrach","shei1drak"),
        ("Meshach","mii1shak"),
@@ -1571,7 +1571,9 @@ Convert phonemes from <format> into Mac and try it using the Mac OS 'say' comman
    format = sys.argv[i+1]
    if not format in lexFormats: return "No such format "+repr(format)+" (use --formats to see a list of formats)"
    mac = convert(getInputText(i+2,"phonemes in "+format+" format"),format,'mac')
-   os.popen(macSayCommand()+" -v Vicki","w").write(markup_inline_word("mac",mac)) # Need to specify a voice because the default voice might not be able to take Apple phonemes.  Vicki has been available since 10.3, as has the 'say' command (previous versions need osascript, see Gradint's code)
+   toSay = markup_inline_word("mac",mac)
+   print toSay
+   os.popen(macSayCommand()+" -v Vicki","w").write(toSay) # Need to specify a voice because the default voice might not be able to take Apple phonemes.  Vicki has been available since 10.3, as has the 'say' command (previous versions need osascript, see Gradint's code)
 
 def mainopt_trymac_uk(i):
    """*<format> [<pronunciation>]
