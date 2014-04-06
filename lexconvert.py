@@ -904,7 +904,8 @@ def LexFormats():
     # To script this on BeebEm, first turn off the Speech disc's boot option (by turning off File / Disc options / Write protect and entering "*OPT 4,0"; use "*OPT 4,3" if you want it back later; if you prefer to edit the disk image outside of the emulator then change byte 0x106 from 0x33 to 0x03), and then you can do (e.g. on a Mac) open /usr/local/BeebEm3/diskimg/Speech.ssd && sleep 1 && (echo '*SPEECH';python lexconvert.py --phones bbcmicro "Greetings from 19 85") | pbcopy && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
-    # If you want to emulate a Master, you might need a *DISK before the *SPEECH (to take it out of ADFS mode)
+    # If you want to emulate a Master, you might need a *DISK before the *SPEECH (to take it out of ADFS mode).
+    # In some cases you may need a delay between pasting the *SPEECH and pasting the *SPEAK, depending on which ROMs you've installed into the emulated machine.  (You can also put Speech itself into ROM, but this can cause problems: see comments on SP8000 later.)
     (syllable_separator,'',False),
     ('4',primary_stress),
     ('5',secondary_stress), # (these are pitch numbers on the BBC; normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary and 4=primary; 3 sounds less calm)
