@@ -1177,6 +1177,7 @@ def LexFormats():
   "unicode-ipa" : makeDic(
     "IPA symbols in Unicode, as used by an increasing number of dictionary programs, websites etc",
     ('.',syllable_separator,False),
+    (syllable_separator,'',False),
     (u'\u02c8',primary_stress),
     (u'\u02cc',secondary_stress),
     ('#',text_sharp),
