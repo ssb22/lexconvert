@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.19 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.191 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1699,7 +1699,7 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats."""
    format = sys.argv[i+1]
    if format=="example": return "The 'example' format cannot be used with --phones; try --convert, or did you mean --phones festival" # could allow example anyway as it's basically Festival, but save confusion as eSpeak might not generate the same phonemes if our example words haven't been installed in the system's eSpeak.  (Still allow it to be used in --try etc though.)
    if not format in lexFormats and not format=="all": return "No such format "+repr(format)+" (use --formats to see a list of formats)"
-   response = pipeThroughEspeak(getInputText(i+2,"text"))
+   response = pipeThroughEspeak(getInputText(i+2,"text").replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')) # (remove any 2032 and b7 pronunciation marks before passing to eSpeak)
    if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
    if format=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
    else: formats = [format]
@@ -1877,13 +1877,15 @@ def parseIntoWordsAndClauses(format,phones):
 def mainopt_mac_uk(i):
    """<from-format> [<text>]
 Speak text in Mac OS 10.7+ British voices while using a lexicon converted in from <from-format>. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually. Text speaking needs to be under lexconvert's control because it usually has to change the input words to make them fit the available space in the binary lexicon.) By default the Daniel voice is used; Emily or Serena can be selected by setting the MACUK_VOICE environment variable."""
+   # If you have xterm etc, then text will also be printed, with words from the altered lexicon underlined.
    fromFormat = sys.argv[i+1]
    if not fromFormat in lexFormats: return "No such format "+repr(fromFormat)+" (use --formats to see a list of formats)"
    lex = get_macuk_lexicon(fromFormat)
-   m = MacBritish_System_Lexicon(getInputText(i+2,"text"),os.environ.get("MACUK_VOICE","Daniel"))
    try:
-      try: m.readWithLex(lex)
-      finally: m.close()
+      for line in getInputText(i+2,"text",True):
+         m = MacBritish_System_Lexicon(line,os.environ.get("MACUK_VOICE","Daniel"))
+         try: m.readWithLex(lex)
+         finally: m.close()
    except KeyboardInterrupt:
       sys.stderr.write("Interrupted\n")
 
@@ -2351,13 +2353,15 @@ def stdin_is_terminal():
    "Returns True if it seems the standard input is connected to a terminal (rather than piped from a file etc)"
    return (not hasattr(sys.stdin,"isatty")) or sys.stdin.isatty()
 
-def getInputText(i,prompt):
-  """Gets text either from the command line or from standard input.  Issue prompt if there's nothing on the command line and standard input is connected to a tty instead of a pipe or file."""
+def getInputText(i,prompt,as_iterable=False):
+  """Gets text either from the command line or from standard input.  Issue prompt if there's nothing on the command line and standard input is connected to a tty instead of a pipe or file.  If as_iterable, return an iterable object over the lines instead of reading and returning all text at once."""
   txt = ' '.join(sys.argv[i:])
-  if not txt:
-    if stdin_is_terminal(): sys.stderr.write("Enter "+prompt+" (EOF when done)\n")
-    txt = sys.stdin.read()
-  return txt
+  if txt:
+    if as_iterable: return txt.split('\n')
+    else: return txt
+  if stdin_is_terminal(): sys.stderr.write("Enter "+prompt+" (EOF when done)\n")
+  if as_iterable: return sys.stdin.xreadlines()
+  else: return sys.stdin.read()
 
 def output_clauses(format,clauses):
    "Writes out clauses and words in format 'format' (clauses is a list of lists of words in the phones of 'format').  By default, calls markup_inline_word and join as appropriate.  If however the format's 'clause_separator' has been set to a special case, calls that."
@@ -2685,15 +2689,22 @@ class MacBritish_System_Lexicon(object):
     def readWithLex(self,lex):
         "Reads the text given in the constructor after setting up the lexicon with the given (word,phoneme) list"
         # self.check_redef(lex) # uncomment if you want to know about these
-        tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'")+' '
+        textToPrint = u' '+self.textToAvoid.decode('utf-8')+u' '
+        tta = ' '+self.textToAvoid.replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint)
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"])" # see below for why chr(0) is included; (?i) = ignore case
-        nonWordAfter=r"(?=([^A-Za-z']|'[^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s")
+        nonWordAfter=r"(?=([^A-Za-z']|['"+unichr(0x2019)+r"][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s")
         for ww,pp in lex:
-          if re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
+          if ww in tta and re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
             words2.append(ww) ; phonemes2.append(pp)
-        for k,v in self.setMultiple(words2,phonemes2).iteritems(): tta = re.sub(nonWordBefore+re.escape(k)+nonWordAfter,chr(0)+v,tta)
+        for k,v in self.setMultiple(words2,phonemes2).iteritems():
+           tta = re.sub(nonWordBefore+re.escape(k)+nonWordAfter,chr(0)+v,tta)
+           textToPrint = re.sub(nonWordBefore+'('+u'[\u2032\u00b7]*'.join(re.escape(c) for c in k)+')'+nonWordAfter,chr(0)+r'\1'+chr(1),textToPrint)
         tta = tta.replace(chr(0),'')
+        term = os.environ.get("TERM","")
+        if ("xterm" in term or term=="screen") and sys.stdout.isatty(): # we can probably underline words (inverse is more widely supported than underline, e.g. should work even on old Linux console, but there might be a *lot* of words, which wouldn't be very good in inverse if user needs dark background and inverse is bright.  Unlike Annogen, we're dealing primarily with Latin letters.)
+           print textToPrint.encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip()
+        # else don't print anything (saves confusion)
         os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta)
     def setMultiple(self,words,phonemes):
         "Sets phonemes for words, returning dict of word to substitute word.  Flushes file buffer before return."
@@ -2728,7 +2739,7 @@ class MacBritish_System_Lexicon(object):
         self.dFile.write(val+chr(0))
     def __del__(self):
         "WARNING - this might not be called before exit - best to call close() manually"
-        if not self.voice or not self.voice in MacBritish_System_Lexicon.instances: return # close() already called, or error in the c'tor
+        if not self.voice: return
         self.close()
     def close(self):
         for phPos,val in self.restoreDic.items():
@@ -2736,7 +2747,7 @@ class MacBritish_System_Lexicon(object):
         self.dFile.close()
         del MacBritish_System_Lexicon.instances[self.voice]
         assert not os.system("rm -f /tmp/"+self.voice+".PCMWave.lock")
-        if self.restoreDic: sys.stderr.write("... lexicon for '"+self.voice+"' restored to normal\n")
+        self.voice=None
 
 lexFormats = LexFormats() # at end, in case it refers to anything that was defined later
 
