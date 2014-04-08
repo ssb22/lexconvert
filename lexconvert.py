@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.191 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.193 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -175,6 +175,8 @@ def LexFormats():
        cvtOut_regexps (default none) - optional list of
        (search,replace) regular expressions to "clean up"
        before starting to convert OUT of this format
+       cvtOut_func (default none) - optional special-case
+       function to pass through before any cvtOut_regexps
   
        inline_format (default "%s") the format string for
        printing a word with --phones or --phones2phones
@@ -271,9 +273,12 @@ def LexFormats():
     ('y',y),
     ('z',z),
     ('zh',ge_of_blige_etc),
-    # lex_filename etc not set (read-only for now)
-    lex_read_function = read_festival_lexicon,
+    lex_filename=ifset("HOME",os.environ.get("HOME","")+os.sep)+".festivalrc",
+    lex_entry_format="(lex.add.entry '( \"%s\" n %s))\n",
+    lex_header=";; -*- mode: lisp -*-\n(eval (list voice_default))\n",
+    lex_read_function = lambda *args:eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']'),
     safe_to_drop_characters=True, # TODO: really? (could instead give a string of known-safe characters)
+    cleanup_func = festival_group_stress,
   ),
 
   "example" : makeVariantDic(
@@ -523,14 +528,14 @@ def LexFormats():
     ('D',th_as_in_them),
     ('EH',e_as_in_them),
     (ar_as_in_year,'AX',False),
-    ('EH r',a_as_in_air),
+    ('EHr',a_as_in_air),
     ('EY',a_as_in_ate),
     ('f',f),
     ('g',g),
     ('h',h),
     ('IH',i_as_in_it),
     ('IX',var2_i_as_in_it),
-    ('IY UX',ear),
+    ('IYUX',ear),
     ('IY',e_as_in_eat),
     ('J',j_as_in_jump),
     ('k',k),
@@ -556,9 +561,10 @@ def LexFormats():
     ('Z',ge_of_blige_etc),
     lex_filename="substitute.sh", # write-only for now
     lex_type = "substitution script",
-    lex_header = "# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed",
-    lex_entry_format=' -e "s/%s/[[inpt PHON]]%s[[inpt TEXT]]/g"',
-    lex_footer = "\n",
+    lex_header = "#!/bin/bash\n\n# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed -E -e :S \\\n",
+    lex_entry_format=r" -e 's/(^|[^A-Za-z])%s($|[^A-Za-z[12=])/\1[[inpt PHON]]%s[[inpt TEXT]]\2/g'"+" \\\n",
+    # but /g is non-overlapping matches and won't catch 2 words in the lex right next to each other with only one non-alpha in between, so we put :S at start and tS at end to make the whole operation repeat until it hasn't done any more substitutions (hence also the exclusion of [, 1, 2 or = following a word so it doesn't try to substitute stuff inside the phonemes; TODO: assert the lexicon does not contain "inpt", "PHON" or "TEXT")
+    lex_footer = lambda f:(f.write(" -e tS\n"),f.close(),os.chmod("substitute.sh",0755)),
     inline_format = "[[inpt PHON]]%s[[inpt TEXT]]",
     word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
@@ -1276,6 +1282,7 @@ def LexFormats():
     word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really? (at least '-' should be safe to drop)
+    cvtOut_func=unicode_preprocess,
   ),
 
   "braille-ipa" : makeDic(
@@ -1772,11 +1779,24 @@ def mainopt_check_for_similar_formats(i):
       if "names" in had: break
       print "Only",diffs,"differences between",format1,"and",format2
 
-def read_festival_lexicon(*args):
-  "The lex_read_function for the festival format.  Reads from ~/.festivalrc (Unix required)"
-  if not os.path.exists(os.environ["HOME"]+"/.festivalrc"):
-    raise Message("Cannot find ~/.festivalrc")
-  return eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']')
+def festival_group_stress(pronunc):
+   "Special-case cleanup_func for the Festival format"
+   groups = [] ; thisGroup = [[],'0',False] # phon,stress,complete
+   for phon in pronunc.split():
+      if phon in ['0','1','2']:
+         if groups and phon >= groups[-1][1]:
+            groups[-1][1]=phon
+         continue
+      thisGroup[0].append(phon)
+      if phon[0] in 'aeiou@':
+         thisGroup[2]=True
+         groups.append(thisGroup)
+         thisGroup = [[],'0',False]
+   if thisGroup[0]: groups.append(thisGroup)
+   if len(groups)>=2 and not groups[-1][2]:
+      groups[-2][0] += groups[-1][0]
+      del groups[-1]
+   return "("+' '.join(("(("+' '.join(g[0])+') '+g[1]+")") for g in groups)+")"
 
 def mainopt_convert(i):
    """*<from-format> <to-format>
@@ -1803,7 +1823,7 @@ E.g.: python lexconvert.py --convert festival cepstral"""
       l = 0
       try: l = open(fname).read()
       except: pass
-      assert not l, "File "+fname+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)" # (if you run with python -O then this is ignored, as are some other checks so be careful)
+      assert not l, "File "+replHome(fname)+" already exists and is not empty; are you sure you want to overwrite it?  (Delete it first if so)" # (if you run with python -O then this is ignored, as are some other checks so be careful)
       outFile=open(fname,"w")
    print "Writing %s lexicon entries to %s file %s" % (fromFormat,toFormat,fname)
    try: convert_user_lexicon(fromFormat,toFormat,outFile)
@@ -2000,23 +2020,16 @@ def convert(pronunc,source,dest):
     "Convert pronunc from source to dest.  pronunc can be a string or a list; if a list then we'll recurse on each of the list elements and return a new list (this is meant for batch-converting clauses etc)"
     if source==dest: return pronunc # essential for --try experimentation with codes not yet supported by lexconvert
     if type(pronunc)==list: return [convert(p,source,dest) for p in pronunc]
-    if source=="unicode-ipa":
-        # try to decode it
-        if "\\u" in pronunc and not '"' in pronunc: # maybe \uNNNN copied from Gecko on X11, can just evaluate it to get the unicode
-            # (NB make sure to quote the \'s if pasing in on the command line)
-            try: pronunc=eval('u"'+pronunc+'"')
-            except: pass
-        else: # see if it makes sense as utf-8
-            try: pronunc = pronunc.decode('utf-8')
-            except: pass
+    func = checkSetting(source,'cvtOut_func')
+    if func: pronunc=func(pronunc)
+    for s,r in checkSetting(source,'cvtOut_regexps'):
+        pronunc=re.sub(s,r,pronunc)
     ret = [] ; toAddAfter = None
     dictionary = make_dictionary(source,dest)
     maxLen=max(len(l) for l in dictionary.keys())
     debugInfo=""
     separator = checkSetting(dest,'phoneme_separator',' ')
     safe_to_drop = checkSetting(source,"safe_to_drop_characters")
-    for s,r in checkSetting(source,'cvtOut_regexps'):
-        pronunc=re.sub(s,r,pronunc)
     while pronunc:
         for lettersToTry in range(maxLen,-1,-1):
             if not lettersToTry:
@@ -2065,6 +2078,17 @@ def convert(pronunc,source,dest):
     func = checkSetting(dest,'cleanup_func')
     if func: return func(ret)
     else: return ret
+
+def unicode_preprocess(pronunc):
+   "Special-case cvtOut_func for unicode-ipa: tries to catch \\uNNNN etc"
+   if "\\u" in pronunc and not '"' in pronunc: # maybe \uNNNN copied from Gecko on X11, can just evaluate it to get the unicode
+      # (NB make sure to quote the \'s if pasing in on the command line)
+      try: pronunc=eval('u"'+pronunc+'"')
+      except: pass
+   else: # see if it makes sense as utf-8
+      try: pronunc = pronunc.decode('utf-8')
+      except: pass
+   return pronunc
 
 def ascii_braille_to_unicode(a):
   "Special-case cleanup_func for braille-ipa (set by braille-ipa if BRAILLE_UNICODE is set).  Converts Braille ASCII to Unicode dot patterns."
@@ -2218,9 +2242,16 @@ def read_user_lexicon(fromFormat):
        lexfile = open(lexFilename)
        print "Reading from",lexFilename
     except KeyError: lexfile = None # lex_read_function without lex_filename is allowed, if the read function can take null param and fetch the lexicon itself
-    except IOError: raise Message(fromFormat+"'s lexicon is expected to be in a file called "+lexFilename+" which could not be read - please fix and try again")
+    except IOError: raise Message(fromFormat+"'s lexicon is expected to be in a file called "+replHome(lexFilename)+" which could not be read - please fix and try again")
     return readFunction(lexfile)
 
+def replHome(fname):
+   "Format fname for printing, substituting ~ for HOME if appropriate"
+   h = os.environ.get('HOME','')
+   if h and fname.startswith(h+os.sep):
+      return "~"+fname[len(h):]
+   else: return fname
+    
 def get_macuk_lexicon(fromFormat):
     "Converts lexicon from fromFormat and returns a list suitable for MacBritish_System_Lexicon's readWithLex"
     return [(word,convert(pronunc,fromFormat,"mac-uk")) for word, pronunc in read_user_lexicon(fromFormat)]
@@ -2691,7 +2722,7 @@ class MacBritish_System_Lexicon(object):
         "Reads the text given in the constructor after setting up the lexicon with the given (word,phoneme) list"
         # self.check_redef(lex) # uncomment if you want to know about these
         textToPrint = u' '+self.textToAvoid.decode('utf-8')+u' '
-        tta = ' '+self.textToAvoid.replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint)
+        tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'").replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint; also normalise apostrophes but not in textToPrint)
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"])" # see below for why chr(0) is included; (?i) = ignore case
         nonWordAfter=r"(?=([^A-Za-z']|['"+unichr(0x2019)+r"][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s")
