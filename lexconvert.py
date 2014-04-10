@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.193 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.194 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1569,7 +1569,7 @@ def LexFormats():
   ),
 
   "kana-approx" : makeDic(
-    "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better).  Default is hiragana because I find hiragana easier to read than katakana.  Mac OS 10.7+'s Korean voices (Yuna and Narae) can also read kana, and you could try doing a makeVariantDic and adding in some Korean jamo letters for them (you'd be pushed to represent everything in jamo but kana+jamo seems more hopeful in theory), but again some words work better than others (not all phonetic combinations are supported and some words aren't clear at all).
+  "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better with some complex words, although the built-in converter does seem to have access to slightly more phonemes and can therefore produce words like "to" better).  Default is hiragana because I find hiragana easier to read than katakana.  Mac OS 10.7+'s Korean voices (Yuna and Narae) can also read kana, and you could try doing a makeVariantDic and adding in some Korean jamo letters for them (you'd be pushed to represent everything in jamo but kana+jamo seems more hopeful in theory), but again some words work better than others (not all phonetic combinations are supported and some words aren't clear at all).
     # This kana-approx format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
     (u'double-',primary_stress),
     (secondary_stress,ifset('KANA_MORE_EMPH',u'double-'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well; if it did, I'd put this line in a makeVariantDic called kana-approx-moreEmph or something)
@@ -2309,7 +2309,7 @@ def markup_bbcMicro_word(pronunc):
    "Special-case function set as inline_format in bbcmicro.  Begins a new *SPEAK command when necessary.  See also write_bbcmicro_phones."
    global bbc_partsSoFar,bbc_charsSoFar
    thisPartCount = bbcMicro_partPhonemeCount(pronunc)
-   if (not bbc_partsSoFar or bbc_partsSoFar+thisPartCount > 115) or (not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 238): # 238 is max len of the immediate BASIC prompt; re other limit see bbcMicro_partPhonemeCount
+   if (not bbc_partsSoFar or bbc_partsSoFar+thisPartCount > 115) or (not bbc_charsSoFar or bbc_charsSoFar+len(pronunc) > 238): # 238 is max len of BBC BASIC prompt (both the immediate prompt and the one with line number supplied by AUTO, in both BASIC II and BASIC IV); re other limit see bbcMicro_partPhonemeCount
       if bbc_charsSoFar: r="\n"
       else: r=""
       cmd="*SPEAK" # (could add a space if want to make it more readable, at the expense of an extra keystroke in the paste buffer; by the way, when not using the ROM version you must use *SPEAK not OS.("SPEAK"), at least on a Model B; seems OSCLI doesn't go through quite the same vectors as star)
@@ -2428,7 +2428,7 @@ def print_bbc_warnings(keyCount,lineCount):
      if top > default_speech_loc: limits_exceeded.append("%s TOP=&%X limit%s" % (model,default_speech_loc,x)) # The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any non-shadow mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite (non-shadow) screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
      if top > mode7_himem:
         if model=="Master":
-           if top > shadow_himem: limits_exceeded.append(model+" 32k HIMEM limit (even for shadow modes)") # I suppose you could try using BAS128 but I doubt it's compatible with Speech.  If you really want to store such a long program on the BBC then you'd better split it into several programs that CHAIN each other (as mentioned above).
+           if top > shadow_himem: limits_exceeded.append(model+" 32k HIMEM limit (even for shadow modes)") # TODO: maybe add instructions for using BAS128 on the B+ or Master; this sets PAGE=&10000 and HIMEM=&20000 (i.e. 64k for programs), which uses all 4 SRAM slots so you can't use SP8000 (unless it's on a real ROM); if using Speech in main memory you need to RELOCAT it to leave &3000 upwards for Bas128 code; putting it at &1900 for B+/DFS leaves you only 417 bytes for lexicon (which might not matter if you're using only *SPEECH: just create a shortened lexicon); putting it at &E00 for Master allows space for the default 2204-byte lexicon with 1029 bytes to spare; TODO check if Bas128 uses any workspace between &E00 and &3000 though.  Alternatively (if you really want to store such a long program on the BBC) then you'd better split it into several programs that CHAIN each other (as mentioned above).
            else: limits_exceeded.append(model+" Mode 7 HIMEM limit (use shadow modes 128-135)")
         else: limits_exceeded.append(model+" Mode 7 HIMEM limit") # unless you overwrite the screen (see above) - let's assume the Model B hasn't been fitted with shadow modes (although the Integra-B add-on does give them to the Model B, and leaves PAGE at &1900; B+ has shadow modes but I don't know what's supposed to happen to PAGE on it).  65C02 Tube doesn't help much (it'll try to run Speech on the coprocessor instead of the host, and this results in silence because it can't send its sound back across the Tube; don't know if there's a way to make it run on the host in these circumstances or what the host's memory map is like)
   if lineCount > 32768: limits_exceeded.append("BBC BASIC line number limit") # and you wouldn't get this far without filling the memory, even with 128k (4 bytes per line)
@@ -2466,47 +2466,53 @@ def bbcshortest(n):
   if len(str(n)) < len('&%X'%n): return str(n)
   else: return '&%X'%n
 def bbcKeystrokes(data,start):
-  "Return BBC BASIC keystrokes to put data into RAM starting at address start.  Uses BBC assembler instructions, which usually saves keystrokes compared with ! operators.  Keystrokes are limited to ASCII for easier copy/paste."
-  i=0 ; ret=[] ; thisLine = ""
+  "Return BBC BASIC keystrokes to put data into RAM starting at address start, without using the BASIC heap in the process (although we do use one of the page-4 integer variables to save some keystrokes).  Assumes the data is mostly ASCII so the $ operator is the least-keystrokes method of getting it in (rather than ? and ! operators, assembler EQUB/EQUW/EQUS, 6502 mnemonics, etc); we don't mind about overwriting the byte after with a CHR$(13).  Keystrokes are limited to ASCII for easier copy/paste.  See comments for more details."
+  # Taken to the extreme, a 'find the least keystrokes' function would be some kind of data compressor; we're not doing that here as we assume this is going to be used to poke in a lexicon, which is basically ASCII with a few CHR$(128)s thrown in; this '$ operator' method is highly likely to yield the least keystrokes for that kind of data, apart from setting and using temporary string variables, but then (1) you're in the realms of data compression and (2) you require heap memory, which might not be a good idea depending on where we're putting our lexicon.
+  # I suppose it wouldn't hurt in most cases to have an A$=CHR$(128), but not doing this for now because you might be in a situation where you can't touch the heap at all (I'm not sure where the workspace for assembling strings is though).
+  # However, just to be pedantic about saving a few bytes, there is one thing we CAN do: as we're expecting a lexicon with a lot of CHR$(128)s in it, let's set one of BASIC's page-4 integer variables to 0xd80 (let's make it B% because the decimal address of this is 1028 which is sort-of reminiscent of 128); if B%=&D80 then BASIC will store CHR$(128)+CHR$(13) so $1028 == CHR$(128), which saves 4 keystrokes per entry without needing the heap.  Whether we do this is controlled by use_page4_hack:
+  use_page4_hack = ((start>=1030 or start+len(data)<=1028) and len(data.split(chr(128))) >= 4) # (2 separators breaks even, 3 separators starts saving; we'll do it on 3 rather than 2 because it does hurt readability a bit)
+  # (An additional 3 keystrokes per entry could be saved if we didn't mind putting an A$ on the heap; alternatively it might be possible to save 1 or 2 more keystrokes if 2 bytes of spare RAM can be found starting at an address not exceeding 999 decimal, but it's anyone's guess what else might be storing temporaries down there, especially in page 0 - even if something's normally unused, somebody might have installed some timer-driven piece of machine code that uses it and we don't want to needlessly break compatibility with that.  Oh dear I seem to have forgotten which century I'm in :-)
+  i=0 ; ret=[]
+  if use_page4_hack: thisLine = "B%=&D80:"
+  else: thisLine = ""
+  bbc_max_line_len = 238
+  inQuote=needPlus=0 ; needCmd=1
   while i<len(data):
-    bbc_max_line_len = 238
-    def equdParam(): return bbcshortest(ord(data[i])+(ord(data[i+1])<<8)+(ord(data[i+2])<<16)+(ord(data[i+3])<<24))
-    def canEQUS(j): return 32<=ord(data[j])<127 and not data[j]=='"' # there aren't any escape sequences to worry about in EQUS strings.  (Delete the <127 if not worried about limiting keystrokes to ASCII.)
-    def equsCount(i,lineLeft):
-       j=i
-       while j<len(data) and j-i<lineLeft-len(':EQUS""') and canEQUS(j): j += 1
-       return j-i
-    if not thisLine:
-       if i==len(data)-4 and not all(canEQUS(j) for j in range(i,len(data))): # finish it off with a pling - it'll be quicker than another "[OPT2:EQUD"
-          thisLine='!'+bbcshortest(start)+'='+equdParam()
-          break
-       elif i==len(data)-1: # ditto with ?
-          thisLine='?'+bbcshortest(start)+'='+str(ord(data[i]))
-          break
-       else: # start the assembler (need a [OPT at the start of each and every line when in immediate mode)
-          if not ret: ret.append("P%="+bbcshortest(start))
-          thisLine = "[OPT2" # (or OPT1 if you want to see on the screen what it did, but that takes more processing)
-    add = equsCount(i,bbc_max_line_len-len(thisLine))
-    if add >= 4 or (add >= 2 and len(data)-i < 4): # (a good-enough approximation of when it'll be better to EQUS)
-       thisI = ':EQUS"'+data[i:i+add]+'"'
-    elif len(data)-i==2 or (len(data)-i>2 and not canEQUS(i+1) and equsCount(i+2,bbc_max_line_len) >= 4): # (ditto for EQUW)
-       thisI = ":EQUW"+bbcshortest(ord(data[i])+(ord(data[i+1])<<8)) ; add = 2
-    elif len(data)-i < 4 or equsCount(i+1,bbc_max_line_len) >= 4: # (ditto for EQUB)
-       o=ord(data[i]) ; add = 1
-       thisI = ':'+{0:"BRK",0x48:"PHA",0x68:"PLA",8:"PHP",0x28:"PLP",0x38:"SEC",0x18:"CLC",0xf8:"SED",0xd8:"CLD",0xe8:"INX",0xca:"DEX",0xc8:"INY",0x88:"DEY",0xaa:"TAX",0xa8:"TAY",0x8a:"TXA",0x98:"TYA",0x9a:"TXS",0xba:"TSX",0xb8:"CLV",0xea:"NOP",0x60:"RTS",0x40:"RTI"}.get(o,"EQUB"+str(o)) # (omit Master-only instructions like 0xda:"PHX") (in extremely rare cases, generating 2, 3 or 4 bytes might just be quicker with opcode+operand than EQUD, e.g. "ROL1:ROL1" vs "EQUD&1260126", but we won't worry about that - this function is complex enough already - anyway most of this stuff will never occur in lexicons and is here only in case bbcKeystrokes ends up being used for something else e.g. the Speech code itself)
-    else:
-       thisI = ":EQUD"+equdParam() ; add = 4
-    if len(thisLine)+len(thisI) <= bbc_max_line_len:
-       thisLine += thisI ; i += add ; start += add
-    else: # instruction won't fit on current line
-       ret.append(thisLine) ; thisLine = "" # and recalculate the instruction on the next loop iter (might then be able to fit more into an EQUS or something)
-  if thisLine: ret.append(thisLine)
+    if needCmd:
+       thisLine += ('$'+bbcshortest(start)+'=')
+       inQuote=needPlus=needCmd=0
+    if data[i]=='"': c,inQ = '""',1 # inQ MUST be 0 or 1, not False/True, because it's also used as 'len of necessary close quote' below
+    elif 32<=ord(data[i])<127: c,inQ = data[i],1
+    elif use_page4_hack and ord(data[i])==128:
+       c,inQ="$1028",0 # see above re B%
+    else: c,inQ=("CHR$("+str(ord(data[i]))+")"),0
+    addToLine = [] ; newNeedPlus = needPlus
+    if inQ and not inQuote:
+       if needPlus: addToLine.append('+')
+       addToLine.append('"')
+       newNeedPlus=0
+    elif inQuote and not inQ:
+       addToLine.append('"+')
+       newNeedPlus=1 # after what we'll add
+    elif not inQ:
+       if needPlus: addToLine.append('+')
+       newNeedPlus=1 # after what we'll add
+    addToLine.append(c)
+    addToLine=''.join(addToLine)
+    if len(thisLine)+len(addToLine)+inQ > bbc_max_line_len: # oops, we've gone too far, back off and end prev line
+       if inQuote: thisLine += '"'
+       ret.append(thisLine)
+       thisLine="" ; needCmd=1 ; continue
+    thisLine += addToLine ; inQuote=inQ
+    needPlus=newNeedPlus ; i += 1 ; start += 1
+  if inQuote: thisLine += '"'
+  if not needCmd: ret.append(thisLine)
   return '\n'.join(ret)+'\n'
 def print_bbclex_instructions(fname,size):
  """Print suitable instructions for a BBC Micro lexicon of the given filename and size (the exact nature of the instructions depends on the size).  If appropriate, create a .key file containing keystrokes for transferring to an emulator."""
  if os.environ.get("MAKE_SPEECH_ROM",0): print "%s (%d bytes, hex %X) can now installed on an emulator (set in Roms.cfg or whatever), or loaded onto a chip.  The sound quality of this might be worse than that of the main-RAM version." % (fname,size,size) # (at least on emulation - see comment on sound quality above)
  else:
-  print "The size of this lexicon is %d bytes (hex %X)" % (size,size)
+  print "The size of this lexicon is %d bytes (hex %X)" % (size,size) # (the default lexicon is 2204 bytes)
   bbcStart=None
   noSRAM_lex_offset=0x155F # (on the BBC Micro, SRAM means Sideways RAM, not Static RAM as it does elsewhere; for clarity we'd better say "Sideways RAM" in all output)
   SRAM_lex_offset=0x1683
@@ -2551,6 +2557,10 @@ def print_bbclex_instructions(fname,size):
   print "You can also set MAKE_SPEECH_ROM=1 (along with SPEECH_DISK) to create a SPEECH.ROM file instead"
  print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' (this seems to be a Speech bug)" # - can't track down which words it does and doesn't apply to
  print "It might be better to load your lexicon into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
+
+def mainopt_version(i):
+   # TODO: doc string for the help? (or would this option clutter it needlessly) - just print lexconvert's version number and nothing else
+   print __doc__.split("\n")[0].split(" - ")[0]
 
 def main():
     """Introspect the module to find the mainopt_ functions, and either call one of them or print the help.  Returns the error code to send back to the OS."""
