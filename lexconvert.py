@@ -2469,10 +2469,10 @@ def bbcKeystrokes(data,start):
   "Return BBC BASIC keystrokes to put data into RAM starting at address start, without using the BASIC heap in the process (although we do use one of the page-4 integer variables to save some keystrokes).  Assumes the data is mostly ASCII so the $ operator is the least-keystrokes method of getting it in (rather than ? and ! operators, assembler EQUB/EQUW/EQUS, 6502 mnemonics, etc); we don't mind about overwriting the byte after with a CHR$(13).  Keystrokes are limited to ASCII for easier copy/paste.  See comments for more details."
   # Taken to the extreme, a 'find the least keystrokes' function would be some kind of data compressor; we're not doing that here as we assume this is going to be used to poke in a lexicon, which is basically ASCII with a few CHR$(128)s thrown in; this '$ operator' method is highly likely to yield the least keystrokes for that kind of data, apart from setting and using temporary string variables, but then (1) you're in the realms of data compression and (2) you require heap memory, which might not be a good idea depending on where we're putting our lexicon.
   # I suppose it wouldn't hurt in most cases to have an A$=CHR$(128), but not doing this for now because you might be in a situation where you can't touch the heap at all (I'm not sure where the workspace for assembling strings is though).
-  # However, just to be pedantic about saving a few bytes, there is one thing we CAN do: if we have a lexicon with a lot of CHR$(128)s in it, let's set one of BASIC's page-4 integer variables to 0xd80 (=CHR$(128)+CHR$(13)) and another to the address of this so $A%==CHR$(128), saving 6 keystrokes per entry without needing the heap (an additional 1 keystroke per entry could be saved if we didn't mind putting an A$ on the heap).
+  # However, just to be pedantic about saving a few bytes, there is one thing we CAN do: if we have a lexicon with a lot of CHR$(128)s in it, let's set up BASIC's page-4 integer variables such that $A%=CHR$(128), saving 6 keystrokes per entry without needing the heap (an additional 1 keystroke per entry could be saved if we didn't mind putting an A$ on the heap).
   use_int_hack = ((start>=1030 or start+len(data)<=1026) and len(data.split(chr(128))) >= 4)
   i=0 ; ret=[]
-  if use_int_hack: thisLine = "B%=&D80:A%=1028:"
+  if use_int_hack: thisLine = "A%=&408:B%=&D80:" # (@% is at &400 and each is 4 byte LSB-MSB; $x reads to next 0D)
   else: thisLine = ""
   bbc_max_line_len = 238
   inQuote=needPlus=0 ; needCmd=1
@@ -2650,7 +2650,7 @@ class MacBritish_System_Lexicon(object):
         voice can be Daniel, Emily or Serena."""
         self.voice = False
         assert not voice in MacBritish_System_Lexicon.instances, "There is already another instance of MacBritish_System_Lexicon for the "+voice+" voice"
-        assert not os.system("lockfile /tmp/"+voice+".PCMWave.lock") # in case some other process has it
+        assert not os.system("lockfile -1 -r 10 /tmp/"+voice+".PCMWave.lock") # in case some other process has it (note: if you run with python -O, this check won't happen!)
         self.voice = voice
         self.filename = "/System/Library/Speech/Voices/"+voice+".SpeechVoice/Contents/Resources/PCMWave"
         assert os.path.exists(self.filename),"Cannot find an installation of '"+voice+"' on this system"
