@@ -2469,11 +2469,10 @@ def bbcKeystrokes(data,start):
   "Return BBC BASIC keystrokes to put data into RAM starting at address start, without using the BASIC heap in the process (although we do use one of the page-4 integer variables to save some keystrokes).  Assumes the data is mostly ASCII so the $ operator is the least-keystrokes method of getting it in (rather than ? and ! operators, assembler EQUB/EQUW/EQUS, 6502 mnemonics, etc); we don't mind about overwriting the byte after with a CHR$(13).  Keystrokes are limited to ASCII for easier copy/paste.  See comments for more details."
   # Taken to the extreme, a 'find the least keystrokes' function would be some kind of data compressor; we're not doing that here as we assume this is going to be used to poke in a lexicon, which is basically ASCII with a few CHR$(128)s thrown in; this '$ operator' method is highly likely to yield the least keystrokes for that kind of data, apart from setting and using temporary string variables, but then (1) you're in the realms of data compression and (2) you require heap memory, which might not be a good idea depending on where we're putting our lexicon.
   # I suppose it wouldn't hurt in most cases to have an A$=CHR$(128), but not doing this for now because you might be in a situation where you can't touch the heap at all (I'm not sure where the workspace for assembling strings is though).
-  # However, just to be pedantic about saving a few bytes, there is one thing we CAN do: as we're expecting a lexicon with a lot of CHR$(128)s in it, let's set one of BASIC's page-4 integer variables to 0xd80 (let's make it B% because the decimal address of this is 1028 which is sort-of reminiscent of 128); if B%=&D80 then BASIC will store CHR$(128)+CHR$(13) so $1028 == CHR$(128), which saves 4 keystrokes per entry without needing the heap.  Whether we do this is controlled by use_page4_hack:
-  use_page4_hack = ((start>=1030 or start+len(data)<=1028) and len(data.split(chr(128))) >= 4) # (2 separators breaks even, 3 separators starts saving; we'll do it on 3 rather than 2 because it does hurt readability a bit)
-  # (An additional 3 keystrokes per entry could be saved if we didn't mind putting an A$ on the heap; alternatively it might be possible to save 1 or 2 more keystrokes if 2 bytes of spare RAM can be found starting at an address not exceeding 999 decimal, but it's anyone's guess what else might be storing temporaries down there, especially in page 0 - even if something's normally unused, somebody might have installed some timer-driven piece of machine code that uses it and we don't want to needlessly break compatibility with that.  Oh dear I seem to have forgotten which century I'm in :-)
+  # However, just to be pedantic about saving a few bytes, there is one thing we CAN do: if we have a lexicon with a lot of CHR$(128)s in it, let's set one of BASIC's page-4 integer variables to 0xd80 (=CHR$(128)+CHR$(13)) and another to the address of this so $A%==CHR$(128), saving 6 keystrokes per entry without needing the heap (an additional 1 keystroke per entry could be saved if we didn't mind putting an A$ on the heap).
+  use_int_hack = ((start>=1030 or start+len(data)<=1026) and len(data.split(chr(128))) >= 4)
   i=0 ; ret=[]
-  if use_page4_hack: thisLine = "B%=&D80:"
+  if use_int_hack: thisLine = "B%=&D80:A%=1028:"
   else: thisLine = ""
   bbc_max_line_len = 238
   inQuote=needPlus=0 ; needCmd=1
@@ -2483,8 +2482,7 @@ def bbcKeystrokes(data,start):
        inQuote=needPlus=needCmd=0
     if data[i]=='"': c,inQ = '""',1 # inQ MUST be 0 or 1, not False/True, because it's also used as 'len of necessary close quote' below
     elif 32<=ord(data[i])<127: c,inQ = data[i],1
-    elif use_page4_hack and ord(data[i])==128:
-       c,inQ="$1028",0 # see above re B%
+    elif use_int_hack and ord(data[i])==128: c,inQ="$A%",0
     else: c,inQ=("CHR$("+str(ord(data[i]))+")"),0
     addToLine = [] ; newNeedPlus = needPlus
     if inQ and not inQuote:
