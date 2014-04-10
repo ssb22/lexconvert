@@ -2473,6 +2473,7 @@ def bbcKeystrokes(data,start):
   use_int_hack = ((start>=1030 or start+len(data)<=1026) and len(data.split(chr(128))) >= 4)
   i=0 ; ret=[]
   if use_int_hack: thisLine = "A%=&408:B%=&D80:" # (@% is at &400 and each is 4 byte LSB-MSB; $x reads to next 0D)
+  # (If we're guaranteed to NOT be using Bas128 and therefore all memory addresses are effectively masked by &FFFF, we can instead set A%=&D800406 (using A%'s low 2 bytes to point to A%'s high 2 bytes) for a 1-off saving of 5 keystrokes and 1 page-4 variable, but this saving is not really worth the readability compromise and the risk posed by the possibility of Bas128 - I don't know how Bas128 treats addresses above &1FFFF)
   else: thisLine = ""
   bbc_max_line_len = 238
   inQuote=needPlus=0 ; needCmd=1
