@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.194 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.2 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -53,6 +53,7 @@ def Phonemes():
    a_as_in_ago = vowel()
    _, var1_a_as_in_ago = variant()
    e_as_in_herd = vowel()
+   ar_as_in_year = variant()
    eye = vowel()
    _, var1_eye = variant()
    b = consonant()
@@ -61,7 +62,6 @@ def Phonemes():
    th_as_in_them = consonant()
    e_as_in_them = vowel()
    _, var1_e_as_in_them = variant()
-   ar_as_in_year = vowel()
    a_as_in_air = vowel()
    _, var1_a_as_in_air = variant()
    _, var2_a_as_in_air = variant()
@@ -166,6 +166,15 @@ def LexFormats():
        string of safe characters or True = all; controls
        warnings when unrecognised characters are found)
 
+       approximate_missing (default False) - if True,
+       makeDic will attempt to compensate for missing
+       phonemes by approximating them to others, instead of
+       warning about them.  This is useful for American codes
+       that can't cope with all the British English phonemes.
+       (Approximation is done automatically anyway in the
+       case of variant phonemes; approximate_missing adds in
+       some additional approximations - see comments in code)
+
        cleanup_regexps (default none) - optional list of
        (search,replace) regular expressions to "clean up"
        after converting INTO this format
@@ -183,6 +192,12 @@ def LexFormats():
        (can be used to put markup around each word)
        (can also be a function taking the phonetic word
         and returning the resulting string, e.g. bbcmicro)
+
+       output_is_binary (default False) - True if the output
+       is almost certainly unsuitable for a terminal; will
+       cause lexconvert to refuse to print phonemes unless
+       its standard output is redirected to a file or pipe
+       (affects the --phones and --phones2phones options)
 
        inline_header (default none) a line to print first
        when outputting from --phones or --phones2phones
@@ -287,7 +302,7 @@ def LexFormats():
        ("Shadrach","shei1drak"),
        ("Meshach","mii1shak"),
        ("Abednego","@be1dniigou"),
-    ]),
+    ], lex_filename=None, lex_entry_format=None),
 
   "espeak" : makeDic(
     "eSpeak's default British voice", # but eSpeak's phoneme representation isn't always that simple, hence the regexps at the end
@@ -412,14 +427,11 @@ def LexFormats():
     ('dh',th_as_in_them),
     ('eh',e_as_in_them),
     ('ey',var1_e_as_in_them),
-    (ar_as_in_year,'er',False),
-    ('eh r',a_as_in_air),
     (a_as_in_ate,'ey',False),
     ('f',f),
     ('g',g),
     ('h',h), # Jan suggested 'hh', but I can't get this to work on Windows XP (TODO: try newer versions of Windows)
     ('ih',i_as_in_it),
-    ('iy ah',ear),
     ('iy',e_as_in_eat),
     ('jh',j_as_in_jump),
     ('k',k),
@@ -444,6 +456,7 @@ def LexFormats():
     ('y',y),
     ('z',z),
     ('zh',ge_of_blige_etc),
+    approximate_missing=True,
     lex_filename="run-ptts.bat", # write-only for now
     lex_header = "rem  You have to run this file\nrem  with ptts.exe in the same directory\nrem  to add these words to the SAPI lexicon\n\n",
     lex_entry_format='ptts -la %s "%s"\n',
@@ -460,7 +473,6 @@ def LexFormats():
     ('ah',u_as_in_but),
     ('oa',o_as_in_orange),
     ('aw',o_as_in_now),
-    (a_as_in_ago,'ah',False),
     ('er',e_as_in_herd),
     ('ay',eye),
     ('b',b),
@@ -468,14 +480,12 @@ def LexFormats():
     ('d',d),
     ('dh',th_as_in_them),
     ('eh',e_as_in_them),
-    (ar_as_in_year,'er',False),
     ('e@',a_as_in_air),
     ('ey',a_as_in_ate),
     ('f',f),
     ('g',g),
     ('h',h),
     ('ih',i_as_in_it),
-    ('i ah',ear),
     ('i',e_as_in_eat),
     ('jh',j_as_in_jump),
     ('k',k),
@@ -499,6 +509,7 @@ def LexFormats():
     ('j',y),
     ('z',z),
     ('zh',ge_of_blige_etc),
+    approximate_missing=True,
     lex_filename="lexicon.txt",
     lex_entry_format = "%s 0 %s\n",
     lex_read_function = lambda lexfile: [(word,pronunc) for word, ignore, pronunc in [l.split(None,2) for l in lexfile.readlines()]],
@@ -527,15 +538,12 @@ def LexFormats():
     ('d',d),
     ('D',th_as_in_them),
     ('EH',e_as_in_them),
-    (ar_as_in_year,'AX',False),
-    ('EHr',a_as_in_air),
     ('EY',a_as_in_ate),
     ('f',f),
     ('g',g),
     ('h',h),
     ('IH',i_as_in_it),
     ('IX',var2_i_as_in_it),
-    ('IYUX',ear),
     ('IY',e_as_in_eat),
     ('J',j_as_in_jump),
     ('k',k),
@@ -559,6 +567,7 @@ def LexFormats():
     ('y',y),
     ('z',z),
     ('Z',ge_of_blige_etc),
+    approximate_missing=True,
     lex_filename="substitute.sh", # write-only for now
     lex_type = "substitution script",
     lex_header = "#!/bin/bash\n\n# I don't yet know how to add to the Apple US lexicon,\n# so here is a 'sed' command you can run on your text\n# to put the pronunciation inline:\n\nsed -E -e :S \\\n",
@@ -849,7 +858,6 @@ def LexFormats():
     ('_AI',a_as_in_ate),
     ('_AR',a_as_in_ah),
     ('_AW',close_to_or),
-     (oor_as_in_poor,'_AW',False),
     ('_A',a_as_in_ago),
     ('_B',b),
     ('_CH',ch),
@@ -858,7 +866,6 @@ def LexFormats():
     ('_EE',e_as_in_eat),
     ('_EI',a_as_in_air),
     ('_ER',e_as_in_herd),
-     (ar_as_in_year,'_ER',False),
     ('_E',e_as_in_them),
     ('_F',f),
     ('_G',g),
@@ -896,12 +903,135 @@ def LexFormats():
     ('_ZH',ge_of_blige_etc),
     ('_Z',z),
     # lex_filename not set (the hardware doesn't have one; HAL has an "exceptions dictionary" but I don't know much about it)
+    approximate_missing=True,
     safe_to_drop_characters=True, # TODO: really?
     word_separator=" ",phoneme_separator="",
     cleanup_regexps=[('_K_W','_Q'),('_K_S','_X')],
     cvtOut_regexps=[('_Q','_K_W'),('_X','_K_S')],
   ),
 
+  "dectalk" : makeDic(
+    'DECtalk hardware synthesizers (American English)', # (1984-ish serial port; later ISA cards)
+    (syllable_separator,'',False),
+    ("'",primary_stress),
+    ('aa',o_as_in_orange),
+    ('ae',a_as_in_apple),
+    ('ah',u_as_in_but),
+    ('ao',close_to_or), # bought
+    ('aw',o_as_in_now),
+    ('ax',a_as_in_ago),
+    ('ay',eye),
+    ('b',b),
+    ('ch',ch),
+    ('d',d), ('dx',d,False),
+    ('dh',th_as_in_them),
+    ('eh',e_as_in_them),
+    ('el',l,False), # -le of bottle, allophone ?
+    # TODO: en: -on of button (2 phonemes?)
+    ('ey',a_as_in_ate),
+    ('f',f),
+    ('g',g),
+    ('hx',h),
+    ('ih',i_as_in_it), ('ix',i_as_in_it,False),
+    ('iy',e_as_in_eat), ('q',e_as_in_eat,False),
+    ('jh',j_as_in_jump),
+    ('k',k),
+    ('l',l), ('lx',l,False),
+    ('m',m),
+    ('n',n),
+    ('nx',ng),
+    ('ow',o_as_in_go),
+    ('oy',oy_as_in_toy),
+    ('p',p),
+    ('r',r), ('rx',r,False),
+    ('rr',e_as_in_herd),
+    ('s',s),
+    ('sh',sh),
+    ('t',t), ('tx',t,False),
+    ('th',th_as_in_think),
+    ('uh',opt_u_as_in_pull),
+    ('uw',oo_as_in_food),
+    ('v',v),
+    ('w',w),
+    ('yx',y),
+    ('z',z),
+    ('zh',ge_of_blige_etc),
+    ('ihr',ear), # DECtalk makes this from ih + r
+    approximate_missing=True,
+    cleanup_regexps=[('yxuw','yu')], # TODO: other allophones ("x',False" stuff above)?
+    cvtOut_regexps=[('yu','yxuw')],
+    # lex_filename not set (depends on which model etc)
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # TODO: really?
+    word_separator=" ",phoneme_separator="",
+    inline_header="[:phoneme on]",
+    inline_format="[%s]",
+  ),
+
+  "doubletalk" : makeDic(
+  'DoubleTalk PC/LT serial-port hardware synthesizers (American English; assumes DOS driver by default, otherwise set the DTALK_COMMAND_CODE environment variable to the current binary value of the command code, e.g. export DTALK_COMMAND_CODE=1)', # (1 is the synth's default; the DOS driver lets you put * instead)
+    (syllable_separator,'',False),
+    ("/",primary_stress), # TODO: check it doesn't need a balancing \ afterwards (docs do say it's a "temporary" change of pitch, but it's unclear how long a 'temporary')
+    ('M',m),('N',n),('NX',ng),('O',o_as_in_go),
+    ('OW',o_as_in_go,False), # allophone
+    (o_as_in_orange,'O',False), # TODO: is this the best approximation we can do?
+    ('OY',oy_as_in_toy),('P',p),
+    ('R',r),('S',s),('SH',sh),('T',t),
+    ('TH',th_as_in_think),('V',v),('W',w),('Z',z),
+    ('ZH',ge_of_blige_etc),('K',k),('L',l),
+    ('PX',p,False), ('TX',t,False), # aspirated allophones
+    ('WH',w,False), ('KX',k,False), # ditto
+    ('YY',y),('Y',y,False),
+    ('UH',opt_u_as_in_pull),('UW',oo_as_in_food),
+    ('AA',a_as_in_ah),('AE',a_as_in_apple),
+    ('AH',u_as_in_but),('AO',close_to_or),
+    ('AW',o_as_in_now),('AX',a_as_in_ago),
+    ('AY',eye),('B',b),('CH',ch),('D',d),
+    ('DH',th_as_in_them),
+    ('DX',t,False), # an American "d"-like "t"
+    ('EH',e_as_in_them),('ER',e_as_in_herd),
+    ('EY',a_as_in_ate),('F',f),('G',g),('H',h),
+    ('IH',i_as_in_it),('IX',i_as_in_it,False),
+    ('IY',e_as_in_eat),('JH',j_as_in_jump),
+    approximate_missing=True,
+    stress_comes_before_vowel=True,
+    inline_format=markup_doubleTalk_word,
+    format_is_binary=ifset('DTALK_COMMAND_CODE',True),
+    # DoubleTalk does have a loadable "exceptions dictionary" but usually relies on a DOS tool to write it; I don't have the documentation about it (and don't know how much RAM is available for it - it's taken from the input buffer)
+  ),
+
+  "keynote" : makeDic(
+    'Phoneme-read and lexicon-add codes for Keynote Gold hardware synthesizers (American English)', # ISA, PCMCIA, serial, etc; non-serial models give you an INT 2Fh param to get the address of an API function to call; not sure which software can send these codes directly to it)
+    (syllable_separator,'',False),
+    (primary_stress,"'"),(secondary_stress,'"'),
+    ('w',w),('y',y),('h',h),('m',m),('n',n),('ng',ng),
+    ('l',l),('r',r),('f',f),('v',v),('s',s),('z',z),
+    ('th',th_as_in_think),('dh',th_as_in_them),('k',k),
+    ('ch',ch),('zh',ge_of_blige_etc),('sh',sh),('g',g),
+    ('jh',j_as_in_jump),('b',b),('p',p),('d',d),('t',t),
+    ('i',e_as_in_eat),('I',i_as_in_it),
+    ('e',a_as_in_ate),('E',e_as_in_them),
+    ('ae',a_as_in_apple),('u',oo_as_in_food),
+    ('U',opt_u_as_in_pull),('o',o_as_in_go),
+    ('O',close_to_or),('a',o_as_in_orange),
+    ('^',u_as_in_but),('R',e_as_in_herd),
+    ('ay',eye),('Oy',oy_as_in_toy),('aw',o_as_in_now),
+    ('=',a_as_in_ago),
+    approximate_missing=True,
+    inline_format="[p]%s[t]",
+    lex_filename="keynote.dat", # you have to somehow get this directly dumped to the card, see comment above
+    lex_entry_format="[x]%s %s", lex_footer="[t]\n",
+    stress_comes_before_vowel=False, # even though it's "'"
+  ),
+
+  "audapter" : makeVariantDic(
+  "Audapter Speech System, an old hardware serial/parallel-port synthesizer (American English)", # 1989 I think.  The phonemes themselves are the same as the Keynote above, but there's an extra binary byte in the commands and the lex format is stricter.  I haven't checked but my guess is Audapter came before Keynote.
+  inline_format='\x05[p] %s\x05[t]',
+  format_is_binary=True,
+  lex_filename="audapter.dat",
+  lex_entry_format="\x05[x]%s %s\x05[t]\n", lex_footer="",
+  ),
+  
   "bbcmicro" : makeDic(
     "BBC Micro Speech program from 1985 (see comments in lexconvert.py for more details)",
     # Speech was written by David J. Hoskins and published by Superior Software.  It took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; sounds "retro" by modern standards but quite impressive for the BBC Micro in 1985.  Samples are played by amplitude-modulating the BBC's tone generator.
@@ -989,6 +1119,7 @@ def LexFormats():
   "amiga" : makeDic(
     'AmigaOS speech synthesizer (American English)', # shipped with the 1985 Amiga release; developed by SoftVoice Inc
     # All I had to go by for this was a screenshot on Marcos Miranda's blog.  I once saw this synth demonstrated but never tried it.  My early background was the BBC Micro, not Amigas etc.  But I know some people are keen on Amigas so I might as well include it.
+    # (By the way I think David Hoskins had it harder than SoftVoice.  Yes they were both in 1985, but the Amiga was a new 16-bit machine while the BBC was an older 8-bit one.  See the "sam" format for an even older one though, although probably not written by one person.)
     (syllable_separator,'',False),
     ('4',primary_stress),('3',secondary_stress),
     ('/H',h),
@@ -1040,9 +1171,46 @@ def LexFormats():
     word_separator=" ",phoneme_separator="",
   ),
 
+  "sam" : makeDic(
+  'Software Automatic Mouth (1982 American English synth that ran on C64, Atari 400/800/etc and Apple II/etc)', # *might* be similar to Macintalk on the 1st Macintosh in 1984
+  (syllable_separator,'',False),
+  (primary_stress,'4'),
+  (secondary_stress,'5'),
+  ('IY',e_as_in_eat),
+  ('IH',i_as_in_it),
+  ('EH',e_as_in_them),
+  ('AE',a_as_in_apple),
+  ('AA',o_as_in_orange),
+  ('AH',u_as_in_but),
+  ('AO',close_to_or),
+  ('OH',o_as_in_go),
+  ('UH',opt_u_as_in_pull),
+  ('UX',oo_as_in_food),
+  ('ER',e_as_in_herd),
+  ('AX',a_as_in_apple,False), # allophone?
+  ('IX',i_as_in_it,False), # allophone?
+  ('EY',a_as_in_ate),
+  ('AY',eye),('OY',oy_as_in_toy),
+  ('AW',o_as_in_now),('OW',o_as_in_go,False),
+  ('UW',oo_as_in_food,False), # allophone?
+  ('R',r),('L',l),('W',w),('WH',w,False),('Y',y),('M',m),
+  ('N',n),('NX',ng),('B',b),('D',d),('G',g),('Z',z),
+  ('J',j_as_in_jump),('ZH',ge_of_blige_etc),('V',v),
+  ('DH',th_as_in_them),('S',s),('SH',sh),('F',f),
+  ('TH',th_as_in_think),('P',p),('T',t),('K',k),
+  ('CH',ch),('/H',h),('Q',glottal_stop),
+  approximate_missing=True,
+  word_separator=" ",phoneme_separator="",
+  # TODO: inline_format etc similar to bbcmicro?
+  # In Atari BASIC, you set SAM$ to the phonemes and then
+  # do A=USR(8192).  I don't know about the C64 etc versions.
+  # (max 255 phonemes per string; don't know max line len.)
+  ),
+
   "speakjet" : makeDic(
     'Allophone codes for the American English "SpeakJet" speech synthesis chip (the conversion from phonemes to allophones might need tweaking).  Set the SPEAKJET_SYM environment variable to use mnemonics, otherwise numbers are used (set SPEAKJET_BINARY for binary output).',
-    (syllable_separator,'',False), # TODO: instead of having emphasis, it has a 'faster' code for all NON-emphasized syllables
+  # TODO: might want to do something similar for the older Votrax SC-02 chip, but would need to check how exactly its phoneme interface was exposed to software by the PC cards that used it (Heathkit HV-2000 etc; not sure if any are still in use though)
+    (syllable_separator,'',False), # TODO: instead of having emphasis, the Speakjet has a 'faster' code for all NON-emphasized syllables
     (speakjet('IY',128),e_as_in_eat),
     (speakjet('IH',129),i_as_in_it),
     (speakjet('EY',130),a_as_in_ate),
@@ -1067,10 +1235,8 @@ def LexFormats():
     (speakjet('IYRR',149),ear),
     (speakjet('EYRR',150),a_as_in_air),
     (speakjet('AXRR',151),e_as_in_herd),
-     (ar_as_in_year,speakjet('AXRR',151),False),
     (speakjet('AWRR',152),a_as_in_ah,False),
     (speakjet('OWRR',153),close_to_or),
-     (oor_as_in_poor,speakjet('OWRR',153),False),
     (speakjet('EYIY',154),a_as_in_ate,False),
     (speakjet('OHIY',155),eye),
     (speakjet('OWIY',156),oy_as_in_toy),
@@ -1119,9 +1285,11 @@ def LexFormats():
     (speakjet('PE',198),p,False),
     (speakjet('PO',199),p),
     # lex_filename not set (I think the front-end software might have one, but don't know if it's accessible; chip itself just takes phonemes)
+    approximate_missing=True,
     word_separator=ifset('SPEAKJET_BINARY',""," "),
     phoneme_separator=ifset('SPEAKJET_BINARY',""," "),
     clause_separator=ifset('SPEAKJET_BINARY',"","\n"), # TODO: is there a pause code?
+    output_is_binary=ifset('SPEAKJET_BINARY',True),
     safe_to_drop_characters=True, # TODO: really?
   ),
 
@@ -1137,7 +1305,6 @@ def LexFormats():
     ("Q",o_as_in_orange),
     ("A:",a_as_in_ah),
     ("oU",o_as_in_go),
-     (a_as_in_ago,'oU',False),
     ("U",opt_u_as_in_pull),
     ("u:",oo_as_in_food),
     ("m",m),
@@ -1149,9 +1316,7 @@ def LexFormats():
     ("I@",ear),
     ("e@",a_as_in_air),
     ("3:",e_as_in_herd),
-     (ar_as_in_year,"3:",False),
     ("Qr",close_to_or),
-     (oor_as_in_poor,"Qr",False),
     ("OI",oy_as_in_toy),
     ("aI",eye),
     ("j",y),
@@ -1175,6 +1340,7 @@ def LexFormats():
     ("t",t),
     ("k",k),
     ("p",p),
+    approximate_missing=True,
     # lex_filename not set (TODO: check what sort of lexicon is used by rsynth's "say" front-end)
     safe_to_drop_characters=True, # TODO: really?
     word_separator=" ",phoneme_separator="",
@@ -1492,7 +1658,6 @@ def LexFormats():
     ('e5',u_as_in_but),
     ('yo5',o_as_in_orange),
     ('ao5',o_as_in_now),
-    (a_as_in_ago,'e5',False),
     (e_as_in_herd,'e5',False),
     ('ai5',eye),
     ('bu0',b),
@@ -1500,7 +1665,6 @@ def LexFormats():
     ('de0',d),
     ('ze0',th_as_in_them),
     ('ye5',e_as_in_them),
-    (ar_as_in_year,'e5',False),
     (a_as_in_air,'ye5',False),
     ('ei5',a_as_in_ate),
     ('fu0',f),
@@ -1531,6 +1695,7 @@ def LexFormats():
     ('yu0',y),
     (z,'ze0',False),
     (ge_of_blige_etc,'zhe0',False),
+    approximate_missing=True,
     lex_filename="words-pinyin-approx.txt", # write-only for now
     lex_type = "text",
     lex_header = "Pinyin approxmations (very approximate!)\n----------------------------------------\n",
@@ -1764,12 +1929,13 @@ def mainopt_check_for_similar_formats(i):
    # undocumented (won't appear in help text)
    items = lexFormats.items() ; r = []
    while items:
-      k1,dic1 = items[0] ; diff=0
+      k1,dic1 = items[0]
       for k2,dic2 in items[1:]:
+         diff = 0
          for kk,vv in dic1.items():
             if not type(kk)==int: continue
             if kk==syllable_separator: continue
-            if not dic2.get(kk,"")==vv: diff += 1
+            if not dic2.get(kk,"!"+vv)==vv: diff += 1
          r.append((diff,k1,k2))
       items = items[1:]
    r.sort() ; had = set()
@@ -1777,7 +1943,7 @@ def mainopt_check_for_similar_formats(i):
       if format1 in had and format2 in had: continue
       had.add(format1) ; had.add(format2)
       if "names" in had: break
-      print "Only",diffs,"differences between",format1,"and",format2
+      print diffs,"phoneme differences between",format1,"and",format2
 
 def festival_group_stress(pronunc):
    "Special-case cleanup_func for the Festival format"
@@ -1876,6 +2042,7 @@ Perform a one-off conversion of phonemes from format1 to format2 (format2 can be
    else: formats = [format2]
    for format2 in formats:
      if len(formats)>1: writeFormatHeader(format2)
+     write_inlineWord_header(format2)
      output_clauses(format2,convert(clauses,format1,format2))
 
 def parseIntoWordsAndClauses(format,phones):
@@ -1948,7 +2115,7 @@ def speakjet(symbol,opcode):
 
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
-    d = {("settings","doc"):doc} ; duplicates = set()
+    d = {} ; duplicates = set()
     for a in args:
         assert type(a)==tuple and (len(a)==2 or len(a)==3)
         k=a[0]
@@ -1960,10 +2127,27 @@ def makeDic(doc,*args,**kwargs):
             # (k,v,True) = both (k,v) and (v,k)
             if v in d: duplicates.add(v)
             d[v] = k
+    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(list(duplicates)))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
     missing = [l for l in (list(consonants)+list(mainVowels)) if not l in d]
+    # did_approx = False
+    if missing and 'approximate_missing' in kwargs:
+      for miss,approxTo in [
+          # TODO: put this table somewhere else?
+          # (If the thing on the right is just 1 item, we could make the thing on the left a variant of it.  But that might not be a good idea unless they're really very close, since if it's a variant then the substitution is done without warning even if approximate_missing is not set.)
+          (a_as_in_ago, [u_as_in_but]),
+          (a_as_in_air, [e_as_in_them,r]),
+          (ear, [e_as_in_eat,u_as_in_but]),
+          (oor_as_in_poor, [close_to_or]), # TODO: ,r?
+          (a_as_in_ah,[a_as_in_apple]), # this seems to be missing in some American voices (DecTalk, Keynote, SAM); TODO: is this the best approximation we can do?
+          ]:
+        if miss in missing and all(x in d for x in approxTo):
+          d[miss]=kwargs.get("phoneme_separator"," ").join(d[x] for x in approxTo)
+          # did_approx = True
+          missing.remove(miss)
+    # if did_approx: doc="(approx.) "+doc # and see also the code in makeVariantDic.  Commenting out because this is misleading: the formats where we didn't do a did_approx might also contain approximations of some kind.  Incidentally there are some British English voices that need approximate_missing (e.g. Apollo 2)
+    d[("settings","doc")] = doc
     if missing:
        import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(g for g,val in globals().items() if val==m) for m in missing)+"\n")
-    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(list(duplicates)))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
     for k,v in kwargs.items(): d[('settings',k)] = v
     wsep = d.get(('settings','word_separator'),None)
     psep = d.get(('settings','phoneme_separator'),' ')
@@ -1979,6 +2163,7 @@ def makeVariantDic(doc,*args,**kwargs):
     mainVowels,consonants = [],[] # so makeDic doesn't complain if some vowels/consonants are missing
     d = makeDic(doc,*args,**kwargs)
     mainVowels,consonants = oldV,oldC
+    # if toUpdate[("settings","doc")].startswith("(approx.) ") and not d[("settings","doc")].startswith("(approx.) "): d[("settings","doc")]="(approx.) "+d[("settings","doc")] # TODO: always?
     for k,v in toUpdate.items():
        if type(v)==list and k in d: d[k] = v+d[k]
     toUpdate.update(d) ; return toUpdate
@@ -2305,6 +2490,12 @@ def markup_inline_word(format,pronunc):
        if type(format)==unicode: format=format.encode('utf-8') # see above
        return format % pronunc
     else: return format(pronunc)
+def markup_doubleTalk_word(pronunc):
+   "Special-case function set as inline_format in doubletalk (checks environment variables for command code)"
+   cmd = os.environ.get('DTALK_COMMAND_CODE','')
+   if cmd: cmd=chr(int(cmd))
+   else: cmd = '*'
+   return "%sD%s%sT" % (cmd,pronunc,cmd)
 def markup_bbcMicro_word(pronunc):
    "Special-case function set as inline_format in bbcmicro.  Begins a new *SPEAK command when necessary.  See also write_bbcmicro_phones."
    global bbc_partsSoFar,bbc_charsSoFar
@@ -2396,6 +2587,9 @@ def getInputText(i,prompt,as_iterable=False):
 
 def output_clauses(format,clauses):
    "Writes out clauses and words in format 'format' (clauses is a list of lists of words in the phones of 'format').  By default, calls markup_inline_word and join as appropriate.  If however the format's 'clause_separator' has been set to a special case, calls that."
+   if checkSetting(format,"output_is_binary") and hasattr(sys.stdout,"isatty") and sys.stdout.isatty():
+      print "This is a binary format - not writing to terminal.\nPlease direct output to a file or pipe."
+      return
    clause_sep = checkSetting(format,"clause_separator","\n")
    if type(clause_sep) in [str,unicode]: print clause_sep.join(wordSeparator(format).join(markup_inline_word(format,word) for word in clause) for clause in clauses)
    else: clause_sep(clauses)
@@ -2474,6 +2668,8 @@ def bbcKeystrokes(data,start):
   i=0 ; ret=[]
   if use_int_hack: thisLine = "A%=&408:B%=&D80:" # (@% is at &400 and each is 4 byte LSB-MSB; $x reads to next 0D)
   # (If we're guaranteed to NOT be using Bas128 and therefore all memory addresses are effectively masked by &FFFF, we can instead set A%=&D800406 (using A%'s low 2 bytes to point to A%'s high 2 bytes) for a 1-off saving of 5 keystrokes and 1 page-4 variable, but this saving is not really worth the readability compromise and the risk posed by the possibility of Bas128 - I don't know how Bas128 treats addresses above &1FFFF)
+  # (An even 'nastier' trick would be to put !13=&D80 and then use $13, as those bytes are used by BASIC's random number generator, which presumably isn't called during the paste and we don't mind disrupting it; again I don't know about Bas128.  But you can't do it because BASIC gives a "$ range" error on anything below 256.)
+  # (I suppose one thing you _could_ do is LOMEM=&400:A$=CHR$(13) and end with LOMEM=TOP, which would overwrite 3 page-4 variables and let you use just A$ instead of $A%, saving keystrokes over A%=&D800406 after 21 more lexicon words, at the expense of losing track of any variables you had on the heap.  But this is getting silly.)
   else: thisLine = ""
   bbc_max_line_len = 238
   inQuote=needPlus=0 ; needCmd=1
