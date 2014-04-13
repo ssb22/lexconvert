@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.2 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.201 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -199,8 +199,9 @@ def LexFormats():
        its standard output is redirected to a file or pipe
        (affects the --phones and --phones2phones options)
 
-       inline_header (default none) a line to print first
+       inline_header (default none) text to print first
        when outputting from --phones or --phones2phones
+       inline_footer (default none) text to print last
 
        lex_filename - filename of a lexicon file.  If this
        is not specified, there is no support for writing a
@@ -630,7 +631,7 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
-    inline_header = "(mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it)",
+    inline_header = "(mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it)\n",
     word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
@@ -721,6 +722,16 @@ def LexFormats():
     # TODO: inline_format ?
     word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
+  ),
+  "android-pico" : makeVariantDic(
+    'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+, American), wrapped in Java code',
+    cleanup_regexps=[(r'\\',r'\\\\'),('"','&quot;')],
+    lex_filename="",lex_entry_format="",
+    lex_read_function=None,
+    inline_header=r'mTts.speak("<speak xml:lang=\"en-US\">', # TODO: this assumes you're using their published 'boilerplate' code to instantiate mTts in onActivityResult.  Don't know if want to put ALL the boilerplate code in here (probably best not to)
+    inline_format=r'<phoneme alphabet=\"xsampa\" ph=\"%s\"/>',
+    clause_separator=r"\n", # note r"\n" != "\n"
+    inline_footer='</speak>", TextToSpeech.QUEUE_ADD, null);',
   ),
 
   "acapela-uk" : makeDic(
@@ -964,12 +975,12 @@ def LexFormats():
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
     word_separator=" ",phoneme_separator="",
-    inline_header="[:phoneme on]",
+    inline_header="[:phoneme on]\n",
     inline_format="[%s]",
   ),
 
   "doubletalk" : makeDic(
-  'DoubleTalk PC/LT serial-port hardware synthesizers (American English; assumes DOS driver by default, otherwise set the DTALK_COMMAND_CODE environment variable to the current binary value of the command code, e.g. export DTALK_COMMAND_CODE=1)', # (1 is the synth's default; the DOS driver lets you put * instead)
+    'DoubleTalk PC/LT serial-port hardware synthesizers (American English; assumes DOS driver by default, otherwise set DTALK_COMMAND_CODE to your current command-code binary value, e.g. export DTALK_COMMAND_CODE=1)', # (1 is the synth's default; the DOS driver lets you put * instead)
     (syllable_separator,'',False),
     ("/",primary_stress), # TODO: check it doesn't need a balancing \ afterwards (docs do say it's a "temporary" change of pitch, but it's unclear how long a 'temporary')
     ('M',m),('N',n),('NX',ng),('O',o_as_in_go),
@@ -1642,7 +1653,7 @@ def LexFormats():
     lex_entry_format=r"%s & \textipa{%s}\\"+"\n",
     lex_footer = r"\end{longtable}\end{document}"+"\n",
     inline_format = "\\textipa{%s}",
-    inline_header = r"% In preamble, put \usepackage[safe]{tipa}", # (the [safe] part is recommended if you're mixing with other TeX)
+    inline_header = r"% In preamble, put \usepackage[safe]{tipa}"+"\n", # (the [safe] part is recommended if you're mixing with other TeX)
     word_separator=" ",phoneme_separator="",
     clause_separator=r"\\"+"\n",
     stress_comes_before_vowel=True,
@@ -1785,6 +1796,7 @@ def LexFormats():
     lex_header = "Kana approxmations (very approximate!)\n--------------------------------------\n",
     lex_entry_format = "%s ~= %s\n",
     word_separator=" ",phoneme_separator="",
+    clause_separator=u"\u3002\n".encode('utf-8'),
     stress_comes_before_vowel=True,
     cleanup_regexps=[
        (u'double-(.)',ur'\1\u30fc'),
@@ -1877,8 +1889,10 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats."""
    else: formats = [format]
    for format in formats:
     if len(formats)>1: writeFormatHeader(format)
-    write_inlineWord_header(format)
+    sys.stdout.write(checkSetting(format,"inline_header"))
     output_clauses(format,convert(parseIntoWordsAndClauses("espeak",response),"espeak",format))
+    sys.stdout.write(checkSetting(format,"inline_footer"))
+    print
 
 def pipeThroughEspeak(inpt):
    "Writes inpt to espeak -q -x (in chunks if necessary) and returns the result"
@@ -1947,6 +1961,10 @@ def mainopt_check_for_similar_formats(i):
 
 def festival_group_stress(pronunc):
    "Special-case cleanup_func for the Festival format"
+   # TODO: do we ever need to add extra consonants to the
+   # previous group instead of the next group?  (not sure
+   # what difference it makes to the synthesis, but it
+   # might make the entry a bit more readable)
    groups = [] ; thisGroup = [[],'0',False] # phon,stress,complete
    for phon in pronunc.split():
       if phon in ['0','1','2']:
@@ -2042,8 +2060,9 @@ Perform a one-off conversion of phonemes from format1 to format2 (format2 can be
    else: formats = [format2]
    for format2 in formats:
      if len(formats)>1: writeFormatHeader(format2)
-     write_inlineWord_header(format2)
+     sys.stdout.write(checkSetting(format2,"inline_header"))
      output_clauses(format2,convert(clauses,format1,format2))
+     sys.stdout.write(checkSetting(format2,"inline_footer")) ; print
 
 def parseIntoWordsAndClauses(format,phones):
    "Returns list of clauses, each of which is a list of words, assuming 'phones' are in format 'format'"
@@ -2478,10 +2497,6 @@ def bbcMicro_partPhonemeCount(pronunc):
          pronunc=pronunc[1:]
    return partCount
 
-def write_inlineWord_header(format):
-    "Checks the format for inline_header, prints if so"
-    h = checkSetting(format,"inline_header")
-    if h: print h
 def markup_inline_word(format,pronunc):
     "Returns pronunc with any necessary markup for putting it in a text (using the inline_format setting)"
     if type(pronunc)==unicode: pronunc=pronunc.encode('utf-8') # UTF-8 output - ok for pasting into Firefox etc *IF* the terminal/X11 understands utf-8 (otherwise redirect to a file, point the browser at it, and set encoding to utf-8, or try --convert'ing which will o/p HTML)
@@ -2591,7 +2606,7 @@ def output_clauses(format,clauses):
       print "This is a binary format - not writing to terminal.\nPlease direct output to a file or pipe."
       return
    clause_sep = checkSetting(format,"clause_separator","\n")
-   if type(clause_sep) in [str,unicode]: print clause_sep.join(wordSeparator(format).join(markup_inline_word(format,word) for word in clause) for clause in clauses)
+   if type(clause_sep) in [str,unicode]: sys.stdout.write(clause_sep.join(wordSeparator(format).join(markup_inline_word(format,word) for word in clause) for clause in clauses))
    else: clause_sep(clauses)
 def write_bbcmicro_phones(clauses):
   """Special-case function set as clause_separator in bbcmicro format.  Must be a special case because it needs to track any extra keystrokes to avoid "Line too long".  And while we're at it, we might as well start a new *SPEAK command with each clause, using the natural brief delay between commands; this should minimise the occurrence of additional delays in arbitrary places.  Also calls print_bbc_warnings"""
@@ -2793,10 +2808,10 @@ def main():
        return 0
     elif html:
        print "Available pronunciation formats:"
-       if html: print "<table>"
+       if html: print '<table id="formats">'
        keys=lexFormats.keys() ; keys.sort()
        for k in keys: print '<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>"
-       print "</table>"
+       print "</table><script><!-- try to be more readable on some smartphones\nif(screen && screen.width<600 && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//--></script>"
     else: print "Available pronunciation formats: "+", ".join(sorted(lexFormats.keys()))+"\n(Use --formats to see their descriptions)"
     print missALine
     print "Program options:"
