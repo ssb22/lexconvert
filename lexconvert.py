@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.201 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.202 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -53,7 +53,7 @@ def Phonemes():
    a_as_in_ago = vowel()
    _, var1_a_as_in_ago = variant()
    e_as_in_herd = vowel()
-   ar_as_in_year = variant()
+   _, ar_as_in_year = variant()
    eye = vowel()
    _, var1_eye = variant()
    b = consonant()
@@ -2139,7 +2139,9 @@ def makeDic(doc,*args,**kwargs):
         assert type(a)==tuple and (len(a)==2 or len(a)==3)
         k=a[0]
         if k in d: duplicates.add(k)
-        v=a[1] ; d[k] = v
+        v=a[1]
+        assert (type(k) in [str,unicode] and type(v) in [int,float]) or (type(v) in [str,unicode] and type(k) in [int,float]), "Wrong types "+repr(a)+" (did you forget a _, before calling variant() or something?)"
+        d[k] = v
         if len(a)==3: bidir=a[2]
         else: bidir=True
         if bidir:
@@ -2945,7 +2947,7 @@ class MacBritish_System_Lexicon(object):
         tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'").replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint; also normalise apostrophes but not in textToPrint)
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"])" # see below for why chr(0) is included; (?i) = ignore case
-        nonWordAfter=r"(?=([^A-Za-z']|['"+unichr(0x2019)+r"][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s")
+        nonWordAfter=r"(?=([^A-Za-z'"+unichr(0x2019)+"-]|['"+unichr(0x2019)+r"-][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s") (also not if followed by hyphen-letters)
         for ww,pp in lex:
           if ww in tta and re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
             words2.append(ww) ; phonemes2.append(pp)
