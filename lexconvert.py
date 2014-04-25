@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.202 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.203 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1460,6 +1460,56 @@ def LexFormats():
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really? (at least '-' should be safe to drop)
     cvtOut_func=unicode_preprocess,
+  ),
+
+  "unicode-rough" : makeVariantDic(
+    "A non-standard notation that's reminiscent of unicode-ipa but changed so that more of the characters show in old browsers with incomplete fonts",
+    ("'",primary_stress),
+    (',',secondary_stress),
+    ('ar-',a_as_in_ah),
+    (':',var2_a_as_in_ah),
+    (var3_a_as_in_ah,'ar-',False),
+    (var4_a_as_in_ah,'ar-',False),
+    ('^',u_as_in_but),
+    (u'\u0259:',e_as_in_herd),
+    ('ai',eye),
+    ('ch',ch),
+    ('e',e_as_in_them),
+    ('3:',ar_as_in_year),
+     (a_as_in_air,'e:',False),
+     (var1_a_as_in_air,'e:',False),
+     (var2_a_as_in_air,'e:',False),
+     (var3_a_as_in_air,'e:',False),
+     (var4_a_as_in_air,'e:',False),
+    (u'ei',a_as_in_ate),
+    (u'\xe6i',var1_a_as_in_ate),
+    ('g',g),
+    ('i',i_as_in_it), (var1_i_as_in_it,'i',False),
+    ('eeuh-',ear), (var2_ear,'eeuh-',False),
+    ('ee',e_as_in_eat), (var1_e_as_in_eat,'ee',False),
+    ('j',j_as_in_jump),
+    ('ng',ng),
+    ('o',o_as_in_go),
+    (var2_o_as_in_go,'o',False), # override unicode-ipa
+    (var3_o_as_in_go,'o',False), # ditto
+    ('oy',oy_as_in_toy), (var1_oy_as_in_toy,'oy',False),
+    ('r',r),
+    ('sh',sh),
+    (var1_t,'t',False),
+    ('th',th_as_in_think),
+    ('or',oor_as_in_poor),
+    (var1_oor_as_in_poor,'or',False),
+    ('u',opt_u_as_in_pull), ('oo',oo_as_in_food),
+     (var1_oo_as_in_food,'oo',False),
+     (var2_oo_as_in_food,'oo',False),
+     (close_to_or,'or',False),
+     (var1_close_to_or,'or',False),
+     (var2_close_to_or,'or',False),
+     (var1_w,'w',False),
+    ('y',y),
+    ('3',ge_of_blige_etc),
+     cleanup_regexps=[('-$','')],
+    cvtOut_func=None,
   ),
 
   "braille-ipa" : makeDic(
@@ -2948,8 +2998,9 @@ class MacBritish_System_Lexicon(object):
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"])" # see below for why chr(0) is included; (?i) = ignore case
         nonWordAfter=r"(?=([^A-Za-z'"+unichr(0x2019)+"-]|['"+unichr(0x2019)+r"-][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s") (also not if followed by hyphen-letters)
+        ttal = tta.lower()
         for ww,pp in lex:
-          if ww in tta and re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
+          if ww.lower() in ttal and re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
             words2.append(ww) ; phonemes2.append(pp)
         for k,v in self.setMultiple(words2,phonemes2).iteritems():
            tta = re.sub(nonWordBefore+re.escape(k)+nonWordAfter,chr(0)+v,tta)
@@ -2978,7 +3029,7 @@ class MacBritish_System_Lexicon(object):
             _,wSubst,pos,oldPhon = avail[i] ; i += 1
             if avail[i][2] in self.restoreDic: oldPhon=None # shouldn't happen if setMultiple is called only once, but might be useful for small experiments in the Python interpreter etc
             self.set(pos,phon,oldPhon)
-            wDic[word] = wSubst
+            wDic[word] = wSubst[0].upper()+wSubst[1:] # always capitalise it so it can be used at start of sentence too (TODO: copy original capitalisation instead? + what if wSubst[0] is a digit?)
         self.dFile.flush() ; return wDic
     def set(self,phPos,val,old=None):
         """Sets phonemes at position phPos to new value.
