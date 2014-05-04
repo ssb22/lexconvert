@@ -861,6 +861,7 @@ def LexFormats():
     safe_to_drop_characters=True, # TODO: really?
   ),
 
+  # BEGIN PRE-32bit ERA SYNTHS (TODO: add an attribute to JS-hide them by default in HTML?  what about the SpeakJet which probably isn't a 32-bit chip but is post 32-bit era?  and then what about the 'approximation' formats - kana etc - would they need hiding by default also?  maybe best to just leave it)
   "apollo" : makeDic(
     'Dolphin Apollo 2 serial-port and parallel-port hardware synthesizers (in case anybody still uses those)',
     (syllable_separator,'',False), # I don't think the Apollo had anything to mark stress; TODO: control the pitch instead like bbcmicro ?
@@ -920,7 +921,6 @@ def LexFormats():
     cleanup_regexps=[('_K_W','_Q'),('_K_S','_X')],
     cvtOut_regexps=[('_Q','_K_W'),('_X','_K_S')],
   ),
-
   "dectalk" : makeDic(
     'DECtalk hardware synthesizers (American English)', # (1984-ish serial port; later ISA cards)
     (syllable_separator,'',False),
@@ -978,7 +978,6 @@ def LexFormats():
     inline_header="[:phoneme on]\n",
     inline_format="[%s]",
   ),
-
   "doubletalk" : makeDic(
     'DoubleTalk PC/LT serial-port hardware synthesizers (American English; assumes DOS driver by default, otherwise set DTALK_COMMAND_CODE to your current command-code binary value, e.g. export DTALK_COMMAND_CODE=1)', # (1 is the synth's default; the DOS driver lets you put * instead)
     (syllable_separator,'',False),
@@ -1010,7 +1009,6 @@ def LexFormats():
     format_is_binary=ifset('DTALK_COMMAND_CODE',True),
     # DoubleTalk does have a loadable "exceptions dictionary" but usually relies on a DOS tool to write it; I don't have the documentation about it (and don't know how much RAM is available for it - it's taken from the input buffer)
   ),
-
   "keynote" : makeDic(
     'Phoneme-read and lexicon-add codes for Keynote Gold hardware synthesizers (American English)', # ISA, PCMCIA, serial, etc; non-serial models give you an INT 2Fh param to get the address of an API function to call; not sure which software can send these codes directly to it)
     (syllable_separator,'',False),
@@ -1034,7 +1032,6 @@ def LexFormats():
     lex_entry_format="[x]%s %s", lex_footer="[t]\n",
     stress_comes_before_vowel=False, # even though it's "'"
   ),
-
   "audapter" : makeVariantDic(
   "Audapter Speech System, an old hardware serial/parallel-port synthesizer (American English)", # 1989 I think.  The phonemes themselves are the same as the Keynote above, but there's an extra binary byte in the commands and the lex format is stricter.  I haven't checked but my guess is Audapter came before Keynote.
   inline_format='\x05[p] %s\x05[t]',
@@ -1042,7 +1039,6 @@ def LexFormats():
   lex_filename="audapter.dat",
   lex_entry_format="\x05[x]%s %s\x05[t]\n", lex_footer="",
   ),
-  
   "bbcmicro" : makeDic(
     "BBC Micro Speech program from 1985 (see comments in lexconvert.py for more details)",
     # Speech was written by David J. Hoskins and published by Superior Software.  It took 7.5k of RAM including 3.1k of samples (49 phonemes + 1 for fricatives at 64 bytes each, 4-bit ~5.5kHz), 2.2k of lexicon, and 2.2k of machine code; sounds "retro" by modern standards but quite impressive for the BBC Micro in 1985.  Samples are played by amplitude-modulating the BBC's tone generator.
@@ -1052,7 +1048,7 @@ def LexFormats():
     # or if you know it's already loaded: echo "Here is some text" | python lexconvert.py --phones bbcmicro | pbcopy && osascript -e 'tell application "BeebEm3" to activate' && osascript -e 'tell application "System Events" to keystroke "v" using command down'
     # (unfortunately there doesn't seem to be a way of doing it without giving the emulator window focus)
     # If you want to emulate a Master, you might need a *DISK before the *SPEECH (to take it out of ADFS mode).
-    # In some cases you may need a delay between pasting the *SPEECH and pasting the *SPEAK, depending on which ROMs you've installed into the emulated machine.  (You can also put Speech itself into ROM, but this can cause problems: see comments on SP8000 later.)
+    # You can also put Speech into ROM, but this can cause problems: see comments on SP8000 later.
     (syllable_separator,'',False),
     ('4',primary_stress),
     ('5',secondary_stress), # (these are pitch numbers on the BBC; normal pitch is 6, and lower numbers are higher pitches, so try 5=secondary and 4=primary; 3 sounds less calm)
@@ -1126,10 +1122,9 @@ def LexFormats():
     ],
     cvtOut_regexps=[('DUX','DYUW')], # CT handled above
   ),
-
   "amiga" : makeDic(
     'AmigaOS speech synthesizer (American English)', # shipped with the 1985 Amiga release; developed by SoftVoice Inc
-    # All I had to go by for this was a screenshot on Marcos Miranda's blog.  I once saw this synth demonstrated but never tried it.  My early background was the BBC Micro, not Amigas etc.  But I know some people are keen on Amigas so I might as well include it.
+    # All I had to go by for this was a screenshot on Marcos Miranda's "blog".  I once saw this synth demonstrated but never tried it.  My early background was the BBC Micro, not Amigas etc.  But I know some people are keen on Amigas so I might as well include it.
     # (By the way I think David Hoskins had it harder than SoftVoice.  Yes they were both in 1985, but the Amiga was a new 16-bit machine while the BBC was an older 8-bit one.  See the "sam" format for an even older one though, although probably not written by one person.)
     (syllable_separator,'',False),
     ('4',primary_stress),('3',secondary_stress),
@@ -1181,7 +1176,6 @@ def LexFormats():
     safe_to_drop_characters=True, # TODO: really?
     word_separator=" ",phoneme_separator="",
   ),
-
   "sam" : makeDic(
   'Software Automatic Mouth (1982 American English synth that ran on C64, Atari 400/800/etc and Apple II/etc)', # *might* be similar to Macintalk on the 1st Macintosh in 1984
   (syllable_separator,'',False),
@@ -1217,6 +1211,7 @@ def LexFormats():
   # do A=USR(8192).  I don't know about the C64 etc versions.
   # (max 255 phonemes per string; don't know max line len.)
   ),
+  # END (?) PRE-32bit ERA SYNTHS (but see TODO above re SpeakJet, which is below)
 
   "speakjet" : makeDic(
     'Allophone codes for the American English "SpeakJet" speech synthesis chip (the conversion from phonemes to allophones might need tweaking).  Set the SPEAKJET_SYM environment variable to use mnemonics, otherwise numbers are used (set SPEAKJET_BINARY for binary output).',
@@ -2683,8 +2678,10 @@ def print_bbc_warnings(keyCount,lineCount):
         (0x1900,"Model B"), # with Acorn DFS (a reasonable assumption although alternate DFS ROMs are different)
         (0xE00,"Master")]: # (the Master has 8k of special paged-in "filing system RAM", so doesn't need 2816 bytes of main RAM for DFS)
      top = page+keyCount+lineCount*(overhead_per_program_line-1)+2 # the -1 is because keyCount includes a carriage return at the end of each line
-     if model=="Master": x=" (use Speech's Sideways RAM version instead, e.g. *SRLOAD SP8000 8000 7 and reset, but sound quality might be worse)" # I don't know why but SP8000 can play higher and more distorted than SPEECH, at least on emulation (and changing the emulation speed doesn't help, because that setting, at least in BeebEm3, just controls extra usleep every frame; it doesn't actually slow down the 6502 *between* frames).  If on the Master you go into View (*WORD) and then try SP8000, it plays _lower_ than *SPEECH (even if you do *BASIC first) and *SAY can corrupt a View document; ViewSheet (*SHEET) doesn't seem to have this effect; neither does *TERMINAL but *SAY can confuse the terminal.
+     if model=="Master": x=" (use Speech's Sideways RAM version instead, e.g. *SRLOAD SP8000 8000 7 and reset, but sound quality might be worse)" # I don't know why but SP8000 can play higher and more distorted than SPEECH, at least on emulation (and changing the emulation speed doesn't help, because that setting, at least in BeebEm3, just controls extra usleep every frame; it doesn't actually slow down the 6502 *between* frames; anyway timing of sound changes is done by CyclesToSamples stuff in beebsound.cc's SoundTrigger).  If on the Master you go into View (*WORD) and then try SP8000, it plays _lower_ than *SPEECH (even if you do *BASIC first) and *SAY can corrupt a View document; ViewSheet (*SHEET) doesn't seem to have this effect; neither does *TERMINAL but *SAY can confuse the terminal.
      # Re bank numbers, by default banks 4 to 7 are Sideways RAM (4*16k=64k) and I suppose filling up from 7 makes sense because banks 8-F are ROMs (ANFS,DFS,ViewSheet,Edit,BASIC,ADFS,View,Terminal; OS is a separate 16k so there's scope for 144k of supplied ROM).  Banks 0-3 are ROM expansion slots.  The "128" in the name "Master 128" comes from 32k main RAM, 64k Sideways RAM, 20k shadow RAM (for screen modes 128-135), 4k OS "private RAM" (paged on top of 8000-8FFF) and 8k filing system RAM (paged on top of C000-DFFF) = 128k.  Not sure what happened on the B+.
+     # By the way BeebEm's beebsound.cc also shows us why SOUND was always out of tune especially in the higher pitches.  The 16-bit freqval given to the chip is 125000/freq and must be an integer, so the likely temperament in cents for non-PCM is given by [int(math.log(125000.0/math.ceil(125000/freq)/freq,2**(1.0/1200))) for freq in [440*((2**(1.0/12))**semi) for semi in range(-12*3+2,12*2+6)]] (the actual temperament will depend on the OS's implementation of mapping SOUND pitch values to freqval's, unless you program the chip directly, but this list is indicative and varies over 10% in the top 2 octaves)
+     # Some other ROMs (e.g. Alan Blundell's "Informant" 1989) seem to result in a crash after the *SPEECH and/or *SPEAK commands complete, at least in some emulator configurations; this may or may not be resolved via timing adjustments or adjustments in the ROM order; not sure exactly what the problem is
      else: x=" (Speech program will be overwritten unless relocated)" # (could use Sideways RAM for it instead if you have it fitted, see above)
      if top > default_speech_loc: limits_exceeded.append("%s TOP=&%X limit%s" % (model,default_speech_loc,x)) # The Speech program does nothing to stop your program (or its variables etc) from growing large enough to overwrite &5500, nor does it stop the stack pointer (coming down from HIMEM) from overwriting &72FF. For more safety on a Model B you could use RELOCAT to put Speech at &5E00 and be sure to set HIMEM=&5E00 before loading, but then you must avoid commands that change HIMEM, such as MODE (but selecting any non-shadow mode other than 7 will overwrite Speech anyway, although if you set the mode before loading Speech then it'll overwrite screen memory and still work as long as the affected part of the screen is undisturbed).  You can't do tricks like ditching the lexicon because RELOCAT won't let you go above 5E00 (unless you fix it, but I haven't looked in detail; if you can fix RELOCAT to go above 5E00 then you can create a lexicon-free Speech by taking the 1st 0x1560 bytes of SPEECH and append two * bytes, relocate to &6600 and set HIMEM, but don't expect *SAY to work, unless you put a really small lexicon into the spare 144 bytes that are left - RELOCAT needs an xx00 address so you can't have those bytes at the bottom).  You could even relocate to &6A00 and overwrite (non-shadow) screen memory if you don't mind the screen being filled with gibberish that you'd better not erase! (well if you program the VIDC as mentioned above and you didn't re-add a small lexicon then you could get yourself 3.6 lines of usable Mode 7 display from the spare bytes but it's probably not worth the effort)
      if top > mode7_himem:
