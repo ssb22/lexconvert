@@ -1398,7 +1398,7 @@ def LexFormats():
     (u'e\u026a',a_as_in_ate),
     (u'\xe6\u026a',var1_a_as_in_ate),
     ('f',f),
-    (u'\u0261',g),
+    (u'\u0261',g), ('g',g,False),
     ('h',h),
     (u'\u026a',i_as_in_it),
     (u'\u0268',var1_i_as_in_it),
