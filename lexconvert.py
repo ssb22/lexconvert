@@ -1423,7 +1423,7 @@ def LexFormats():
     (u'\u0254\u026a',oy_as_in_toy),
     (u'o\u026a',var1_oy_as_in_toy),
     ('p',p),
-    (u'\u0279',r),
+    (u'\u0279',r), ('r',r,False),
     (var1_r,'r',False),
     ('s',s),
     (u'\u0283',sh),
