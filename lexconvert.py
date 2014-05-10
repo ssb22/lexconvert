@@ -1792,8 +1792,8 @@ def LexFormats():
   "kana-approx" : makeDic(
   "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example try feeding it to 'say -v Kyoko' on Mac OS 10.7+ (with Japanese voice installed in System Preferences) (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better with some complex words, although the built-in converter does seem to have access to slightly more phonemes and can therefore produce words like "to" better).  Default is hiragana because I find hiragana easier to read than katakana.  Mac OS 10.7+'s Korean voices (Yuna and Narae) can also read kana, and you could try doing a makeVariantDic and adding in some Korean jamo letters for them (you'd be pushed to represent everything in jamo but kana+jamo seems more hopeful in theory), but again some words work better than others (not all phonetic combinations are supported and some words aren't clear at all).
     # This kana-approx format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
-    (u'double-',primary_stress),
-    (secondary_stress,ifset('KANA_MORE_EMPH',u'double-'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well; if it did, I'd put this line in a makeVariantDic called kana-approx-moreEmph or something)
+    (u'\u30fc',primary_stress),
+    (secondary_stress,ifset('KANA_MORE_EMPH',u'\u30fc'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well; if it did, I'd put this line in a makeVariantDic called kana-approx-moreEmph or something)
     # The following Unicode codepoints are hiragana; KANA_TYPE is handled by cleanup_func below
     (u'\u3042',a_as_in_apple),
     (u'\u3044',e_as_in_eat),
@@ -1842,10 +1842,7 @@ def LexFormats():
     lex_entry_format = "%s ~= %s\n",
     word_separator=" ",phoneme_separator="",
     clause_separator=u"\u3002\n".encode('utf-8'),
-    stress_comes_before_vowel=True,
-    cleanup_regexps=[
-       (u'double-(.)',ur'\1\u30fc'),
-       (u"\u306c$",u"\u3093\u30fc"), # TODO: or u"\u3093\u3093" ?
+    cleanup_regexps=[(u"\u306c$",u"\u3093\u30fc"), # TODO: or u"\u3093\u3093" ?
        # now the vowel replacements (bu+a -> ba, etc) (in most cases these can be reversed into cvtOut_regexps if you want to use the kana-approx table to convert hiragana into approximate English phonemes (plus add a (u"\u3093\u30fc*",u"\u306c") and perhaps de-doubling rules to convert back to emphasis) but the result is unlikely to be any good)
        (u"\u3076\u3042",u"\u3070"),(u"\u3076\u3044",u"\u3073"),(u"\u3076\u3046",u"\u3076"),(u"\u3076\u3048",u"\u3079"),(u"\u3076\u304a",u"\u307c"),
        (u"\u3061\u3085\u3042",u"\u3061\u3083"),(u"\u3061\u3085\u3044",u"\u3061"),(u"\u3061\u3085\u3046",u"\u3061\u3085"),(u"\u3061\u3085\u3048",u"\u3061\u3047"),(u"\u3061\u3085\u304a",u"\u3061\u3087"),
@@ -2295,8 +2292,8 @@ def convert(pronunc,source,dest):
                 isStressMark=(toAdd and toAdd in [lexFormats[dest].get(primary_stress,''),lexFormats[dest].get(secondary_stress,''),lexFormats[dest].get(syllable_separator,'')])
                 if isStressMark and not checkSetting(dest,"stress_comes_before_vowel"):
                     if checkSetting(source,"stress_comes_before_vowel"): toAdd, toAddAfter = "",toAdd # move stress marks from before vowel to after
-                    else:
-                        # With Cepstral synth, stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
+                    else: # stress is already after, but:
+                        # With Cepstral synth (and kana-approx), stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
                         r=len(ret)-1
                         while ret[r] in dest_consonants or ret[r].endswith("*added"): r -= 1 # (if that raises IndexError then the input had a stress mark before any vowel) ("*added" condition is there so that implicit vowels don't get the stress)
                         ret.insert(r+1,toAdd) ; toAdd=""
