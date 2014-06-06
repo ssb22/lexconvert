@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.203 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.204 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -2887,9 +2887,13 @@ def catchSignals():
     if inSigHandler: return
     inSigHandler = True
     os.killpg(os.getpgrp(),sigNo)
+    sys.stderr.write("\nCaught signal %d\n" % sigNo)
     raise KeyboardInterrupt
   for n in xrange(1,signal.NSIG):
-    if not n==signal.SIGCHLD and not signal.getsignal(n)==signal.SIG_IGN:
+    if not n in [
+          signal.SIGCHLD, # sent on subprocess completion
+          signal.SIGTSTP,signal.SIGCONT, # Ctrl-Z / fg
+    ] and not signal.getsignal(n)==signal.SIG_IGN:
       try: signal.signal(n,f)
       except: pass
 class MacBritish_System_Lexicon(object):
