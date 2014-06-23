@@ -2712,7 +2712,7 @@ def bbc_appendDefaultLex(outFile):
      # TODO: can we compress the BBC lexicon?  i.e. detect if a rule will happen anyway due to subsequent wildcard rules, and delete it if so (don't know how many bytes that would save)
   outFile.write(">**")
   fileLen = outFile.tell()
-  assert not os.environ.get("MAKE_SPEECH_ROM",0) or fileLen <= 16384, "Speech ROM file got too big"
+  assert not os.environ.get("MAKE_SPEECH_ROM",0) or fileLen <= 16384, "Speech ROM file got too big (%d)" % fileLen
   outFile.close()
   print_bbclex_instructions(getSetting("bbcmicro","lex_filename"),fileLen)
 
@@ -2798,7 +2798,7 @@ def print_bbclex_instructions(fname,size):
         reloc_call = reloc_addr + 0xB00
         print "This lexicon is too big for Speech at its default address of &%X, but you could use RELOCAT to put a version at &%X and then initialise it with CALL %s (or do the suggested *SAVE, reset, and run *SP). Be sure to set HIMEM=&%X. Then *LOAD %s %X or change the relocated SP file from offset &%X.%s" % (noSRAM_default_addr,reloc_addr,bbcshortest(reloc_call),reloc_addr,fname,bbcStart,noSRAM_lex_offset,instr)
     else: print "This lexicon is too big for Speech in main RAM even with relocation."
-  else:
+  else: # fits at default location - no relocation needed
     bbcStart = noSRAM_default_addr+noSRAM_lex_offset
     print "You can load this lexicon by *LOAD %s %X or change the SPEECH file from offset &%X. Suggest you also set HIMEM=&%X for safety." % (fname,bbcStart,noSRAM_lex_offset,noSRAM_default_addr)
   if bbcStart: # we managed to fit it into main RAM
@@ -2807,10 +2807,10 @@ def print_bbclex_instructions(fname,size):
      print "For ease of transfer to emulators etc, a self-contained keystroke file for putting %s data at &%X has been written to %s.key" % (fname,bbcStart,fname)
      if len(keys) > 32767: print "(This file looks too big for BeebEm to paste though)" # see comments elsewhere
   # Instructions for replacing lex in SRAM:
-  if size > SRAM_max-SRAM_lex_offset: print "This lexicon is too big for Speech in Sideways RAM." # unless you can patch Speech to run in SRAM but read its lexicon from main RAM
+  if size > SRAM_max-SRAM_lex_offset: print "This lexicon is too big for Speech in Sideways RAM." # unless you can patch Speech to run in SRAM but read its lexicon from main RAM, or run in main RAM but page in multiple banks of SRAM for the lexicon (but even then there'll be a limit)
   else: print "You can load this lexicon into Sideways RAM by *SRLOAD %s %X 7 (or whichever bank number you're using), or change the SP8000 file from offset &%X." % (fname,SRAM_lex_offset+0x8000,SRAM_lex_offset)
   if not os.environ.get("SPEECH_DISK",""): print "If you want to append the default lexicon to this one, set SPEECH_DISK to the image of the original Speech disk before running lexconvert, e.g. export SPEECH_DISK=/usr/local/BeebEm3/diskimg/Speech.ssd"
-  print "You can also set MAKE_SPEECH_ROM=1 (along with SPEECH_DISK) to create a SPEECH.ROM file instead"
+  if size <= SRAM_max-SRAM_lex_offset: print "You can also set MAKE_SPEECH_ROM=1 (along with SPEECH_DISK) to create a SPEECH.ROM file instead"
  print "If you get 'Mistake in speech' when testing some words, try starting with '*SAY, ' (this seems to be a Speech bug)" # - can't track down which words it does and doesn't apply to
  print "It might be better to load your lexicon into eSpeak and use lexconvert's --phones option to drive the BBC with phonemes."
 
