@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.205 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.206 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -3005,7 +3005,7 @@ class MacBritish_System_Lexicon(object):
            textToPrint = re.sub(nonWordBefore+'('+u'[\u2032\u00b7]*'.join(re.escape(c) for c in k)+')'+nonWordAfter,chr(0)+r'\1'+chr(1),textToPrint)
         tta = tta.replace(chr(0),'')
         term = os.environ.get("TERM","")
-        if ("xterm" in term or term=="screen") and sys.stdout.isatty(): # we can probably underline words (inverse is more widely supported than underline, e.g. should work even on old Linux console, but there might be a *lot* of words, which wouldn't be very good in inverse if user needs dark background and inverse is bright.  Unlike Annogen, we're dealing primarily with Latin letters.)
+        if ("xterm" in term or term=="screen") and sys.stdout.isatty(): # we can probably underline words (inverse is more widely supported than underline, e.g. should work even on an old Linux console in case someone's using that to control an OS X server, but there might be a *lot* of words, which wouldn't be very good in inverse if user needs dark background and inverse is bright.  Unlike Annogen, we're dealing primarily with Latin letters.)
            print textToPrint.encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip()
         # else don't print anything (saves confusion)
         os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta)
@@ -3017,17 +3017,23 @@ class MacBritish_System_Lexicon(object):
         for word,phon in zip(words,phonemes):
             needed.append((len(phon),word,phon))
         avail.sort() ; needed.sort() # shortest phon first
-        i = 0 ; wDic = {}
+        i = 0 ; wDic = {} ; iDone=set() ; mustBeAlpha=True
+        # mustBeAlpha: prefer alphabetical words, since
+        # these can be capitalised at start of sentence
+        # (the prosody doesn't always work if it isn't)
         for l,word,phon in needed:
-            while avail[i][0] < l:
+            while avail[i][0] < l or (mustBeAlpha and not re.match("[A-Za-z]",avail[i][1])) or i in iDone:
                 i += 1
                 if i==len(avail):
+                    if mustBeAlpha: # desperate situation: we HAVE to use the non-alphabetical slots now (ideally we should pick words that never occur at start of sentence for them, but this branch is hopefully a rare situation in practice)
+                       mustBeAlpha=False ; i=0; continue
                     sys.stderr.write("Could not find enough lexicon slots!\n") # TODO: we passed 'words' to usable_words's words_ok_to_redefine - this might not be the case if we didn't find enough slots
                     self.dFile.flush() ; return wDic
+            iDone.add(i)
             _,wSubst,pos,oldPhon = avail[i] ; i += 1
             if avail[i][2] in self.restoreDic: oldPhon=None # shouldn't happen if setMultiple is called only once, but might be useful for small experiments in the Python interpreter etc
             self.set(pos,phon,oldPhon)
-            wDic[word] = wSubst[0].upper()+wSubst[1:] # always capitalise it so it can be used at start of sentence too (TODO: copy original capitalisation instead? + what if wSubst[0] is a digit?)
+            wDic[word] = wSubst[0].upper()+wSubst[1:] # always capitalise it so it can be used at start of sentence too (TODO: copy original capitalisation of each instance instead, in case it happens to come directly after a dotted abbreviation? although if it's something that's always capitalised anyway, e.g. most names, then this won't make any difference)
         self.dFile.flush() ; return wDic
     def set(self,phPos,val,old=None):
         """Sets phonemes at position phPos to new value.
