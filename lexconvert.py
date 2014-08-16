@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.206 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.207 - convert phonemes between different speech synthesizers etc
 (c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1379,7 +1379,7 @@ def LexFormats():
     (u'\u0259',a_as_in_ago),
     (u'\u0259\u02d0',e_as_in_herd),
     (u'\u025a',var1_a_as_in_ago),
-    (u'a\u026a',eye),
+    (u'a\u026a',eye), (u'\u028c\u026a',eye,False),
     (u'\u0251e',var1_eye),
     ('b',b),
     (u't\u0283',ch),
