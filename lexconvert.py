@@ -1869,6 +1869,7 @@ def LexFormats():
        (u'\u3050\u3050',u'\u3050'), # gugu -> gu, sometimes comes up with 'gl-' combinations
        (u'\u30fc\u30fc+',u'\u30fc'), # in case we put 30fc in the table AND a stress mark has been applied to it
        (u'^(.)$',ur'\1\u30fc'), # lengthen any word that ends up as a single kana (otherwise can be clipped badly)
+    (u'^([\u3042\u3070\u3060\u304c\u304b\u3089\u307e\u306a\u3071\u3055\u305f\u3084\u3056\u308f]\u3044)$',ur'\1\u30fc'), # ditto for -ai (TODO: -ao might need lengthening sometimes?? depends on context.  -ei, -oi, -ou seem OK)
     ],
     cleanup_func = hiragana_to_katakana
   ),
