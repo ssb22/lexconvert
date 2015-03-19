@@ -2508,7 +2508,7 @@ def read_user_lexicon(fromFormat):
     try:
        lexFilename = getSetting(fromFormat,"lex_filename")
        lexfile = open(lexFilename)
-       print "Reading from",lexFilename
+       if not os.environ.get("LEXCONVERT_OMIT_READING_FROM",""): print "Reading from",lexFilename # TODO: document LEXCONVERT_OMIT_READING_FROM (might be useful for the --mac-uk option)
     except KeyError: lexfile = None # lex_read_function without lex_filename is allowed, if the read function can take null param and fetch the lexicon itself
     except IOError: raise Message(fromFormat+"'s lexicon is expected to be in a file called "+replHome(lexFilename)+" which could not be read - please fix and try again")
     return readFunction(lexfile)
