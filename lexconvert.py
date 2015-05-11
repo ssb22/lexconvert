@@ -582,7 +582,7 @@ def LexFormats():
   ),
 
   "mac-uk" : makeDic(
-    "Scansoft/Nuance British voices for Mac OS 10.7+ (system lexicon editing required, see --mac-uk option)",
+    "Scansoft/Nuance British voices in Mac OS 10.7+ (system lexicon editing required, see --mac-uk option)",
     ('.',syllable_separator),
     ("'",primary_stress),
     (secondary_stress,'',False),
