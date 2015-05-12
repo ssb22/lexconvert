@@ -1936,7 +1936,7 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats.
    if format=="example": return "The 'example' format cannot be used with --phones; try --convert, or did you mean --phones festival" # could allow example anyway as it's basically Festival, but save confusion as eSpeak might not generate the same phonemes if our example words haven't been installed in the system's eSpeak.  (Still allow it to be used in --try etc though.)
    if not format in lexFormats and not format=="all": return "No such format "+repr(format)+" (use --formats to see a list of formats)"
    for response in getInputText(i+2,"text",'maybe'):
-    response = pipeThroughEspeak(response.replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')) # (remove any 2032 and b7 pronunciation marks before passing to eSpeak)
+    response = pipeThroughEspeak(response.replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b4'.encode('utf-8'),'').replace(u'\u02b9'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')) # (remove any 2032 and b7 pronunciation marks before passing to eSpeak)
     if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
     if format=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
     else: formats = [format]
@@ -2977,7 +2977,7 @@ class MacBritish_System_Lexicon(object):
         self.dFile = open(self.filename,'r+')
         assert len(self.allWords()) == len(self.allPh())
         MacBritish_System_Lexicon.instances[voice] = self
-        self.textToAvoid = text ; self.restoreDic = {}
+        self.textToAvoid = text.replace(unichr(160).encode('utf-8'),' ') ; self.restoreDic = {}
         catchSignals()
     def allWords(self):
         "Returns a list of words that are defined in the system lexicon (which won't be changed, but see allPh)"
@@ -3022,7 +3022,7 @@ class MacBritish_System_Lexicon(object):
         "Reads the text given in the constructor after setting up the lexicon with the given (word,phoneme) list"
         # self.check_redef(lex) # uncomment if you want to know about these
         textToPrint = u' '+self.textToAvoid.decode('utf-8')+u' '
-        tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'").replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'').replace(u'\u2014'.encode('utf-8'),' ')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint; also normalise apostrophes but not in textToPrint, and be careful with dashes as lex'ing the word after a hyphen or em-dash won't work BUT we still want to support hyphenated words IN the lexicon, so em-dashes are replaced here and hyphens are included in nonWordBefore below)
+        tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'").replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b4'.encode('utf-8'),'').replace(u'\u02b9'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'').replace(u'\u2014'.encode('utf-8'),' ')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint; also normalise apostrophes but not in textToPrint, and be careful with dashes as lex'ing the word after a hyphen or em-dash won't work BUT we still want to support hyphenated words IN the lexicon, so em-dashes are replaced here and hyphens are included in nonWordBefore below)
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"-])" # see below for why chr(0) is included, and see comment above for why hyphen is at the end; (?i) = ignore case
         nonWordAfter=r"(?=([^A-Za-z'"+unichr(0x2019)+"-]|['"+unichr(0x2019)+r"-][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s", because the voice won't use our custom lex entry if "'s" is added to the lex'd word, TODO: automatically add "'s" versions to the lexicon?) (also not if followed by hyphen-letters; hyphen before start is handled above, although TODO preceded by non-letter + hyphen might be OK)
@@ -3032,7 +3032,7 @@ class MacBritish_System_Lexicon(object):
             words2.append(ww) ; phonemes2.append(pp)
         for k,v in self.setMultiple(words2,phonemes2).iteritems():
            tta = re.sub(nonWordBefore+re.escape(k)+nonWordAfter,chr(0)+v,tta)
-           textToPrint = re.sub(nonWordBefore+'('+u'[\u2032\u00b7]*'.join(re.escape(c) for c in k)+')'+nonWordAfter,chr(0)+r'\1'+chr(1),textToPrint)
+           textToPrint = re.sub(nonWordBefore+'('+u'[\u2032\u00b4\u02b9\u00b7]*'.join(re.escape(c) for c in k)+')'+nonWordAfter,chr(0)+r'\1'+chr(1),textToPrint)
         tta = tta.replace(chr(0),'')
         term = os.environ.get("TERM","")
         if ("xterm" in term or term=="screen") and sys.stdout.isatty(): # we can probably underline words (inverse is more widely supported than underline, e.g. should work even on an old Linux console in case someone's using that to control an OS X server, but there might be a *lot* of words, which wouldn't be very good in inverse if user needs dark background and inverse is bright.  Unlike Annogen, we're dealing primarily with Latin letters.)
