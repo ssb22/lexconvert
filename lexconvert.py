@@ -738,7 +738,7 @@ def LexFormats():
     cleanup_regexps=[(r'\\',r'\\\\'),('"','&quot;'),('::',':')],
     lex_filename="",lex_entry_format="",
     lex_read_function=None,
-    inline_oneoff_header=r'class Speak { public static void speak(android.app.Activity a,String s) { class OnInit implements android.speech.tts.TextToSpeech.OnInitListener { public OnInit(String s) { this.s = s; } public void onInit(int i) { mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private String s; }; if(mTts==null) mTts=new android.speech.tts.TextToSpeech(a,new OnInit(s)); else mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private static android.speech.tts.TextToSpeech mTts = null; };'+'\n',
+    inline_oneoff_header=r'class Speak { public static void speak(android.app.Activity a,String s) { class OnInit implements android.speech.tts.TextToSpeech.OnInitListener { public OnInit(String s) { this.s = s; } public void onInit(int i) { mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private String s; }; if(mTts==null) mTts=new android.speech.tts.TextToSpeech(a,new OnInit(s)); else mTts.speak(s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private static android.speech.tts.TextToSpeech mTts = null; };'+'\n',
     inline_header=r'Speak.speak(this,"<speak xml:lang=\"en-GB\">',
     inline_format=r'<phoneme alphabet=\"xsampa\" ph=\"%s\"/>',
     clause_separator=r".\n", # note r"\n" != "\n"
