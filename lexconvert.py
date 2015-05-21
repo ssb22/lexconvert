@@ -44,6 +44,7 @@ def Phonemes():
    _, var5_a_as_in_ah = variant()
    a_as_in_apple = vowel()
    u_as_in_but = vowel() # or the first part of un as in hunt
+   _, var1_u_as_in_but = variant()
    o_as_in_orange = vowel()
    _, var1_o_as_in_orange = variant()
    _, var2_o_as_in_orange = variant()
@@ -90,7 +91,6 @@ def Phonemes():
    o_as_in_go = vowel()
    _, var1_o_as_in_go = variant()
    _, var2_o_as_in_go = variant()
-   _, var3_o_as_in_go = variant()
    opt_ol_as_in_gold = opt_vowel() # see eSpeak / bbcmicro
    oy_as_in_toy = vowel()
    _, var1_oy_as_in_toy = variant()
@@ -694,7 +694,7 @@ def LexFormats():
     ('N',ng),
     ('@U',o_as_in_go),
     ('oU',var2_o_as_in_go),
-    ('@}',var3_o_as_in_go), # ?? on pico this sounds more like u_as_in_but
+    ('@}',var1_u_as_in_but),
     ('OI',oy_as_in_toy),
     ('oI',var1_oy_as_in_toy),
     ('p',p),
@@ -727,7 +727,7 @@ def LexFormats():
     safe_to_drop_characters=True, # TODO: really?
   ),
   "android-pico" : makeVariantDic(
-    'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+), wrapped in Java code',
+    'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+, American), wrapped in Java code', # you could put en-GB instead of en-US, but it must be installed on the phone
     ('A:',a_as_in_ah), # won't sound without the :
     (var5_a_as_in_ah,'A:',False), # a: won't sound
     ('@U:',o_as_in_go),
@@ -738,8 +738,8 @@ def LexFormats():
     cleanup_regexps=[(r'\\',r'\\\\'),('"','&quot;'),('::',':')],
     lex_filename="",lex_entry_format="",
     lex_read_function=None,
-    inline_oneoff_header=r'class Speak { public static void speak(android.app.Activity a,String s) { class OnInit implements android.speech.tts.TextToSpeech.OnInitListener { public OnInit(String s) { this.s = s; } public void onInit(int i) { mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private String s; }; if(mTts==null) mTts=new android.speech.tts.TextToSpeech(a,new OnInit(s)); else mTts.speak(s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private static android.speech.tts.TextToSpeech mTts = null; };'+'\n',
-    inline_header=r'Speak.speak(this,"<speak xml:lang=\"en-GB\">',
+    inline_oneoff_header=r'class Speak { public static void speak(android.app.Activity a,String s) { class OnInit implements android.speech.tts.TextToSpeech.OnInitListener { public OnInit(String s) { this.s = s; } public void onInit(int i) { mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private String s; }; if(mTts==null) mTts=new android.speech.tts.TextToSpeech(a,new OnInit(s),"com.svox.pico"); else mTts.speak(s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private static android.speech.tts.TextToSpeech mTts = null; };'+'\n',
+    inline_header=r'Speak.speak(this,"<speak xml:lang=\"en-US\">',
     inline_format=r'<phoneme alphabet=\"xsampa\" ph=\"%s\"/>',
     clause_separator=r".\n", # note r"\n" != "\n"
     inline_footer='</speak>");',
@@ -790,7 +790,7 @@ def LexFormats():
     ('N',ng),
     ('@U',o_as_in_go),
     ('o U',var2_o_as_in_go),
-    ('@ }',var3_o_as_in_go),
+    ('@ }',var1_u_as_in_but),
     ('OI',oy_as_in_toy),
     ('o I',var1_oy_as_in_toy),
     ('p',p),
@@ -1430,7 +1430,7 @@ def LexFormats():
     (u'\u0259\u028a',o_as_in_go),
     ('o',var1_o_as_in_go),
     (u'o\u028a',var2_o_as_in_go),
-    (u'\u0259\u0289',var3_o_as_in_go),
+    (u'\u0259\u0289',var1_u_as_in_but),
     (u'\u0254\u026a',oy_as_in_toy),
     (u'o\u026a',var1_oy_as_in_toy),
     ('p',p),
@@ -1497,7 +1497,7 @@ def LexFormats():
     ('ng',ng),
     ('o',o_as_in_go),
     (var2_o_as_in_go,'o',False), # override unicode-ipa
-    (var3_o_as_in_go,'o',False), # ditto
+    (var1_u_as_in_but,'o',False), # ditto (?? '+'?)
     ('oy',oy_as_in_toy), (var1_oy_as_in_toy,'oy',False),
     ('r',r),
     ('sh',sh),
@@ -1577,7 +1577,7 @@ def LexFormats():
     ('5(',o_as_in_go),
     ('O',var1_o_as_in_go),
     ('O(',var2_o_as_in_go),
-    ('50U',var3_o_as_in_go),
+    ('50U',var1_u_as_in_but),
     ('</',oy_as_in_toy),
     ('O/',var1_oy_as_in_toy),
     ('P',p),
@@ -1676,7 +1676,7 @@ def LexFormats():
     ('@U',o_as_in_go),
     ('o',var1_o_as_in_go),
     ('oU',var2_o_as_in_go),
-    ('@0',var3_o_as_in_go),
+    ('@0',var1_u_as_in_but),
     ('OI',oy_as_in_toy),
     ('oI',var1_oy_as_in_toy),
     ('p',p),
