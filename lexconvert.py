@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.21 - convert phonemes between different speech synthesizers etc
-(c) 2007-2012,2014 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.22 - convert phonemes between different speech synthesizers etc
+(c) 2007-15 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
 
@@ -39,7 +39,6 @@ def Phonemes():
      format. """
    a_as_in_ah = vowel()
    _, var1_a_as_in_ah = variant()
-   _, var2_a_as_in_ah = variant()
    _, var3_a_as_in_ah = variant()
    _, var4_a_as_in_ah = variant()
    _, var5_a_as_in_ah = variant()
@@ -129,6 +128,7 @@ def Phonemes():
    text_question = other()
    text_exclamation = other()
    text_comma = other()
+   ipa_colon = other() # for catching missed cases
    del _ ; return locals()
 
 def LexFormats():
@@ -177,7 +177,7 @@ def LexFormats():
 
        cleanup_regexps (default none) - optional list of
        (search,replace) regular expressions to "clean up"
-       after converting INTO this format
+       after converting each word INTO this format
        cleanup_func (default none) - optional special-case
        function to pass result through after cleanup_regexps
 
@@ -200,8 +200,10 @@ def LexFormats():
        (affects the --phones and --phones2phones options)
 
        inline_header (default none) text to print first
-       when outputting from --phones or --phones2phones
+         when outputting from --phones or --phones2phones
        inline_footer (default none) text to print last
+       inline_oneoff_header (default none) text to print
+         before inline_header on the first time only
 
        lex_filename - filename of a lexicon file.  If this
        is not specified, there is no support for writing a
@@ -606,7 +608,7 @@ def LexFormats():
     ('g',g),
     ('h',h),
     ('I',i_as_in_it),
-    (ear,'E0',False),
+    ('I&$',ear),
     ('i',e_as_in_eat),
     ('d&Z',j_as_in_jump),
     ('k',k),
@@ -632,7 +634,7 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
-    inline_header = "(mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it)\n",
+    inline_oneoff_header = "(mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it)\n",
     word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
     safe_to_drop_characters=True, # TODO: really?
@@ -645,7 +647,7 @@ def LexFormats():
     ('"',primary_stress),
     ('%',secondary_stress),
     ('A',a_as_in_ah),
-    (':',var2_a_as_in_ah),
+    (':',ipa_colon),
     ('A:',var3_a_as_in_ah),
     ('Ar\\',var4_a_as_in_ah),
     ('a:',var5_a_as_in_ah),
@@ -692,7 +694,7 @@ def LexFormats():
     ('N',ng),
     ('@U',o_as_in_go),
     ('oU',var2_o_as_in_go),
-    ('@}',var3_o_as_in_go),
+    ('@}',var3_o_as_in_go), # ?? on pico this sounds more like u_as_in_but
     ('OI',oy_as_in_toy),
     ('oI',var1_oy_as_in_toy),
     ('p',p),
@@ -725,14 +727,22 @@ def LexFormats():
     safe_to_drop_characters=True, # TODO: really?
   ),
   "android-pico" : makeVariantDic(
-    'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+, American), wrapped in Java code',
-    cleanup_regexps=[(r'\\',r'\\\\'),('"','&quot;')],
+    'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+), wrapped in Java code',
+    ('A:',a_as_in_ah), # won't sound without the :
+    (var5_a_as_in_ah,'A:',False), # a: won't sound
+    ('@U:',o_as_in_go),
+    ('I',var1_i_as_in_it), # '1' won't sound
+    ('i:',e_as_in_eat), # 'i' won't sound
+    ('u:',oo_as_in_food), # }: won't sound
+    ('a_I',eye),('a_U',o_as_in_now),('e_I',a_as_in_ate),('O_I',oy_as_in_toy),('O_I',var1_oy_as_in_toy),('o_U',var2_o_as_in_go),
+    cleanup_regexps=[(r'\\',r'\\\\'),('"','&quot;'),('::',':')],
     lex_filename="",lex_entry_format="",
     lex_read_function=None,
-    inline_header=r'mTts.speak("<speak xml:lang=\"en-US\">', # TODO: this assumes you're using their published 'boilerplate' code to instantiate mTts in onActivityResult.  Don't know if want to put ALL the boilerplate code in here (probably best not to)
+    inline_oneoff_header=r'class Speak { public static void speak(android.app.Activity a,String s) { class OnInit implements android.speech.tts.TextToSpeech.OnInitListener { public OnInit(String s) { this.s = s; } public void onInit(int i) { mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private String s; }; if(mTts==null) mTts=new android.speech.tts.TextToSpeech(a,new OnInit(s)); else mTts.speak(this.s, android.speech.tts.TextToSpeech.QUEUE_ADD, null); } private static android.speech.tts.TextToSpeech mTts = null; };'+'\n',
+    inline_header=r'Speak.speak(this,"<speak xml:lang=\"en-GB\">',
     inline_format=r'<phoneme alphabet=\"xsampa\" ph=\"%s\"/>',
-    clause_separator=r"\n", # note r"\n" != "\n"
-    inline_footer='</speak>", TextToSpeech.QUEUE_ADD, null);',
+    clause_separator=r".\n", # note r"\n" != "\n"
+    inline_footer='</speak>");',
   ),
 
   "acapela-uk" : makeDic(
@@ -814,7 +824,7 @@ def LexFormats():
     ('2',secondary_stress),
     ('AA',a_as_in_ah),
     (var1_a_as_in_ah,'2',False),
-    (var2_a_as_in_ah,'1',False),
+    (ipa_colon,'1',False),
     ('AE',a_as_in_apple),
     ('AH',u_as_in_but),
     (o_as_in_orange,'AA',False),
@@ -1365,7 +1375,7 @@ def LexFormats():
     ('!',text_exclamation),
     (',',text_comma),
     (u'\u0251',a_as_in_ah),
-    (u'\u02d0',var2_a_as_in_ah),
+    (u'\u02d0',ipa_colon),
     (u'\u0251\u02d0',var3_a_as_in_ah),
     (u'\u0251\u0279',var4_a_as_in_ah),
     ('a\u02d0',var5_a_as_in_ah),
@@ -1463,7 +1473,7 @@ def LexFormats():
     ("'",primary_stress),
     (',',secondary_stress),
     ('ar-',a_as_in_ah),
-    (':',var2_a_as_in_ah),
+    (':',ipa_colon),
     (var3_a_as_in_ah,'ar-',False),
     (var4_a_as_in_ah,'ar-',False),
     ('^',u_as_in_but),
@@ -1514,7 +1524,7 @@ def LexFormats():
     ('_B',primary_stress),
     ('_2',secondary_stress),
     ('*',a_as_in_ah),
-    ('3',var2_a_as_in_ah),
+    ('3',ipa_colon),
     ('*3',var3_a_as_in_ah),
     ('*#',var4_a_as_in_ah),
     ('A3',var5_a_as_in_ah),
@@ -1615,7 +1625,7 @@ def LexFormats():
     ('!',text_exclamation),
     (',',text_comma),
     ('A',a_as_in_ah),
-    (':',var2_a_as_in_ah),
+    (':',ipa_colon),
     ('A:',var3_a_as_in_ah),
     ('A\\textturnr{}',var4_a_as_in_ah),
     ('a:',var5_a_as_in_ah),
@@ -1699,7 +1709,7 @@ def LexFormats():
     lex_entry_format=r"%s & \textipa{%s}\\"+"\n",
     lex_footer = r"\end{longtable}\end{document}"+"\n",
     inline_format = "\\textipa{%s}",
-    inline_header = r"% In preamble, put \usepackage[safe]{tipa}"+"\n", # (the [safe] part is recommended if you're mixing with other TeX)
+    inline_oneoff_header = r"% In preamble, put \usepackage[safe]{tipa}"+"\n", # (the [safe] part is recommended if you're mixing with other TeX)
     word_separator=" ",phoneme_separator="",
     clause_separator=r"\\"+"\n",
     stress_comes_before_vowel=True,
@@ -1935,20 +1945,22 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats.
    format = sys.argv[i+1]
    if format=="example": return "The 'example' format cannot be used with --phones; try --convert, or did you mean --phones festival" # could allow example anyway as it's basically Festival, but save confusion as eSpeak might not generate the same phonemes if our example words haven't been installed in the system's eSpeak.  (Still allow it to be used in --try etc though.)
    if not format in lexFormats and not format=="all": return "No such format "+repr(format)+" (use --formats to see a list of formats)"
+   hadOneoff = False
    for response in getInputText(i+2,"text",'maybe'):
     response = pipeThroughEspeak(response.replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b4'.encode('utf-8'),'').replace(u'\u02b9'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'')) # (remove any 2032 and b7 pronunciation marks before passing to eSpeak)
     if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
     if format=="all": formats = sorted(k for k in lexFormats.keys() if not k=="example")
     else: formats = [format]
     for format in formats:
-       def out():
+       def out(doOneoff=True):
           if len(formats)>1: writeFormatHeader(format)
+          if doOneoff: sys.stdout.write(checkSetting(format,"inline_oneoff_header"))
           sys.stdout.write(checkSetting(format,"inline_header"))
           output_clauses(format,convert(parseIntoWordsAndClauses("espeak",response),"espeak",format))
           sys.stdout.write(checkSetting(format,"inline_footer"))
           print
           sys.stdout.flush() # in case it's being piped
-       out()
+       out(not hadOneoff) ; hadOneoff = True
        if os.environ.get("PHONES_PIPE_COMMAND",""):
           o,sys.stdout = sys.stdout,os.popen(os.environ["PHONES_PIPE_COMMAND"],'w')
           out()
@@ -2056,7 +2068,8 @@ E.g.: python lexconvert.py --convert festival cepstral"""
    try:
       fname=getSetting(toFormat,"lex_filename")
       getSetting(toFormat,"lex_entry_format") # convert_user_lexicon will need this
-   except KeyError: return "Write support for lexicons of format '%s' not yet implemented (need at least lex_filename and lex_entry_format); try using --phones or --phones2phones options instead" % (toFormat,)
+   except KeyError: fname = None
+   if not fname: return "Write support for lexicons of format '%s' not yet implemented (need at least lex_filename and lex_entry_format); try using --phones or --phones2phones options instead" % (toFormat,)
    if toFormat=="espeak":
       assert fname=="en_extra", "If you changed eSpeak's lex_filename in the table you also need to change the code below"
       try: open("en_list")
@@ -2664,7 +2677,9 @@ def getInputText(i,prompt,as_iterable=False):
   if stdin_is_terminal(): sys.stderr.write("Enter "+prompt+" (EOF when done)\n")
   elif as_iterable=='maybe': return [sys.stdin.read()]
   if as_iterable: return my_xreadlines()
-  else: return sys.stdin.read()
+  else:
+     try: return sys.stdin.read()
+     except KeyboardInterrupt: raise SystemExit
 
 def my_xreadlines():
    "On some platforms this might be a bit more responsive than sys.stdin.xreadlines"
@@ -2672,6 +2687,7 @@ def my_xreadlines():
       # sys.stderr.write('got here\n')
       try: yield raw_input()
       except EOFError: return
+      except KeyboardInterrupt: raise SystemExit
 
 def output_clauses(format,clauses):
    "Writes out clauses and words in format 'format' (clauses is a list of lists of words in the phones of 'format').  By default, calls markup_inline_word and join as appropriate.  If however the format's 'clause_separator' has been set to a special case, calls that."
