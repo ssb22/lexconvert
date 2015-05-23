@@ -734,7 +734,7 @@ def LexFormats():
     ('I',var1_i_as_in_it), # '1' won't sound
     ('i:',e_as_in_eat), # 'i' won't sound
     ('u:',oo_as_in_food), # }: won't sound
-    ('a_I',eye),('a_U',o_as_in_now),('e_I',a_as_in_ate),('O_I',oy_as_in_toy),('O_I',var1_oy_as_in_toy),('o_U',var2_o_as_in_go),
+    ('a_I',eye),('a_U',o_as_in_now),('e_I',a_as_in_ate),('O_I',oy_as_in_toy),(var1_oy_as_in_toy,'O_I',False),('o_U',var2_o_as_in_go),
     cleanup_regexps=[(r'\\',r'\\\\'),('"','&quot;'),('::',':')],
     lex_filename="",lex_entry_format="",
     lex_read_function=None,
