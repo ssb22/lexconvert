@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.22 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.221 - convert phonemes between different speech synthesizers etc
 (c) 2007-15 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -3052,7 +3052,9 @@ class MacBritish_System_Lexicon(object):
         tta = tta.replace(chr(0),'')
         term = os.environ.get("TERM","")
         if ("xterm" in term or term=="screen") and sys.stdout.isatty(): # we can probably underline words (inverse is more widely supported than underline, e.g. should work even on an old Linux console in case someone's using that to control an OS X server, but there might be a *lot* of words, which wouldn't be very good in inverse if user needs dark background and inverse is bright.  Unlike Annogen, we're dealing primarily with Latin letters.)
-           print textToPrint.encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip()
+           import textwrap
+           textwrap.len = lambda x: len(x.replace(chr(0),"").replace(chr(1),"")) # a 'hack' to make (at least the 2.x implementations of) textwrap ignore our chr(0) and chr(1) markers in their calculations.  Relies on textwrap calling len().
+           print textwrap.fill(textToPrint,stdout_width_unix()).encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip()
         # else don't print anything (saves confusion)
         os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta)
     def setMultiple(self,words,phonemes):
@@ -3103,7 +3105,10 @@ class MacBritish_System_Lexicon(object):
         del MacBritish_System_Lexicon.instances[self.voice]
         assert not os.system("rm -f /tmp/"+self.voice+".PCMWave.lock")
         self.voice=None
-
+def stdout_width_unix(): # assumes isatty
+   import struct,fcntl,termios
+   return struct.unpack('hh', fcntl.ioctl(1,termios.TIOCGWINSZ,'1234'))[1]
+        
 lexFormats = LexFormats() # at end, in case it refers to anything that was defined later
 
 if __name__ == "__main__": sys.exit(main())
