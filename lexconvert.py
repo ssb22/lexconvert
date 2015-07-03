@@ -2432,6 +2432,7 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
     for word,pos,pronunc in parse_festival_dict(festival_location):
         pronunc=pronunc.replace("i@ 0 @ 0","ii ou 2 ").replace("i@ 0 u 0","ii ou ") # (hack for OALD's "radio"/"video"/"stereo"/"embryo" etc)
         pronunc=pronunc.replace("0","") # 0's not necessary, and OALD sometimes puts them in wrong places, confusing the converter
+        if word in ['mosquitoes']: continue # OALD bug (TODO: any others?)
         if wordDic.has_key(word):
             ambiguous[word] = True
             del wordDic[word] # better not go there
