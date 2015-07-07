@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.221 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.23 - convert phonemes between different speech synthesizers etc
 (c) 2007-15 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1468,6 +1468,16 @@ def LexFormats():
     cvtOut_func=unicode_preprocess,
   ),
 
+  "yinghan" : makeVariantDic(
+     "As unicode-ipa but, when converting a user lexicon, generates Python code that reads Wenlin Yinghan dictionary entries and adds IPA bands to matching words",
+    lex_filename="yinghan-ipa.py", # write-only for now
+    lex_type = "Python script",
+    lex_header = '#!/usr/bin/env python\n# -*- coding: utf-8 -*-\nimport sys; d={',
+    lex_entry_format='"%s":u"%s",\n',
+    lex_footer = "}\nfor k in d.keys(): d[k.lower()]=d[k]\nnextIsHead=False\nfor l in sys.stdin:\n sys.stdout.write(l)\n if nextIsHead and l.strip():\n  w=l.split()\n  if w[0]=='ehw': l=' '.join(w[1:])\n  if l.strip().lower() in d: sys.stdout.write('ipa '+d[l.strip().lower()].encode('utf-8')+'\\n')\n if l.startswith('*** '): nextIsHead=True\n",
+    noInherit=True
+  ),
+
   "unicode-rough" : makeVariantDic(
     "A non-standard notation that's reminiscent of unicode-ipa but changed so that more of the characters show in old browsers with incomplete fonts",
     ("'",primary_stress),
@@ -2252,12 +2262,19 @@ def makeDic(doc,*args,**kwargs):
     global lastDictionaryMade ; lastDictionaryMade = d
     return d
 def makeVariantDic(doc,*args,**kwargs):
-    "Like makeDic but create a new 'variant' version of the last-made dictionary, modifying some phonemes and settings (and giving it a new doc string) but keeping everything else the same.  Any list settings (e.g. cleanup_regexps) are ADDED to by the variant; other settings and phonemes are REPLACED if they are specified in the variant."
+    "Like makeDic but create a new 'variant' version of the last-made dictionary, modifying some phonemes and settings (and giving it a new doc string) but keeping everything else the same.  Any list settings (e.g. cleanup_regexps) are ADDED to by the variant; other settings and phonemes are REPLACED if they are specified in the variant.  If you don't want subsequent variants to inherit the changes made by this variant, add noInherit=True to the keyword args."
+    global lastDictionaryMade
+    ldmOld = lastDictionaryMade
     toUpdate = lastDictionaryMade.copy()
     global mainVowels,consonants
     oldV,oldC = mainVowels,consonants
     mainVowels,consonants = [],[] # so makeDic doesn't complain if some vowels/consonants are missing
+    if 'noInherit' in kwargs:
+       noInherit = kwargs['noInherit']
+       del kwargs['noInherit']
+    else: noInherit = False
     d = makeDic(doc,*args,**kwargs)
+    if noInherit: lastDictionaryMade = ldmOld
     mainVowels,consonants = oldV,oldC
     # if toUpdate[("settings","doc")].startswith("(approx.) ") and not d[("settings","doc")].startswith("(approx.) "): d[("settings","doc")]="(approx.) "+d[("settings","doc")] # TODO: always?
     for k,v in toUpdate.items():
