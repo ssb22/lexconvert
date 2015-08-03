@@ -2082,9 +2082,7 @@ E.g.: python lexconvert.py --convert festival cepstral"""
    if not fname: return "Write support for lexicons of format '%s' not yet implemented (need at least lex_filename and lex_entry_format); try using --phones or --phones2phones options instead" % (toFormat,)
    if toFormat=="espeak":
       assert fname=="en_extra", "If you changed eSpeak's lex_filename in the table you also need to change the code below"
-      try: open("en_list")
-      except: return "You should cd to the espeak source directory before converting a lexicon to espeak"
-      os.system("mv en_extra en_extra~ ; grep \" // \" en_extra~ > en_extra") # keep the commented entries, so can incrementally update the user lexicon only
+      if os.system("mv en_extra en_extra~ && grep \" // \" en_extra~ > en_extra"): sys.stderr.write("Warning: en_extra not found, making a new one\n(espeak compile will probably fail in this directory)\n") # otherwise keep the commented entries, so can incrementally update the user lexicon only
       outFile=open(fname,"a")
    else:
       l = 0
