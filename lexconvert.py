@@ -15,8 +15,9 @@
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 
-# Old versions of this code are being kept on SourceForge's E-GuideDog SVN at
+# Old versions of this code are being kept in the E-GuideDog SVN repository at
 # http://svn.code.sf.net/p/e-guidedog/code/ssb22/lexconvert
+
 # although some early ones are missing.
 
 def Phonemes():
