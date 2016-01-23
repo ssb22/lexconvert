@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.23 - convert phonemes between different speech synthesizers etc
-(c) 2007-15 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.24 - convert phonemes between different speech synthesizers etc
+(c) 2007-16 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
 
@@ -3072,7 +3072,7 @@ class MacBritish_System_Lexicon(object):
         if ("xterm" in term or term=="screen") and sys.stdout.isatty(): # we can probably underline words (inverse is more widely supported than underline, e.g. should work even on an old Linux console in case someone's using that to control an OS X server, but there might be a *lot* of words, which wouldn't be very good in inverse if user needs dark background and inverse is bright.  Unlike Annogen, we're dealing primarily with Latin letters.)
            import textwrap
            textwrap.len = lambda x: len(x.replace(chr(0),"").replace(chr(1),"")) # a 'hack' to make (at least the 2.x implementations of) textwrap ignore our chr(0) and chr(1) markers in their calculations.  Relies on textwrap calling len().
-           print textwrap.fill(textToPrint,stdout_width_unix()).encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip()
+           print textwrap.fill(textToPrint,stdout_width_unix(),break_on_hyphens=False).encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip() # break_on_hyphens=False because we don't really want hyphenated NAMES to be split across lines, and anyway textwrap in (at least) Python 2.7 has a bug that sometimes causes a line breaks to be inserted before a syllable marker symbol like 'prime'
         # else don't print anything (saves confusion)
         os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta)
     def setMultiple(self,words,phonemes):
