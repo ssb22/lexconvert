@@ -1488,7 +1488,7 @@ def LexFormats():
     (':',ipa_colon),
     (var3_a_as_in_ah,'ar-',False),
     (var4_a_as_in_ah,'ar-',False),
-    ('^',u_as_in_but),
+    ('uh',u_as_in_but),
     (u'\u0259:',e_as_in_herd),
     ('ai',eye),
     ('ch',ch),
