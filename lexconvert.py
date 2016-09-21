@@ -728,7 +728,7 @@ def LexFormats():
     safe_to_drop_characters=True, # TODO: really?
   ),
   "vocaloid" : makeVariantDic(
-     "X-SAMPA phonemes for Yamaha's Vocaloid singing synthesizer, contributed by Lorenzo Gatti",
+     "X-SAMPA phonemes for Yamaha's Vocaloid singing synthesizer, contributed by Lorenzo Gatti.  Lorenzo tested in Vocaloid 4 using two American English voices.",
      ('-',syllable_separator),
      (primary_stress,'',False), # not used by Vocaloid
      (secondary_stress,'',False),
@@ -766,6 +766,7 @@ def LexFormats():
      (var2_close_to_or,'O:',False),
      (var1_w, 'w', False),
      lex_filename="vocaloid.txt",
+     phoneme_separator=" ",
      noInherit=True
   ),
   "android-pico" : makeVariantDic(
