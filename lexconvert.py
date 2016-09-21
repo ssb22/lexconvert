@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.24 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.25 - convert phonemes between different speech synthesizers etc
 (c) 2007-16 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -643,7 +643,7 @@ def LexFormats():
   ),
 
   "x-sampa" : makeDic(
-    "General X-SAMPA notation (contributed by Jan Weiss)",
+    "General X-SAMPA notation, contributed by Jan Weiss",
     ('.',syllable_separator),
     ('"',primary_stress),
     ('%',secondary_stress),
@@ -726,6 +726,47 @@ def LexFormats():
     # TODO: inline_format ?
     word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
+  ),
+  "vocaloid" : makeVariantDic(
+     "X-SAMPA phonemes for Yamaha's Vocaloid singing synthesizer, contributed by Lorenzo Gatti",
+     ('-',syllable_separator),
+     (primary_stress,'',False), # not used by Vocaloid
+     (secondary_stress,'',False),
+     ('Q',a_as_in_ah),
+     (var3_a_as_in_ah,'Q',False),
+     (var4_a_as_in_ah,'Q',False),
+     (var5_a_as_in_ah,'Q',False),
+     ('O@',o_as_in_orange),
+     (var1_o_as_in_orange,'O@',False),
+     (var2_o_as_in_orange, 'O@',False),
+     ('@U',o_as_in_now),
+     ('@r',e_as_in_herd),
+     (var1_eye, 'aI',False),
+     ('e',e_as_in_them),
+     ('I@',ar_as_in_year),
+     ('e@',a_as_in_air),
+     (var1_a_as_in_air, 'e@',False),
+     (var2_a_as_in_air, 'e@',False),
+     (var3_a_as_in_air, 'e@',False),
+     (var4_a_as_in_air, 'e@',False),
+     (var1_a_as_in_ate, 'eI', False),
+     (var1_i_as_in_it, 'I',False),
+     (var1_ear, 'I@',False),
+     ('i:',e_as_in_eat),
+     (var1_e_as_in_eat, 'i:',False),
+     (var2_o_as_in_go, '@U', False),
+     ('V', var1_u_as_in_but),
+     (var1_oy_as_in_toy, 'OI',False),
+     ('r',r),
+     ('th',t),
+     (var1_oor_as_in_poor, '@U',False),
+     ('u:',oo_as_in_food),
+     (var1_oo_as_in_food, 'u:',False),
+     (var1_close_to_or,'O:',False),
+     (var2_close_to_or,'O:',False),
+     (var1_w, 'w', False),
+     lex_filename="vocaloid.txt",
+     noInherit=True
   ),
   "android-pico" : makeVariantDic(
     'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+, American), wrapped in Java code', # you could put en-GB instead of en-US, but it must be installed on the phone
@@ -819,7 +860,7 @@ def LexFormats():
   ),
 
   "cmu" : makeDic(
-    'format of the US-English Carnegie Mellon University Pronouncing Dictionary (contributed by Jan Weiss)', # http://www.speech.cs.cmu.edu/cgi-bin/cmudict
+    'format of the US-English Carnegie Mellon University Pronouncing Dictionary, contributed by Jan Weiss', # http://www.speech.cs.cmu.edu/cgi-bin/cmudict
     ('0',syllable_separator),
     ('1',primary_stress),
     ('2',secondary_stress),
