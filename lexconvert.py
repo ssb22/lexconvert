@@ -2161,7 +2161,7 @@ Attempt to break 'words' into syllables for music lyrics (uses espeak to determi
    # Normally, espeak -x output can't be relied on to always put a space between every input word.  So we put a newline after every input word instead.  This might affect eSpeak's output (not recommended for mainopt_phones, hence no 'interleave words and phonemes' option), but it should be OK for just counting the syllables.  (Also, the assumption that the input words have been taken from song lyrics usefully rules out certain awkward punctuation cases.)
    for txt in getInputText(i+1,"word(s)",'maybe'):
       words=txt.split()
-      response = pipeThroughEspeak('\n'.join(words).replace("!","").replace(":",""))
+      response = pipeThroughEspeak('\n'.join(words).replace("!","").replace(":","").replace(".",""))
       if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
       rrr = response.split("\n")
       print " ".join([hyphenate(word,sylcount(convert(line,"espeak","example"))) for word,line in zip(words,filter(lambda x:x,rrr))])
