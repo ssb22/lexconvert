@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.25 - convert phonemes between different speech synthesizers etc
-(c) 2007-16 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.26 - convert phonemes between different speech synthesizers etc
+(c) 2007-17 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
 
@@ -3053,7 +3053,7 @@ class MacBritish_System_Lexicon(object):
         self.dFile = open(self.filename,'r+')
         assert len(self.allWords()) == len(self.allPh())
         MacBritish_System_Lexicon.instances[voice] = self
-        self.textToAvoid = text.replace(unichr(160).encode('utf-8'),' ') ; self.restoreDic = {}
+        self.textToAvoid = text.decode('utf-8').replace(unichr(160),' ') ; self.restoreDic = {}
         catchSignals()
     def allWords(self):
         "Returns a list of words that are defined in the system lexicon (which won't be changed, but see allPh)"
@@ -3097,13 +3097,14 @@ class MacBritish_System_Lexicon(object):
     def readWithLex(self,lex):
         "Reads the text given in the constructor after setting up the lexicon with the given (word,phoneme) list"
         # self.check_redef(lex) # uncomment if you want to know about these
-        textToPrint = u' '+self.textToAvoid.decode('utf-8')+u' '
-        tta = ' '+self.textToAvoid.replace(u'\u2019'.encode('utf-8'),"'").replace(u'\u2032'.encode('utf-8'),'').replace(u'\u00b4'.encode('utf-8'),'').replace(u'\u02b9'.encode('utf-8'),'').replace(u'\u00b7'.encode('utf-8'),'').replace(u'\u2014'.encode('utf-8'),' ')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint; also normalise apostrophes but not in textToPrint, and be careful with dashes as lex'ing the word after a hyphen or em-dash won't work BUT we still want to support hyphenated words IN the lexicon, so em-dashes are replaced here and hyphens are included in nonWordBefore below)
+        textToPrint = u' '+self.textToAvoid+u' '
+        tta = ' '+self.textToAvoid.replace(u'\u2019',"'").replace(u'\u2032','').replace(u'\u00b4','').replace(u'\u02b9','').replace(u'\u00b7','').replace(u'\u2014',' ')+' ' # (ignore pronunciation marks 2032 and b7 that might be in the text, but still print them in textToPrint; also normalise apostrophes but not in textToPrint, and be careful with dashes as lex'ing the word after a hyphen or em-dash won't work BUT we still want to support hyphenated words IN the lexicon, so em-dashes are replaced here and hyphens are included in nonWordBefore below)
         words2,phonemes2 = [],[] # keep only the ones actually used in the text (no point setting whole lexicon)
         nonWordBefore=r"(?i)(?<=[^A-Za-z"+chr(0)+"-])" # see below for why chr(0) is included, and see comment above for why hyphen is at the end; (?i) = ignore case
         nonWordAfter=r"(?=([^A-Za-z'"+unichr(0x2019)+"-]|['"+unichr(0x2019)+r"-][^A-Za-z]))" # followed by non-letter non-apostrophe, or followed by apostrophe non-letter (so not if followed by "'s", because the voice won't use our custom lex entry if "'s" is added to the lex'd word, TODO: automatically add "'s" versions to the lexicon via +s or +iz?) (also not if followed by hyphen-letters; hyphen before start is handled above, although TODO preceded by non-letter + hyphen might be OK)
         ttal = tta.lower()
         for ww,pp in lex:
+          ww = ww.decode('utf-8') # so you can add words with accents etc (in utf-8) to the lexicon
           if ww.lower() in ttal and re.search(nonWordBefore+re.escape(ww)+nonWordAfter,tta):
             words2.append(ww) ; phonemes2.append(pp)
         for k,v in self.setMultiple(words2,phonemes2).iteritems():
@@ -3116,7 +3117,7 @@ class MacBritish_System_Lexicon(object):
            textwrap.len = lambda x: len(x.replace(chr(0),"").replace(chr(1),"")) # a 'hack' to make (at least the 2.x implementations of) textwrap ignore our chr(0) and chr(1) markers in their calculations.  Relies on textwrap calling len().
            print textwrap.fill(textToPrint,stdout_width_unix(),break_on_hyphens=False).encode('utf-8').replace(chr(0),"\x1b[4m").replace(chr(1),"\x1b[0m").strip() # break_on_hyphens=False because we don't really want hyphenated NAMES to be split across lines, and anyway textwrap in (at least) Python 2.7 has a bug that sometimes causes a line breaks to be inserted before a syllable marker symbol like 'prime'
         # else don't print anything (saves confusion)
-        os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta)
+        os.popen(macSayCommand()+" -v \""+self.voice+"\"",'w').write(tta.encode('utf-8'))
     def setMultiple(self,words,phonemes):
         "Sets phonemes for words, returning dict of word to substitute word.  Flushes file buffer before return."
         avail = [] ; needed = []
