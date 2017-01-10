@@ -2330,7 +2330,6 @@ def checkSetting(formatName,settingName,default=""):
   return lexFormats[formatName].get(('settings',settingName),default)
 
 import commands,sys,re,os
-if not sys.version_info[0]==2: sys.stderr.write("WARNING: may break if not on Python 2.x (preferably 2.7)\n")
 
 cached_sourceName,cached_destName,cached_dict = None,None,None
 def make_dictionary(sourceName,destName):
