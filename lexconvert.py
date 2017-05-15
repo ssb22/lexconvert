@@ -2024,14 +2024,54 @@ def mainopt_ruby(i):
    """*<format> [<words>]
 Like --phones but outputs the result as HTML RUBY markup, with each word's pronunciation symbols placed above the corresponding English word.
 E.g.: python lexconvert.py --ruby unicode-ipa This is a test sentence.
-This option is made more complicated by the fact that different versions of eSpeak may space the phoneme output differently, for example when handling numbers. For now all numbers are unannotated, and you are advised not to rely on this option working with the new development NG versions of eSpeak. If the version you have behaves unexpectedly, words and phonemes output might lose synchronisation and in extreme cases lexconvert may crash. However this option is believed to be stable when used with simple text and the original eSpeak.
+This option is made more complicated by the fact that different versions of eSpeak may space the phoneme output differently, for example when handling numbers; if your eSpeak version is not recognised then all numbers are unannotated. Anyway you are advised not to rely on this option working with the new development NG versions of eSpeak. If the version you have behaves unexpectedly, words and phonemes output might lose synchronisation. However this option is believed to be stable when used with simple text and the original eSpeak.
 You can optionally set the RUBY_GRADINT_CGI environment variable to the URL of an instance of Gradint Web Edition to generate audio links for each word.  If using lexconvert as an htmlFilter in Web Adjuster, please set separator to two newlines when using RUBY_GRADINT_CGI.""" # as single newlines are used in the h5a script
    format = sys.argv[i+1]
    if format=="example": return "The 'example' format cannot be used with --ruby; did you mean festival?" # as above
    elif format=="all": return "The --phones all option cannot be used with --ruby" # (well you could implement it if you want but the resulting ruby would be quite unwieldy)
    if not format in lexFormats: return "No such format "+repr(format)+" (use --formats to see a list of formats)"
    text = getInputText(i+2,"text").replace(u'\u2032'.encode('utf-8'),"'").replace(u'\u00b4'.encode('utf-8'),"'").replace(u'\u02b9'.encode('utf-8'),"'").replace(u'\u00b7'.encode('utf-8'),'')
-   response = pipeThroughEspeak(re.sub(r"\.?[0-9]+","",text))
+   # eSpeak's basic idea of an alphabetical word (most versions?) -
+   wordRegexps = [r"(?:[A-Z]+['?-])*(?:(?:(?<![A-z.])(?:[A-z]\.)+[A-z](?![A-z.]))|[A-Z]+[a-z](?![A-z])|[A-Z][A-Z]+(?![a-z][A-z])|[A-Z]?(?:[a-z]['?-]?)+|[A-Z])"]
+   # A dot, when not part of an elipses, followed by a letter is pronounced "dot", and two of them are pronounced "dot dot":
+   wordRegexps.append(r"(?<!\.\.)\.(?=[A-z])|(?<!\.)\.(?=\.[A-z])")
+   # ! followed by a letter is pronounced "exclamation", and .! is "dotexclamation"
+   wordRegexps.append(r"\.?!(?=[A-z])")
+   # TODO: if you paste in (e.g.) CJK characters, eSpeak will say "symbol-symbol-symbol" etc, but this is not accounted for by the above regexp so it'll go onto following words.  Similarly for @@@ etc.
+   vLine = espeak_version_line()
+   if "1.45." in vLine:
+      # This seems to work in eSpeak 1.45:
+      # (TODO: test leading 0s & leading decimal)
+      # a number of 4 digits or less (with any number of digits after the decimal point) is grouped as 1 word:
+      wordRegexps.append(r"(?<![0-9])[0-9]{1,4}(?:\.[0-9]+)?(?!,?[0-9])")
+      # and a number of 1 to 3 digits with any number of 000 or ,000 groups, with optional decimal point followed by any number of digits, OR when placed before an integer number of 3-digit groups, is grouped as 1 word:
+      wordRegexps.append(r"[0-9]{1,3}(?:,?000)*(?:\.[0-9]+)?,?(?=(?:,?[0-9]{3,3})*,?(?:[^0-9]|$))")
+      text2 = text
+   elif "1.48." in vLine:
+      # In eSpeak 1.48 the groups are smaller.
+      # Decimal point and everything after it = individual
+      wordRegexps.append(r"(?<=[0-9])\.(?=[0-9])")
+      for places in range(25): # TODO: really want unbounded, but (?<=...) is fixed-length
+         wordRegexps.append(r"(?<=[0-9]\."+"[0-9]"*places+r")[0-9]")
+      # Number with a leading dot grouped as 1 word:
+      wordRegexps.append(r"(?<![0-9])\.[0-9]+")
+      # TODO: leading 0s (0000048 goes to 0 000 048)
+      # For normal numbers:
+      # A null string w. 3 or 6 digits to go and digits b4 shld match for 'thousand', 'million' (unless 3+ digits are leading 0s, or fewer than 3 leading 0s and whole thing begins with a 0, or it's part of a decimal expansion, in which case different rules apply, but (?<=...) must be fixed-length, so we need another one of these awful loops) :
+      for prevDigits in range(10):
+         for beforeThat in ["^",r"[^.0-9,]"]: # beginning of string, or something OTHER than a decimal point / num
+            wordRegexps.append(r"(?<="+beforeThat+"[1-9]"+"[0-9,]"*prevDigits+r")(?<!000)(?<!000,)(?# empty string )(?=(?:,?(?:[0-9]{3,3}))+(?:[^0-9]|$))")
+      # 1-9 (not 0) with 2, 5 or 8 etc digits to go = "N-hundred-and" :
+      wordRegexps.append(r"[1-9](?=[0-9][0-9](?:,?(?:[0-9]{3,3}))*(?:[^0-9]|$))")
+      # + 0 with 2 digits to go when preceded by digits = "and", as long as followed by at least one non-0:
+      wordRegexps.append(r"(?<=[0-9,])0(?=(?:[0-9][1-9]|[1-9][0-9])(?:[^0-9,]|$))")
+      # 1 or 2 digits with 0,3,6.. to go = "seventy-six" or whatever, as long as they're not both 0 :
+      wordRegexps.append(r"(?:0[1-9]|[1-9][0-9]?)(?=(?:,?(?:[0-9]{3,3}))*(?:[^0-9]|$))")
+      # 0 by itself (not preceded by digits) = "nought" :
+      wordRegexps.append(r"(?<![0-9])0(?=[^0-9]|$)")
+      text2 = text
+   else: text2 = re.sub(r"\.?[0-9]+","",text) # unknown eSpeak version: don't annotate the numbers
+   response = pipeThroughEspeak(text2)
    if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
    gradint_cgi = os.environ.get("RUBY_GRADINT_CGI","")
    if gradint_cgi:
@@ -2053,9 +2093,32 @@ function h5a(link) {
    else: linkStart,linkEnd = lambda w:"", ""
    rubyList = [linkStart(w)+markup_inline_word(format,convert(w,"espeak",format)).replace("&","&amp;").replace("<","&lt;")+linkEnd for clause in parseIntoWordsAndClauses("espeak",response) for w in clause]
    rubyList.reverse() # so can pop() left-to-right order
-   # This may work with (whole) numbers on espeak 1.45, but needs updating for 1.48: r"(?:[A-Z]+['?-])*(?:(?:(?<![A-z.])(?:[A-z]\.)+[A-z](?![A-z.]))|[A-Z]+[a-z](?![A-z])|[A-Z][A-Z]+(?![a-z][A-z])|[A-Z]?(?:[a-z]['?-]?)+|[A-Z])|(?<![0-9])[0-9]{1,4}(?!,?[0-9])|[0-9]{1,3}(?:,?000)*,?(?=(?:,?[0-9]{3,3})*(?:,?[^0-9]|$))|(?<!\.\.)\.(?=[A-z])|(?<!\.)\.(?=\.[A-z])|!(?=[A-z])"
-   sys.stdout.write(re.sub(r"(?:[A-Z]+['?-])*(?:(?:(?<![A-z.])(?:[A-z]\.)+[A-z](?![A-z.]))|[A-Z]+[a-z](?![A-z])|[A-Z][A-Z]+(?![a-z][A-z])|[A-Z]?(?:[a-z]['?-]?)+|[A-Z])|(?<!\.\.)\.(?=[A-z])|(?<!\.)\.(?=\.[A-z])|!(?=[A-z])",lambda match:"<ruby><rb>"+match.group()+"</rb><rt>"+rubyList.pop()+"</rt></ruby>",text))
-   # TODO: if you paste in (e.g.) CJK characters, eSpeak will say "symbol-symbol-symbol" etc, but this is not accounted for by the above regexp so it'll go onto following words
+   # Write out re.sub ourselves, because (1) some versions of the library (e.g. on 2.7.12) try to do some things in-place, and we're using previous-context regexps that aren't compatible with previous things having been already <ruby>'ified, and (2) if we match a 0-length string, re.finditer won't ALSO return a non-0 length match starting in the same place, and we want both (so we're using wordRegexps as a list rather than an | expression)
+   matches = {}
+   debug = False # if True, will add ruby title=(index of the regexp that matched)
+   debugCount = 0
+   for r in wordRegexps:
+      for match in re.finditer(r,text):
+         matches[(match.start(),match.end())] = debugCount
+      debugCount += 1
+   i = 0 ; r = []
+   for start,end in sorted(matches.keys()):
+      if start<i: continue # overlap??
+      r.append(text[i:start])
+      if start==end: m = "&nbsp;"
+      else: m = text[start:end].replace("&","&amp;").replace("<","&lt;")
+      try: rt = rubyList.pop()
+      except: rt = "ERROR" # we've lost synchronisation
+      if debug: title = " title="+str(matches[(start,end)])
+      else: title = ""
+      r.append("<ruby"+title+"><rb>"+m+"</rb><rt>"+rt+"</rt></ruby>")
+      i = end
+   r.append(text[i:])
+   while rubyList: # oops, lost synchronisation the other way (TODO: show this per-paragraph? but don't call eSpeak too many times if processing many short paragraphs)
+      r.append("<ruby><rb>ERROR</rb><rt>"+rubyList.pop()+"</rt></ruby>")
+   out = "".join(r)
+   if out.endswith("\n"): sys.stdout.write(out)
+   else: print out
 
 def pipeThroughEspeak(inpt):
    "Writes inpt to espeak -q -x (in chunks if necessary) and returns the result"
@@ -2074,6 +2137,8 @@ def pipeThroughEspeak(inpt):
    w,r=os.popen4("espeak -q -x",bufsize=bufsize)
    w.write(inpt) ; w.close()
    return "\n".join(ret) + r.read()
+
+def espeak_version_line(): return os.popen("espeak -h 2>&1").read().strip().split("\n")[0]
 
 def writeFormatHeader(format):
    "Writes a header for 'format' when outputting in all formats.  Assumes the output MIGHT end up being more than one line."
