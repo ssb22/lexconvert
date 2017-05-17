@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.262 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.263 - convert phonemes between different speech synthesizers etc
 (c) 2007-17 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -2025,19 +2025,26 @@ def mainopt_ruby(i):
 Like --phones but outputs the result as HTML RUBY markup, with each word's pronunciation symbols placed above the corresponding English word.
 E.g.: python lexconvert.py --ruby unicode-ipa This is a test sentence.
 This option is made more complicated by the fact that different versions of eSpeak may space the phoneme output differently, for example when handling numbers; if your eSpeak version is not recognised then all numbers are unannotated. Anyway you are advised not to rely on this option working with the new development NG versions of eSpeak. If the version you have behaves unexpectedly, words and phonemes output might lose synchronisation. However this option is believed to be stable when used with simple text and the original eSpeak.
-You can optionally set the RUBY_GRADINT_CGI environment variable to the URL of an instance of Gradint Web Edition to generate audio links for each word.  If using lexconvert as an htmlFilter in Web Adjuster, please set separator to two newlines when using RUBY_GRADINT_CGI.""" # as single newlines are used in the h5a script
+You can optionally set the RUBY_GRADINT_CGI environment variable to the URL of an instance of Gradint Web Edition to generate audio links for each word.  If doing this in a Web Adjuster filter, see comments in the lexconvert source for setup details."""
+   # htmlFilter with --htmlText of course.  Set separator to two newlines and copy the generated 'h5a' function (from a manual run or the lexconvert source) into Adjuster's headAppend option (but don't expect HTML5 audio to work from Adjuster's submitBookmarklet option; pronunciation links will take you off the page if it doesn't).
+   # Use double newlines as single newlines are used in the h5a script; adding that script via bookmarklet doesn't always run it
    format = sys.argv[i+1]
    if format=="example": return "The 'example' format cannot be used with --ruby; did you mean festival?" # as above
    elif format=="all": return "The --phones all option cannot be used with --ruby" # (well you could implement it if you want but the resulting ruby would be quite unwieldy)
    if not format in lexFormats: return "No such format "+repr(format)+" (use --formats to see a list of formats)"
-   text = getInputText(i+2,"text").replace(u'\u2032'.encode('utf-8'),"'").replace(u'\u00b4'.encode('utf-8'),"'").replace(u'\u02b9'.encode('utf-8'),"'").replace(u'\u00b7'.encode('utf-8'),'')
+   text = getInputText(i+2,"text").replace(u'\u2019'.encode('utf-8'),"'").replace(u'\u2032'.encode('utf-8'),"'").replace(u'\u00b4'.encode('utf-8'),"'").replace(u'\u02b9'.encode('utf-8'),"'").replace(u'\u00b7'.encode('utf-8'),'').replace(u'\u00a0'.encode('utf-8'),' ')
    # eSpeak's basic idea of an alphabetical word (most versions?) -
    wordRegexps = [r"(?:[A-Z]+['?-])*(?:(?:(?<![A-z.])(?:[A-z]\.)+[A-z](?![A-z.]))|[A-Z]+[a-z](?![A-z])|[A-Z][A-Z]+(?![a-z][A-z])|[A-Z]?(?:[a-z]['?-]?)+|[A-Z])"]
    # A dot, when not part of an elipses, followed by a letter is pronounced "dot", and two of them are pronounced "dot dot":
    wordRegexps.append(r"(?<!\.\.)\.(?=[A-z])|(?<!\.)\.(?=\.[A-z])")
-   # ! followed by a letter is pronounced "exclamation", and .! is "dotexclamation"
-   wordRegexps.append(r"\.?!(?=[A-z])")
-   # TODO: if you paste in (e.g.) CJK characters, eSpeak will say "symbol-symbol-symbol" etc, but this is not accounted for by the above regexp so it'll go onto following words.  Similarly for @@@ etc.
+   # ! followed by a letter is pronounced "exclamation", and .! is "dotexclamation"; @ symbols similarly; copyright
+   atEtc = u"(?:[@!:]|\u00a9)*".encode('utf-8')
+   wordRegexps.append(r"\.?[!@]+(?=[A-z])|(?<![A-z])@"+atEtc+"(?![A-z])|"+unichr(0xa9).encode('utf-8')+atEtc)
+   # : between numbers if NOT followed by 2 digits:
+   wordRegexps.append(r"(?<![A-z]):(?![A-z]|[0-9][0-9])")
+   # - between numbers
+   wordRegexps.append(r"(?<=[0-9])-(?=[0-9])")
+   # TODO: if you paste in (e.g.) CJK characters, eSpeak will say "symbol-symbol-symbol" etc, but this is not accounted for by the above regexp so it'll go onto following words.
    vLine = espeak_version_line()
    if "1.45." in vLine:
       # This seems to work in eSpeak 1.45:
@@ -2060,7 +2067,7 @@ You can optionally set the RUBY_GRADINT_CGI environment variable to the URL of a
       # A null string w. 3 or 6 digits to go and digits b4 shld match for 'thousand', 'million' (unless 3+ digits are leading 0s, or fewer than 3 leading 0s and whole thing begins with a 0, or it's part of a decimal expansion, in which case different rules apply, but (?<=...) must be fixed-length, so we need another one of these awful loops) :
       for prevDigits in range(10):
          for beforeThat in ["^",r"[^.0-9,]"]: # beginning of string, or something OTHER than a decimal point / num
-            wordRegexps.append(r"(?<="+beforeThat+"[1-9]"+"[0-9,]"*prevDigits+r")(?<!000)(?<!000,)(?# empty string )(?=(?:,?(?:[0-9]{3,3}))+(?:[^0-9]|$))")
+            wordRegexps.append(r"(?<="+beforeThat+"[1-9]"+"[0-9,]"*prevDigits+r")(?<!,)(?<!000)(?# empty string )(?=(?:,?(?:[0-9]{3,3}))+(?:[^0-9]|$))")
       # 1-9 (not 0) with 2, 5 or 8 etc digits to go = "N-hundred-and" :
       wordRegexps.append(r"[1-9](?=[0-9][0-9](?:,?(?:[0-9]{3,3}))*(?:[^0-9]|$))")
       # + 0 with 2 digits to go when preceded by digits = "and", as long as followed by at least one non-0:
@@ -2076,8 +2083,6 @@ You can optionally set the RUBY_GRADINT_CGI environment variable to the URL of a
    gradint_cgi = os.environ.get("RUBY_GRADINT_CGI","")
    if gradint_cgi:
       linkStart,linkEnd = lambda w:'<a href="'+gradint_cgi+'?js=[['+w.replace('%','%25').replace('&','%26')+']]&jsl=en" onclick="return h5a(this);">', '</a>'
-      if text.startswith("\n\n"):
-         text = text[2:] ; print "\n" # for Web Adjuster with separator="\n\n", include the script in the 1st o/p
       print r"""<script><!-- // HTML5-audio function
 function h5a(link) {
  if (document.createElement) {
@@ -2091,7 +2096,12 @@ function h5a(link) {
  } return true; }
 //--></script>"""
    else: linkStart,linkEnd = lambda w:"", ""
-   rubyList = [linkStart(w)+markup_inline_word(format,convert(w,"espeak",format)).replace("&","&amp;").replace("<","&lt;")+linkEnd for clause in parseIntoWordsAndClauses("espeak",response) for w in clause]
+   rubyList = []
+   for clause in parseIntoWordsAndClauses("espeak",response):
+      for w in clause:
+         converted = convert(w,"espeak",format)
+         if not converted: continue # e.g. a lone _:_:
+         rubyList.append(linkStart(w)+markup_inline_word(format,converted).replace("&","&amp;").replace("<","&lt;")+linkEnd)
    rubyList.reverse() # so can pop() left-to-right order
    # Write out re.sub ourselves, because (1) some versions of the library (e.g. on 2.7.12) try to do some things in-place, and we're using previous-context regexps that aren't compatible with previous things having been already <ruby>'ified, and (2) if we match a 0-length string, re.finditer won't ALSO return a non-0 length match starting in the same place, and we want both (so we're using wordRegexps as a list rather than an | expression)
    matches = {}
