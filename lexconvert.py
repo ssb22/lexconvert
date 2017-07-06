@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.263 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.264 - convert phonemes between different speech synthesizers etc
 (c) 2007-17 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1423,7 +1423,7 @@ def LexFormats():
     (u'\u02d0',ipa_colon),
     (u'\u0251\u02d0',var3_a_as_in_ah),
     (u'\u0251\u0279',var4_a_as_in_ah),
-    ('a\u02d0',var5_a_as_in_ah),
+    (u'a\u02d0',var5_a_as_in_ah),
     (u'\xe6',a_as_in_apple),
     ('a',a_as_in_apple,False),
     (u'\u028c',u_as_in_but),
@@ -1519,7 +1519,7 @@ def LexFormats():
     lex_type = "Python script",
     lex_header = '#!/usr/bin/env python\n# -*- coding: utf-8 -*-\nimport sys; d={',
     lex_entry_format='"%s":u"%s",\n',
-    lex_footer = "}\nfor k in d.keys(): d[k.lower()]=d[k]\nnextIsHead=False\nfor l in sys.stdin:\n sys.stdout.write(l)\n if nextIsHead and l.strip():\n  w=l.split()\n  if w[0]=='ehw': l=' '.join(w[1:])\n  if l.strip().lower() in d: sys.stdout.write('ipa '+d[l.strip().lower()].encode('utf-8')+'\\n')\n if l.startswith('*** '): nextIsHead=True\n",
+    lex_footer = "}\nimport re\nfor k in d.keys(): d[k.lower()]=d[k]\nnextIsHead=False\nfor l in sys.stdin:\n sys.stdout.write(l)\n if nextIsHead and l.strip():\n  w=l.split()\n  if w[0]=='ehw': l=' '.join(w[1:])\n  k = re.sub(r'\\([^)]*\\)$','',l.strip()).strip().lower()\n  if k in d: sys.stdout.write('ipa '+d[k].encode('utf-8')+'\\n')\n if l.startswith('*** '): nextIsHead=True\n", # (allow parenthesised explanation after headword when matching)
     noInherit=True
   ),
 
