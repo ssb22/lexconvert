@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.264 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.265 - convert phonemes between different speech synthesizers etc
 (c) 2007-17 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -2076,6 +2076,11 @@ You can optionally set the RUBY_GRADINT_CGI environment variable to the URL of a
       wordRegexps.append(r"(?:0[1-9]|[1-9][0-9]?)(?=(?:,?(?:[0-9]{3,3}))*(?:[^0-9]|$))")
       # 0 by itself (not preceded by digits) = "nought" :
       wordRegexps.append(r"(?<![0-9])0(?=[^0-9]|$)")
+      wordRegexps.insert(0,"(?<=[^A-Za-z0-9_-])(?:of|on|in|that|with|for|was) (?:the|a)(?= )")
+      wordRegexps.insert(0,"(?:Of|On|In|That|With|For|Was) (?:the|a)(?= )")
+      wordRegexps.insert(0,"(?<=[^A-Za-z0-9_-])not a(?= )")
+      wordRegexps.insert(0,"(?<=[^A-Za-z0-9_-])(?:some|that) one(?= )")
+      wordRegexps.insert(0,"(?:Some|That) one(?= )")
       text2 = text
    else: text2 = re.sub(r"\.?[0-9]+","",text) # unknown eSpeak version: don't annotate the numbers
    response = pipeThroughEspeak(text2)
@@ -2112,7 +2117,13 @@ function h5a(link) {
          matches[(match.start(),match.end())] = debugCount
       debugCount += 1
    i = 0 ; r = []
-   for start,end in sorted(matches.keys()):
+   def cmpFunc((s1,e1),(s2,e2)):
+      if s1<s2: return -1
+      if s1>s2: return 1
+      if e1>e2: return -1
+      if e1<e2: return 1
+      return 0
+   for start,end in sorted(matches.keys(),cmpFunc):
       if start<i: continue # overlap??
       r.append(text[i:start])
       if start==end: m = "&nbsp;"
