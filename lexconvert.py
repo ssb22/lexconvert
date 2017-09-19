@@ -3088,7 +3088,7 @@ def main():
        if html: print '<table id="formats">'
        keys=lexFormats.keys() ; keys.sort()
        for k in keys: print '<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>"
-       print "</table><script><!-- try to be more readable on some smartphones\nif(screen && screen.width<600 && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//--></script>"
+       print "</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//--></script>"
     else: print "Available pronunciation formats: "+", ".join(sorted(lexFormats.keys()))+"\n(Use --formats to see their descriptions)"
     print missALine
     print "Program options:"
