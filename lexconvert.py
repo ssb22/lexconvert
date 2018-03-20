@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.265 - convert phonemes between different speech synthesizers etc
-(c) 2007-17 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.266 - convert phonemes between different speech synthesizers etc
+(c) 2007-18 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
 
@@ -295,7 +295,7 @@ def LexFormats():
     lex_filename=ifset("HOME",os.environ.get("HOME","")+os.sep)+".festivalrc",
     lex_entry_format="(lex.add.entry '( \"%s\" n %s))\n",
     lex_header=";; -*- mode: lisp -*-\n(eval (list voice_default))\n",
-    lex_read_function = lambda *args:eval('['+commands.getoutput("grep '^(lex.add.entry' ~/.festivalrc | sed -e 's/;.*//' -e 's/[^\"]*\"/[\"/' -e 's/\" . /\",(\"/' -e 's/$/\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']'),
+    lex_read_function = lambda *args:eval('['+commands.getoutput("grep -vi parameter.set < ~/.festivalrc | grep -v '(eval' | sed -e 's/;.*//' -e 's/.lex.add.entry//' -e s/\"'\"'[(] *\"/[\"/' -e 's/\" [^ ]* /\",(\"/' -e 's/\".*$/&\"],/' -e 's/[()]/ /g' -e 's/  */ /g'")+']'),
     safe_to_drop_characters=True, # TODO: really? (could instead give a string of known-safe characters)
     cleanup_func = festival_group_stress,
   ),
@@ -307,7 +307,31 @@ def LexFormats():
        ("Meshach","mii1shak"),
        ("Abednego","@be1dniigou"),
     ], cleanup_func = None,
-    lex_filename=None, lex_entry_format=None),
+    lex_filename=None, lex_entry_format=None, noInherit=True),
+
+  "festival-cmu" : makeVariantDic(
+    "American CMU version of Festival",
+    ('ae',a_as_in_apple),
+    ('ah',u_as_in_but),
+    (o_as_in_orange,'aa',False),
+    ('aw',o_as_in_now),
+    (a_as_in_ago,'ah',False),
+    ('er',e_as_in_herd), # TODO: check this one
+    ('ay',eye),
+    ('eh',e_as_in_them),
+    (ar_as_in_year,'er',False),
+    (a_as_in_air,'er',False),
+    ('ey',a_as_in_ate),
+    ('hh',h),
+    ('ih',i_as_in_it),
+    ('ey ah',ear),
+    ('iy',e_as_in_eat),
+    ('ow',o_as_in_go),
+    ('oy',oy_as_in_toy),
+    ('uh',oor_as_in_poor),
+    ('uw',oo_as_in_food),
+    ('ao',close_to_or),
+  ),
 
   "espeak" : makeDic(
     "eSpeak's default British voice", # but eSpeak's phoneme representation isn't always that simple, hence the regexps at the end
