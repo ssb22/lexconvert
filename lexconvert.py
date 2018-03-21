@@ -316,7 +316,6 @@ def LexFormats():
     ('ax',a_as_in_ago),
     (o_as_in_orange,'aa',False),
     ('aw',o_as_in_now),
-    (a_as_in_ago,'ah',False),
     ('er',e_as_in_herd), # TODO: check this one
     ('ay',eye),
     ('eh',e_as_in_them),
