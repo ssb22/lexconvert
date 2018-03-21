@@ -313,6 +313,7 @@ def LexFormats():
     "American CMU version of Festival",
     ('ae',a_as_in_apple),
     ('ah',u_as_in_but),
+    ('ax',a_as_in_ago),
     (o_as_in_orange,'aa',False),
     ('aw',o_as_in_now),
     (a_as_in_ago,'ah',False),
@@ -897,7 +898,7 @@ def LexFormats():
     ('AH',u_as_in_but),
     (o_as_in_orange,'AA',False),
     ('AW',o_as_in_now),
-    (a_as_in_ago,'AH',False),
+    (a_as_in_ago,'AH',False), # seems they don't use AX as festival-cmu does
     ('ER',e_as_in_herd), # TODO: check this one
     ('AY',eye),
     ('B',b),
@@ -1451,6 +1452,7 @@ def LexFormats():
     (u'\xe6',a_as_in_apple),
     ('a',a_as_in_apple,False),
     (u'\u028c',u_as_in_but),
+    ('\u1d27',u_as_in_but,False), # 28c sometimes mistakenly written as 1d27
     (u'\u0252',o_as_in_orange),
     (var1_o_as_in_orange,u'\u0251',False),
     (u'\u0254',var2_o_as_in_orange),
