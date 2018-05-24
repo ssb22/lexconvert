@@ -1438,6 +1438,11 @@ def LexFormats():
     (syllable_separator,'',False),
     (u'\u02c8',primary_stress),
     (u'\u02cc',secondary_stress),
+    # NB the above two are "modifier", not "combining",
+    # Unicode characters.  There IS a difference.  If
+    # your software displays them as overprinting the
+    # surrounding letters, you have a bug.
+    # (E.g. WeChat v1.2.2.1 on Mac OS 10.7)
     ('#',text_sharp),
     ('_',text_underline),
     ('?',text_question),
