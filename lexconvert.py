@@ -18,6 +18,8 @@
 # Old versions of this code are being kept in the E-GuideDog SVN repository at
 # http://svn.code.sf.net/p/e-guidedog/code/ssb22/lexconvert
 # and on GitHub at https://github.com/ssb22/lexconvert
+# and on GitLab at https://gitlab.com/ssb22/lexconvert
+# and on Bitbucket https://bitbucket.org/ssb22/lexconvert
 # although some early ones are missing.
 
 def Phonemes():
