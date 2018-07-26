@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.266 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.267 - convert phonemes between different speech synthesizers etc
 (c) 2007-18 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -235,7 +235,7 @@ def LexFormats():
        option when summarising the support for each format
 
        lex_read_function - Python function to READ the
-       lexicon file and return a (word,definition) list.
+       lexicon file and return a (word,phonemes) list.
        If this is not specified, there's no read support
        for lexicons in this format (but there can still be
        write support - see above - and you can still use
@@ -662,6 +662,7 @@ def LexFormats():
     ('z',z),
     ('Z',ge_of_blige_etc),
     # lex_filename not set (mac-uk code does not permanently save the lexicon; see --mac-uk option to read text)
+    lex_read_function = lambda *args:[(w,p) for w,_,p in MacBritish_System_Lexicon(False,os.environ.get("MACUK_VOICE","Daniel")).usable_words()],
     inline_oneoff_header = "(mac-uk phonemes output is for information only; you'll need the --mac-uk or --trymac-uk options to use it)\n",
     word_separator=" ",phoneme_separator="",
     stress_comes_before_vowel=True,
@@ -3093,7 +3094,7 @@ def main():
               sys.stderr.write(msg+"\n") ; return 1
            else: return 0
     html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
-    def htmlify(h): return h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>').replace('--','<kbd>--</kbd>') # (the last bit is so typography.js doesn't try to rewrite options stuff to en-dash)
+    def htmlify(h): return re.sub('(--[A-Za-z-]*)',r'<kbd>\1</kbd>',h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>'))
     if not html: htmlify = lambda x:x
     print htmlify(__doc__)
     if html: missALine = "<p>"
@@ -3173,33 +3174,40 @@ class MacBritish_System_Lexicon(object):
         words used in it that are not mentioned in your
         lexicon are unchanged in the system lexicon);
         text="" means you just want to speak phonemes.
+        Special value of text=False means lexicon read only.
         voice can be Daniel, Emily or Serena."""
         self.voice = False
-        assert not voice in MacBritish_System_Lexicon.instances, "There is already another instance of MacBritish_System_Lexicon for the "+voice+" voice"
-        assert not os.system("lockfile -1 -r 10 /tmp/"+voice+".PCMWave.lock") # in case some other process has it (note: if you run with python -O, this check won't happen!)
-        self.voice = voice
+        if not text==False:
+            assert not voice in MacBritish_System_Lexicon.instances, "There is already another instance of MacBritish_System_Lexicon for the "+voice+" voice"
+            assert not os.system("lockfile -1 -r 10 /tmp/"+voice+".PCMWave.lock") # in case some other process has it (note: if you run with python -O, this check won't happen!)
+            self.voice = voice # (don't set this if text==False, since we won't need cleanup on __del__)
         self.filename = "/System/Library/Speech/Voices/"+voice+".SpeechVoice/Contents/Resources/PCMWave"
+        assert not (not os.path.exists(self.filename) and os.path.exists("/System/Library/Speech/Voices/"+voice+"Compact.SpeechVoice/Contents/Resources/PCMWave")), "The only installation of "+voice+" found on this system was the Compact one, which lexconvert does not yet support" # TODO: could try self.wordIndexStart = findW("Abiquiu"),self.phIndexStart = findW("'@b.Ik.ju"),self.wordIndexEnd = findW("www.youtube.com",1),self.phIndexEnd = findW("'d^b.l.ju.'d^b.l.ju.'d^b.l.ju.dA+t.'ju.'tjub.dA+t.kA+m",1), but "t" in phones should be ignored, "activesync" and "afterlife" have no phones, "aqua" has TWO sets of phonemes (aquarium ok) and there are other synchronization issues.
+        # TODO: some sync issues persist even on the NON-Compact version in newer versions of macOS (e.g. 10.12).  This currently leads to exceptions in findW on such systems (which do say it could be due to wrong version of the voice); fixing would need looking at more sync issues as above
         assert os.path.exists(self.filename),"Cannot find an installation of '"+voice+"' on this system"
-        if not os.path.exists(self.filename+"0"):
+        if os.path.exists(self.filename+"0"):
+            if text==False: self.filename += "0" # (use the backup file for read-only, if we created one before; this means we don't have to worry about locks)
+        elif not text==False: # create a backup
             sys.stderr.write("Backing up "+self.filename+" to "+self.filename+"0...\n") # (you'll need a password if you're not running as root)
             err = os.system("sudo mv \""+self.filename+"\" \""+self.filename+"0\"; sudo cp \""+self.filename+"0\" \""+self.filename+"\"; sudo chown "+str(os.getuid())+" \""+self.filename+"\"")
             assert not err, "Error creating backup"
         lexFile = self.filename+".lexdir"
-        if not os.path.exists(lexFile):
+        if not os.path.exists(lexFile) and not text==False:
             sys.stderr.write("Creating lexdir file...\n")
             err = os.system("sudo touch \""+lexFile+"\" ; sudo chown "+str(os.getuid())+" \""+lexFile+"\"")
             assert not err, "Error creating lexdir"
+        compat_err = "\nThis probably means your Mac has a new version of the voice that is no longer compatible with this system-lexicon patch."
         import cPickle
-        if os.stat(lexFile).st_size: self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd = cPickle.Unpickler(open(lexFile)).load()
+        if os.path.exists(lexFile) and os.stat(lexFile).st_size: self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd = cPickle.Unpickler(open(lexFile)).load()
         else:
             dat = open(self.filename).read()
             def findW(word,rtnPastEnd=0):
                 i = re.finditer(re.escape(word+chr(0)),dat)
                 try: n = i.next()
-                except StopIteration: raise Exception("word not found in voice file")
+                except StopIteration: raise Exception(word+" not found in voice file"+compat_err)
                 try:
                     n2 = i.next()
-                    raise Exception("word does not uniquely identify a byte position (has at least %d and %d)" % (n.start(),n2.start()))
+                    raise Exception("%s does not uniquely identify a byte position (has at least %d and %d)%s" % (word,n.start(),n2.start(),compat_err))
                 except StopIteration: pass
                 if rtnPastEnd: return n.end()
                 else: return n.start()
@@ -3207,9 +3215,12 @@ class MacBritish_System_Lexicon(object):
             self.phIndexStart = findW("'e&It.o&U.e&Its")
             self.wordIndexEnd = findW("zombie",1)
             self.phIndexEnd = findW("'zA+m.bI",1)
-            cPickle.Pickler(open(lexFile,"w")).dump((self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd)) 
-        self.dFile = open(self.filename,'r+')
-        assert len(self.allWords()) == len(self.allPh())
+            if not text==False: cPickle.Pickler(open(lexFile,"w")).dump((self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd))
+        if text==False: self.dFile = open(self.filename)
+        else: self.dFile = open(self.filename,'r+')
+        assert len(self.allWords()) == len(self.allPh()), str(len(self.allWords()))+" words but "+str(len(self.allPh()))+" phonemes"+compat_err
+        self.textToAvoid = u""
+        if text==False: return
         MacBritish_System_Lexicon.instances[voice] = self
         self.textToAvoid = text.decode('utf-8').replace(unichr(160),' ') ; self.restoreDic = {}
         catchSignals()
@@ -3237,7 +3248,7 @@ class MacBritish_System_Lexicon(object):
             if word in self.textToAvoid and not word in words_ok_to_redefine: continue
             yield word,pos,phonemes
     def check_redef(self,wordsAndPhonemes):
-        "Diagnostic function to list on standard error the redefinitions we want to make.  wordsAndPhonemes is a list of (original system-lexicon word, proposed new phonemes).  The old phonemes are also listed, fetched from allPh."
+        "Diagnostic function to list on standard error the 'redefinitions' we want to make.  wordsAndPhonemes is a list of (original system-lexicon word, proposed new phonemes).  The old phonemes are also listed, fetched from allPh."
         aw = self.allWords() ; ap = 0
         for w,p in wordsAndPhonemes:
           w = w.lower()
@@ -3327,7 +3338,7 @@ class MacBritish_System_Lexicon(object):
 def stdout_width_unix(): # assumes isatty
    import struct,fcntl,termios
    return struct.unpack('hh', fcntl.ioctl(1,termios.TIOCGWINSZ,'1234'))[1]
-        
+
 lexFormats = LexFormats() # at end, in case it refers to anything that was defined later
 
 if __name__ == "__main__": sys.exit(main())
