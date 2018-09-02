@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""lexconvert v0.267 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.268 - convert phonemes between different speech synthesizers etc
 (c) 2007-18 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -2858,10 +2858,15 @@ def hyphenate(word,numSyls):
     if i==numSyls-1: syls.append(word[i*l:])
     else: syls.append(word[i*l:(i+1)*l])
     if len(syls)>1:
-      if len(syls[-1])>2 and syls[-1][0]==syls[-1][1] and not syls[-1][0].lower() in "aeiou":
+      if syls[-1].startswith('-') or (len(syls[-1])>2 and syls[-1][0]==syls[-1][1] and not syls[-1][0].lower() in "aeiou"):
         # repeated consonant at start - put one on previous
+        # (or hyphen at start - move it to the previous)
         syls[-2] += syls[-1][0]
         syls[-1] = syls[-1][1:]
+      elif len(syls[-1])>2 and syls[-1][1]=='-':
+        # better move this splitpoint after that hyphen (TODO: move more than one character?)
+        syls[-2] += syls[-1][:2]
+        syls[-1] = syls[-1][2:]
       elif ((len(syls[-2])>2 and syls[-2][-1]==syls[-2][-2] and not syls[-2][-1].lower() in "aeiou") \
             or (syls[-1] and syls[-1][0].lower() in "aeiouy" and len(syls[-2])>2)) \
             and filter(lambda x:x.lower() in "aeiou",list(syls[-2][:-1])):
