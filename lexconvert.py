@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 """lexconvert v0.268 - convert phonemes between different speech synthesizers etc
 (c) 2007-18 Silas S. Brown.  License: GPL"""
