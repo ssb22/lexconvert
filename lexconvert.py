@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-"""lexconvert v0.268 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.269 - convert phonemes between different speech synthesizers etc
 (c) 2007-18 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1205,6 +1205,32 @@ def LexFormats():
     ],
     cvtOut_regexps=[('DUX','DYUW')], # CT handled above
   ),
+  "bbcmicro-cc" : makeDic(
+     "Computer Concepts Speech ROM which provided phonemes for the BBC Micro's TMS5220 \"speech chip\" add-on (less widely sold than the software-only product)", # (and harder to run on an emulator.  It wasn't the only phoneme ROM, e.g. Easytalk Speech Utility ROM by Galaxy, reviewed in Beebug Jan/Feb 1985 (3.8) p.32, expanded on Acorn's original PHROM with commands like *SAY Y.U:N.I.V.ER.S but we don't know all the phonemes; there were also some allophone-based hardware boards)
+     (syllable_separator,"",False),
+     ('*',primary_stress),('+',secondary_stress),
+     ('E',e_as_in_eat),('i',i_as_in_it),('e',e_as_in_them),
+     ('a',a_as_in_apple),('u',u_as_in_but),('AR',a_as_in_ah),
+     ('o',o_as_in_orange),('OR',close_to_or),('oo',opt_u_as_in_pull),
+     ('OO',oo_as_in_food),('ER',e_as_in_herd),('A',a_as_in_ate),
+     ('I',eye),('O',o_as_in_go),('OY',oy_as_in_toy),
+     ('AW',o_as_in_now),('EA',ear),('ea',a_as_in_air),
+     ('UR',oor_as_in_poor),('UH',a_as_in_ago),
+     ('P',p),('B',b),('T',t),
+     ('D',d),('K',k),('G',g),
+     ('CH',ch),('J',j_as_in_jump),('F',f),
+     ('V',v),('TH',th_as_in_think),('DH',th_as_in_them),
+     ('S',s),('Z',z),('SH',sh),
+     ('ZH',ge_of_blige_etc),('H',h),('M',m),
+     ('N',n),('NG',ng),('L',l),
+     ('R',r),('Y',y),('W',w),
+     stress_comes_before_vowel=True,
+     inline_header="*UTTER <1> ",
+     clause_separator="\n*UTTER <1> ", # TODO: manual does not say what the maximum length is; longest parameter in examples is 80 bytes; should we use inline_format to make each WORD a separate command?
+     cleanup_regexps=[('[*] ','*'),('[+] ','+')],
+     safe_to_drop_characters=' ',
+  ),
+     
   "amiga" : makeDic(
     'AmigaOS speech synthesizer (American English)', # shipped with the 1985 Amiga release; developed by SoftVoice Inc
     # All I had to go by for this was a screenshot on Marcos Miranda's "blog".  I once saw this synth demonstrated but never tried it.  My early background was the BBC Micro, not Amigas etc.  But I know some people are keen on Amigas so I might as well include it.
