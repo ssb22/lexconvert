@@ -1573,11 +1573,10 @@ def LexFormats():
   ),
 
   "unicode-ipa-syls" : makeVariantDic(
-  "Like unicode-ipa but with syllable separators preserved on output",
+  "Like unicode-ipa but with syllable separators preserved",
   (syllable_separator,'.'),
   cleanup_regexps=[(r"\.+",".")], # multiple . to one .
-  noInherit=True
-  ),
+  noInherit=True),
 
   "yinghan" : makeVariantDic(
      "As unicode-ipa but, when converting a user lexicon, generates Python code that reads Wenlin Yinghan dictionary entries and adds IPA bands to matching words",
