@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
-"""lexconvert v0.269 - convert phonemes between different speech synthesizers etc
-(c) 2007-18 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.27 - convert phonemes between different speech synthesizers etc
+(c) 2007-19 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
 
@@ -1572,6 +1572,13 @@ def LexFormats():
     cvtOut_func=unicode_preprocess,
   ),
 
+  "unicode-ipa-syls" : makeVariantDic(
+  "Like unicode-ipa but with syllable separators preserved on output",
+  (syllable_separator,'.'),
+  cleanup_regexps=[(r"\.+",".")], # multiple . to one .
+  noInherit=True
+  ),
+
   "yinghan" : makeVariantDic(
      "As unicode-ipa but, when converting a user lexicon, generates Python code that reads Wenlin Yinghan dictionary entries and adds IPA bands to matching words",
     lex_filename="yinghan-ipa.py", # write-only for now
@@ -2443,6 +2450,7 @@ def speakjet(symbol,opcode):
 
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
+    assert type(doc)==str, "doc must be a string"
     d = {} ; duplicates = set()
     for a in args:
         assert type(a)==tuple and (len(a)==2 or len(a)==3)
@@ -2479,6 +2487,8 @@ def makeDic(doc,*args,**kwargs):
     if missing:
        import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(g for g,val in globals().items() if val==m) for m in missing)+"\n")
     for k,v in kwargs.items(): d[('settings',k)] = v
+    assert type(d.get(('settings','cleanup_regexps'),[]))==list, "cleanup_regexps must be a list" # not one tuple
+    assert type(d.get(('settings','cvtOut_regexps'),[]))==list, "cvtOut_regexps must be a list" # not one tuple
     wsep = d.get(('settings','word_separator'),None)
     psep = d.get(('settings','phoneme_separator'),' ')
     if not wsep==None: assert not wsep in d, "word_separator duplicates with a key in "+repr(doc)
@@ -2563,8 +2573,9 @@ def convert(pronunc,source,dest):
             elif dictionary.has_key(pronunc[:lettersToTry]):
                 debugInfo=" after "+pronunc[:lettersToTry]
                 toAdd=dictionary[pronunc[:lettersToTry]]
-                isStressMark=(toAdd and toAdd in [lexFormats[dest].get(primary_stress,''),lexFormats[dest].get(secondary_stress,''),lexFormats[dest].get(syllable_separator,'')])
-                if isStressMark and not checkSetting(dest,"stress_comes_before_vowel"):
+                isStressMark=(toAdd and toAdd in [lexFormats[dest].get(primary_stress,''),lexFormats[dest].get(secondary_stress,'')])
+                if toAdd==lexFormats[dest].get(syllable_separator,''): pass
+                elif isStressMark and not checkSetting(dest,"stress_comes_before_vowel"):
                     if checkSetting(source,"stress_comes_before_vowel"): toAdd, toAddAfter = "",toAdd # move stress marks from before vowel to after
                     else: # stress is already after, but:
                         # With Cepstral synth (and kana-approx), stress mark should be placed EXACTLY after the vowel and not any later.  Might as well do this for others also.
