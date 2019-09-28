@@ -1,0 +1,9 @@
+stages:
+  - test
+
+test:
+  stage: test
+  image: python:2
+  script:
+    - pip2 install -r requirements-dev.txt
+    - python2 -m pytest
