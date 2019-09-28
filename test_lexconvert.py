@@ -18,7 +18,7 @@ import sys
 import lexconvert
 from mock import patch
 
-def test_p2p_espeak(capsys):
+def test_p2p_cmu_espeak(capsys):
     testargs = ["--phones2phones", "cmu", "espeak", "T AH M AA 1 T OW"]
     with patch.object(sys, 'argv', testargs):
         lexconvert.main()
