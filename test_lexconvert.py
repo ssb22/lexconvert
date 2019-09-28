@@ -15,13 +15,28 @@
 #    GNU General Public License for more details.
 
 import sys
+import io
 import lexconvert
-from mock import patch
 
-def test_p2p_cmu_espeak(capsys):
+def test_p2p_cmu_espeak(monkeypatch, capsys):
     testargs = ["--phones2phones", "cmu", "espeak", "T AH M AA 1 T OW"]
-    with patch.object(sys, 'argv', testargs):
-        lexconvert.main()
-        captured = capsys.readouterr()
-        assert "[[tVm'A:%toU]]" == captured.out.strip()
-        assert "" == captured.err
+    monkeypatch.setattr('sys.argv', testargs)
+
+    lexconvert.main()
+
+    captured = capsys.readouterr()
+    assert "[[tVm'A:%toU]]" == captured.out.strip()
+    assert "" == captured.err
+
+
+def test_p2p_stdin(monkeypatch, capsys):
+    testargs = ["--phones2phones", "cmu", "espeak"]
+    cmuIn = u"T AH M EY 1 T OW"
+    monkeypatch.setattr('sys.stdin', io.StringIO(cmuIn))
+    monkeypatch.setattr('sys.argv', testargs);
+
+    lexconvert.mainopt_phones2phones(0)
+
+    captured = capsys.readouterr()
+    assert "[[tVm'eI%toU]]" == captured.out.strip()
+    assert "" == captured.err
