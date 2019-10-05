@@ -69,8 +69,16 @@ def test_festival_group_stress():
     assert festcmu == value
 
 def test_hiragana_to_katakana():
-    # TODO: kana-approx does not like the brackets from espeak
-    espeak = "[[h,aU]] [[t@]] [[sp'i:k]]".replace('[','').replace(']','')
+    # TODO: consider adding [ and ] to espeak's safe_to_drop_characters
+    # (in the line: safe_to_drop_characters="_: !")
+    # to stop spurious warning messages from convert() about
+    # kana-approx not taking them, if some user mistakenly
+    # considers the [[ and ]] that we added to espeak's inline_format
+    # to actually be part of the phonemes.  (They are not: they are
+    # simply command characters to tell eSpeak to switch to phoneme mode.
+    # But it's an understandable mistake to make, so we should probably
+    # get the eSpeak format to ignore them on input.)
+    espeak = "h,aU t@ sp'i:k"
     os.environ['KANA_TYPE'] = ''
     value = lexconvert.convert(espeak, source='espeak', dest='kana-approx')
     expected = u'\u306f\u304a \u3064\u304a \u3059\u3074\u30fc\u304f'
