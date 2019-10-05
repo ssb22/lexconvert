@@ -80,3 +80,18 @@ def test_hiragana_to_katakana():
     result = lexconvert.hiragana_to_katakana(expected)
     katakana = u'\u30cf\u30aa \u30c4\u30aa \u30b9\u30d4\u30fc\u30af'
     assert katakana == result
+
+def test_unicode_preprocess():
+    ah = u"\u0251"
+    result = lexconvert.convert(ah, source='unicode-ipa', dest='names')
+    assert "a_as_in_ah" == result
+
+    ah_escaped = r"\u0251"
+    result = lexconvert.convert(ah_escaped, source='unicode-ipa', dest='names')
+    assert "a_as_in_ah" == result
+
+    invalidRaw = r"\udhop"
+    notInvalid = "udhop"
+    result = lexconvert.convert(invalidRaw, source='unicode-ipa', dest='names')
+    result2 = lexconvert.convert(notInvalid, source='unicode-ipa', dest='names')
+    assert result2 == result
