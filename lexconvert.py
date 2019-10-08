@@ -3135,7 +3135,7 @@ def main():
               sys.stderr.write(msg+"\n") ; return 1
            else: return 0
     html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
-    def htmlify(h): return re.sub('(--[A-Za-z-]*)',r'<kbd>\1</kbd>',h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>'))
+    def htmlify(h): return re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>'))
     if not html: htmlify = lambda x:x
     print htmlify(__doc__)
     if html: missALine = "<p>"
