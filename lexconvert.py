@@ -2242,8 +2242,7 @@ def mainopt_check_variants(i):
       if type(k)==str:
          intV = int(v)
          if not intV in consonants:
-            if not intV in groups: groups[intV] = []
-            groups[intV].append((v,k))
+            groups.setdefault(intV,[]).append((v,k))
    i = groups.items() ; i.sort()
    for k,v in i:
       if len(v)==1: continue
