@@ -1,0 +1,5 @@
+;; -*- mode: lisp -*-
+(eval (list voice_default))
+(lex.add.entry '( "Shadrach" n (((sh ei) 1) ((d r a k) 0))))
+(lex.add.entry '( "Meshach" n (((m ii) 1) ((sh a k) 0))))
+(lex.add.entry '( "Abednego" n (((@) 0) ((b e) 1) ((d n ii) 0) ((g ou) 0))))
