@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.3 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.301 - convert phonemes between different speech synthesizers etc
 (c) 2007-19 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -2354,9 +2354,6 @@ E.g.: python lexconvert.py --convert festival cepstral"""
      os.remove(fname) ; raise
 
 def mainopt_festival_dictionary_to_espeak(i):
-   # TODO: subtle differences in the espeak output when run
-   # on Python 2 versus when run on Python 3.  Does not seem
-   # to be that significant, but might still need looking at
    """<location>
 Convert the Festival Oxford Advanced Learners Dictionary (OALD) pronunciation lexicon to eSpeak.
 You need to specify the location of the OALD file in <location>,
@@ -2750,10 +2747,10 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
         pronunc=pronunc.replace("i@ 0 @ 0","ii ou 2 ").replace("i@ 0 u 0","ii ou ") # (hack for OALD's "radio"/"video"/"stereo"/"embryo" etc)
         pronunc=pronunc.replace("0","") # 0's not necessary, and OALD sometimes puts them in wrong places, confusing the converter
         if word in ['mosquitoes']: continue # OALD bug (TODO: any others?)
-        if word in wordDic:
-            ambiguous[word] = True
+        if word in wordDic and not wordDic[word]==(pronunc,pos):
+            ambiguous[as_utf8(word)] = True
             del wordDic[word] # better not go there
-        if not word in ambiguous:
+        if not as_utf8(word) in ambiguous:
             wordDic[word] = (pronunc, pos)
     toDel = []
     if check_existing_pronunciation:
@@ -2761,7 +2758,19 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
         proc=os.popen("espeak -q -x -v en-rp > /tmp/.pronunc 2>&1","w")
         wList = []
     progressCount=0 ; oldPercent=-1
-    for word,(pronunc,pos) in wordDic.items():
+    itemList = list(wordDic.items())
+    # Make sure it's NOT sorted, to ensure eSpeak doesn't
+    # cache pronunciation of previous word when add suffix
+    # (which can subtly change eSpeak's pronunciation in
+    # some versions of eSpeak, leading to
+    # Python 2/3 differences as Python 3 sorts by default) :
+    itemList.sort()
+    i0,i1 = itemList[:int(len(itemList)/2)],itemList[int(len(itemList)/2):]
+    itemList = []
+    while i0 or i1:
+       if i0: itemList.append(i0.pop())
+       if i1: itemList.append(i1.pop())
+    for word,(pronunc,pos) in itemList:
         if check_existing_pronunciation:
             percent = int(progressCount*100/len(wordDic))
             if not percent==oldPercent: sys.stdout.write(str(percent)+"%\r") ; sys.stdout.flush()
@@ -2829,7 +2838,7 @@ def convert_system_festival_dictionary_to_espeak(festival_location,check_existin
       for word,pronunc in zip(not_output_because_ok,getBuf(tp).read().split(as_utf8("\n"))):
         pronunc = pronunc.strip().replace(as_utf8(" "),as_utf8(""))
         if not pronunc==oldPronDic[word] and not espeak_probably_right_already(oldPronDic[word],pronunc):
-          getBuf(outFile).write(word+as_utf8(" ")+oldPronDic[word]+as_utf8(" // (undo affix-side-effect from previous words that gave \"")+pronunc+as_utf8("\")\n"))
+          getBuf(outFile).write(as_utf8(word)+as_utf8(" ")+oldPronDic[word]+as_utf8(" // (undo affix-side-effect from previous words that gave \"")+pronunc+as_utf8("\")\n"))
       outFile.close()
       os.system("espeak --compile=en")
     return not_output_because_ok
