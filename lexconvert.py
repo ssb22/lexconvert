@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.301 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.31 - convert phonemes between different speech synthesizers etc
 (c) 2007-19 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
@@ -1321,6 +1321,79 @@ def LexFormats():
   # do A=USR(8192).  I don't know about the C64 etc versions.
   # (max 255 phonemes per string; don't know max line len.)
   ),
+
+  "cheetah" : makeDic(
+     'Allophone codes for the 1983 "Cheetah Sweet Talker" SP0256-based hardware add-on for ZX Spectrum and BBC Micro home computers. The conversion from phonemes to allophones might need tweaking.',
+     (syllable_separator,'',False),
+     ("0",syllable_separator,False),
+     ("1",syllable_separator,False),
+     ("2",syllable_separator,False),
+     ("3",syllable_separator,False),
+     ("4",syllable_separator,False),
+     ("5",oy_as_in_toy),
+     ("6",eye),
+     ("7",e_as_in_them),
+     ("8",k,False),
+     ("9",p),
+     ("10",j_as_in_jump),
+     ("11",n),
+     ("12",i_as_in_it),
+     ("13",t),
+     ("14",r),
+     ("15",u_as_in_but),
+     ("16",m),
+     ("17",t,False),
+     ("18",th_as_in_them),
+     ("19",e_as_in_eat),
+     ("20",a_as_in_ate),
+     ("21",d),
+     ("22",oo_as_in_food),
+     ("23",close_to_or),
+     ("24",o_as_in_orange),
+     ("25",y),
+     ("26",a_as_in_apple),
+     ("27",h),
+     ("28",b),
+     ("29",th_as_in_think),
+     (opt_u_as_in_pull,"30",False),
+     ("30",opt_ul_as_in_pull),
+     ("31",oo_as_in_food,False),
+     ("32",o_as_in_now),
+     ("33",d,False),
+     ("34",g,False),
+     ("35",v),
+     ("36",g),
+     ("37",sh),
+     ("38",ge_of_blige_etc),
+     ("39",r,False),
+     ("40",f),
+     ("41",k),
+     ("42",k,False),
+     ("43",z),
+     ("44",ng),
+     ("45",l),
+     ("46",w),
+     ("47",a_as_in_air),
+     ("49",y,False),
+     ("50",ch),
+     ("51",a_as_in_ago),
+     ("52",e_as_in_herd),
+     (var1_a_as_in_ago,"52",False),
+     ("53",o_as_in_go),
+     ("54",th_as_in_them,False),
+     ("55",s),
+     ("56",n,False),
+     ("57",h,False),
+     ("58",var3_close_to_or),
+     ("59",a_as_in_ah),
+     ("60",ear), # or var2_ear
+     ("61",g,False),
+     ("62",l,False),
+     ("63",b,False),
+     approximate_missing=True,
+     phoneme_separator=',',safe_to_drop_characters=",",
+     inline_header="DATA ",inline_footer=",0"),
+
   # END (?) PRE-32bit ERA SYNTHS (but see TODO above re SpeakJet, which is below)
 
   "speakjet" : makeDic(
