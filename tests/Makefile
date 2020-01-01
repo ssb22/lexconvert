@@ -28,6 +28,7 @@ test2:
 	[ "$$(python2 ../lexconvert.py --phones2phones braille-ipa festival ⠠⠶⠱⠸⠃⠑⠌⠙⠼⠩⠅⠶⠄)" = "(((sh ei) 1) ((d r a k) 0))" ]
 	[ "$$(python2 ../lexconvert.py --phones2phones bbcmicro festival SHAY4DRAEK)" = "(((sh ei) 1) ((d r a k) 0))" ]
 	[ "$$(python2 ../lexconvert.py --phones2phones bbcmicro doubletalk SHAY4DRAEK)" = "*DSH / EY D R AE K*T" ]
+	[ "$$(python2 ../lexconvert.py --phones2phones festival cheetah t e s t i ng)" = "DATA 13,7,55,13,12,44,0" ]
 	rm -rf obj
 	mkdir obj
 	cd obj && python2 ../../lexconvert.py --convert example espeak && cd .. && diff -u en_extra obj/en_extra && rm obj/en_extra
@@ -74,6 +75,7 @@ test3:
 	[ "$$(python3 ../lexconvert.py --phones2phones braille-ipa festival ⠠⠶⠱⠸⠃⠑⠌⠙⠼⠩⠅⠶⠄)" = "(((sh ei) 1) ((d r a k) 0))" ]
 	[ "$$(python3 ../lexconvert.py --phones2phones bbcmicro festival SHAY4DRAEK)" = "(((sh ei) 1) ((d r a k) 0))" ]
 	[ "$$(python3 ../lexconvert.py --phones2phones bbcmicro doubletalk SHAY4DRAEK)" = "*DSH / EY D R AE K*T" ]
+	[ "$$(python3 ../lexconvert.py --phones2phones festival cheetah t e s t i ng)" = "DATA 13,7,55,13,12,44,0" ]
 	rm -rf obj
 	mkdir obj
 	cd obj && python3 ../../lexconvert.py --convert example espeak && cd .. && diff -u en_extra obj/en_extra && rm obj/en_extra
