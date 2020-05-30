@@ -1656,9 +1656,28 @@ def LexFormats():
      "As unicode-ipa but, when converting a user lexicon, generates Python code that reads Wenlin Yinghan dictionary entries and adds IPA bands to matching words",
     lex_filename="yinghan-ipa.py", # write-only for now
     lex_type = "Python script",
-    lex_header = '#!/usr/bin/env python\n# -*- coding: utf-8 -*-\n# Works in both Python 2 and Python 3\n\nimport sys; d={',
+    lex_header = r"""#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Works in both Python 2 and Python 3
+
+import sys; d={""",
     lex_entry_format='u"%s":u"%s",\n',
-    lex_footer = "}\nimport re\ntry: i,o=sys.stdin.buffer,sys.stdout.buffer # Python 3\nexcept AttributeError: i,o=sys.stdin,sys.stdout # Python 2\nfor k in list(d.keys()): d[k.lower().encode('utf-8')]=d[k]\nnextIsHead=False\nfor l in i:\n o.write(l)\n if nextIsHead and l.strip():\n  w=l.split()\n  if w[0]==u'ehw'.encode('utf-8'): l=u' '.encode('utf-8').join(w[1:])\n  k = re.sub(u'\\\\([^)]*\\\\)$'.encode('utf-8'),u''.encode('utf-8'),l.strip()).strip().lower()\n  if k in d: o.write(u'ipa '.encode('utf-8')+d[k].encode('utf-8')+u'\\n'.encode('utf-8'))\n if l.startswith(u'*** '.encode('utf-8')): nextIsHead=True\n", # (allow parenthesised explanation after headword when matching)
+    lex_footer = r"""}
+import re
+try: i,o=sys.stdin.buffer,sys.stdout.buffer # Python 3
+except AttributeError: i,o=sys.stdin,sys.stdout # Python 2
+for k in list(d.keys()): d[k.lower().encode('utf-8')]=d[k]
+nextIsHead=False
+for l in i:
+ o.write(l)
+ if nextIsHead and l.strip():
+  w=l.split()
+  if w[0]==u'ehw'.encode('utf-8'): l=u' '.encode('utf-8').join(w[1:])
+  k = re.sub(u'\\([^)]*\\)$'.encode('utf-8'),u''.encode('utf-8'),l.strip()).strip().lower() # (allow parenthesised explanation after headword when matching)
+  if k in d: o.write(u'ipa '.encode('utf-8')+d[k].encode('utf-8')+u'\n'.encode('utf-8'))
+ if l.startswith(u'*** '.encode('utf-8')): nextIsHead=True
+""",
     noInherit=True
   ),
 
