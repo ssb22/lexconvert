@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.31 - convert phonemes between different speech synthesizers etc
-(c) 2007-19 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.32 - convert phonemes between different speech synthesizers etc
+(c) 2007-20 Silas S. Brown.  License: GPL"""
 
 # Run without arguments for usage information
 
@@ -1931,7 +1931,7 @@ for l in i:
   ),
 
   "pinyin-approx" : makeDic(
-    "Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words - works with some words better than others)", # write-only for now
+    "Rough approximation using roughly the spelling rules of Chinese Pinyin (for getting Chinese-only voices to speak some English words; works with some words better than others)", # write-only for now
     ('4',primary_stress),
     ('2',secondary_stress),
     ('a5',a_as_in_ah),
@@ -2015,7 +2015,7 @@ for l in i:
   ),
 
   "kana-approx" : makeDic(
-  "Rough approximation using kana (for getting Japanese computer voices to speak some English words - works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example on Mac OS 10.7+ (with Japanese voice installed in System Preferences) try PHONES_PIPE_COMMAND='say -v Kyoko' (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better with some complex words, although the built-in converter does seem to have access to slightly more phonemes and can therefore produce words like "to" better).  Default is hiragana because I find hiragana easier to read than katakana, although the Kyoko voice does seem to be able to say 'v' a little better when using kata.  Mac OS 10.7+'s Korean voices (Yuna and Narae) can also read kana, and you could try doing a makeVariantDic and adding in some Korean jamo letters for them (you'd be pushed to represent everything in jamo but kana+jamo seems more hopeful in theory), but again some words work better than others (not all phonetic combinations are supported and some words aren't clear at all).
+  "Rough approximation using kana (for getting Japanese computer voices to speak some English words; works with some words better than others).  Set KANA_TYPE environment variable to hiragana or katakana (which can affect the sounds of some voices); default is hiragana", # for example on Mac OS 10.7+ (with Japanese voice installed in System Preferences) try PHONES_PIPE_COMMAND='say -v Kyoko' (this voice has a built-in converter from English as well, but lexconvert --phones kana-approx can work better with some complex words, although the built-in converter does seem to have access to slightly more phonemes and can therefore produce words like "to" better).  Default is hiragana because I find hiragana easier to read than katakana, although the Kyoko voice does seem to be able to say 'v' a little better when using kata.  Mac OS 10.7+'s Korean voices (Yuna and Narae) can also read kana, and you could try doing a makeVariantDic and adding in some Korean jamo letters for them (you'd be pushed to represent everything in jamo but kana+jamo seems more hopeful in theory), but again some words work better than others (not all phonetic combinations are supported and some words aren't clear at all).
     # This kana-approx format is 'write-only' for now (see comment in cleanup_regexps re possible reversal)
     (u'\u30fc',primary_stress),
     (secondary_stress,ifset('KANA_MORE_EMPH',u'\u30fc'),False), # set KANA_MORE_EMPH environment variable if you want to try doubling the secondary-stressed vowels as well (doesn't always work very well; if it did, I'd put this line in a makeVariantDic called kana-approx-moreEmph or something)
@@ -2097,6 +2097,72 @@ for l in i:
     ],
     cleanup_func = hiragana_to_katakana
   ),
+
+  "devanagari-approx" : makeDic(
+  "Rough approximation using Devanagari (for getting Indian computer voices to speak some English words; works with some words better than others); can also be used to approximate Devanagari words in English phonemes",
+    (u'\u02c8',primary_stress),
+    (u'\u093e',a_as_in_ah),(u'\u0906',a_as_in_ah,False),
+    (u'\u0905',u_as_in_but),
+    (u'\u092c',b),
+    (u'\u091b',ch),(u'\u091a',ch,False),
+    (u'\u0926',d),(u'\u0921',d,False), # TODO: check which sounds better for reading English words
+    (u'\u0920',th_as_in_them), # (very approximate)
+    (u'\u0948',e_as_in_them),(u'\u0910',e_as_in_them,False),
+    (u'\u0947',a_as_in_ate),(u'\u090f',a_as_in_ate,False),
+    (u'\u092b\u093c',f),
+    (u'\u0917',g),
+    (u'\u0917\u093c',g,False), # (Hindi; differs in others)
+    (u'\u0939',h),(u'\u0903',h,False),
+    (u'\u093f',i_as_in_it),(u'\u0907',i_as_in_it,False),
+    (u'\u0940',e_as_in_eat),(u'\u0908',e_as_in_eat,False),
+    (u'\u091c',j_as_in_jump),
+    (u'\u0915',k),(u'\u0916',k,False),
+    (u'\u0916\u093c',opt_scottish_loch),
+    (u'\u0915\u093c',opt_scottish_loch,False), # ?
+    (u'\u0932',l),
+    (u'\u092e',m),
+    (u'\u0928',n),(u'\u0923',n,False),
+    (u'\u0902',ng),
+    (u'\u092a',p),
+    (u'\u092b',f,False), # (Hindi; p in some others?)
+    (u'\u0930',r),(u'\u0921\u093c',r,False),
+    (u'\u0938',s),
+    (u'\u0936',sh), (u'\u0937',sh,False),
+    (u'\u091f',t),(u'\u0924',t,False),(u'\u0925',t,False),
+    (u'\u0941',opt_u_as_in_pull),(u'\u0909',opt_u_as_in_pull,False),
+    (u'\u0942',oo_as_in_food),(u'\u090a',oo_as_in_food,False),
+    (u'\u094c',close_to_or),(u'\u0914',close_to_or,False),
+    (u'\u094b',opt_ol_as_in_gold),(u'\u0913',opt_ol_as_in_gold,False),
+    (u'\u0935',v),(w,u'\u0935',False),
+    (u'\u092f',y),
+    (u'\u091c\u093c',z),
+    (u'\u091d\u093c',ge_of_blige_etc),
+    (u'\u0901',ipa_colon),
+    word_separator=" ",phoneme_separator="",
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # it's an approximation
+    approximate_missing=True,
+    cleanup_regexps=[
+       # add virama if consonant not followed by vowel, and delete default vowel after consonant:
+       (u'([\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939]\u093c?)(?![\u0905\u093e-\u0942\u0947\u0948\u094b\u094c])',u'\\1\u094d'),(u'(?<=[\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u0905',u''),(u'(.)\u094d\u02c8',u'\u02c8\\1'),
+       # replace vowel signs with vowel letters if not preceded by consonants:
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u093e',u'\u0906'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u093f',u'\u0907'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u0940',u'\u0908'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u0941',u'\u0909'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u0942',u'\u090a'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u0947',u'\u090f'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u0948',u'\u0910'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u094b',u'\u0913'),
+       (u'(?<![\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939\u093c])\u094c',u'\u0914')],
+    cvtOut_func=unicode_preprocess,
+    cvtOut_regexps=[
+       # add default vowel when necessary:
+       (u'([\u0902\u0903\u0915-\u0917\u091a-\u091d\u091f-\u0928\u092a-\u0930\u0932\u0935-\u0939]\u093c?)(?![\u0905\u094d\u093e-\u0942\u0947\u0948\u094b\u094c])',u'\\1\u0905'),(u'\u094d',u''),
+       # 'add h' approximations:
+       (u'\u092d',u'\u092c\u0939'),(u'\u0927',u'\u0922\u0939'),(u'\u0918',u'\u0917\u0939'),(u'\u091d',u'\u091c\u0939'),(u'\u0922\u093c',u'\u0921\u093c\u0939'),
+    ]),
+
   "names" : makeDic(
     "Lexconvert internal phoneme names (sometimes useful with the --phones option while developing new formats)",
      *[(phName,phVal) for phName,phVal in phonemes.items()])}
@@ -2596,6 +2662,8 @@ def makeDic(doc,*args,**kwargs):
           (ear, [e_as_in_eat,u_as_in_but]),
           (oor_as_in_poor, [close_to_or]), # TODO: ,r?
           (a_as_in_ah,[a_as_in_apple]), # this seems to be missing in some American voices (DecTalk, Keynote, SAM); TODO: is this the best approximation we can do?
+          (a_as_in_apple,[a_as_in_ah]), # the reverse of the above, for Devanagari
+          (o_as_in_orange,[oo_as_in_food]),(o_as_in_go,[oo_as_in_food]),(oy_as_in_toy,[oo_as_in_food,i_as_in_it]),(o_as_in_now,[a_as_in_ah, w]),(e_as_in_herd,[u_as_in_but,u_as_in_but]),(ar_as_in_year,[u_as_in_but,u_as_in_but]),(eye,[a_as_in_ah,y]),(th_as_in_think,[th_as_in_them]), # (Devanagari: is this really the best we can do?)
           ]:
         if miss in missing and all(x in d for x in approxTo):
           d[miss]=maybe_bytes(kwargs.get("phoneme_separator"," "),d[approxTo[0]]).join(d[x] for x in approxTo)
@@ -2761,7 +2829,7 @@ def convert(pronunc,source,dest):
     else: return ret
 
 def unicode_preprocess(pronunc):
-   "Special-case cvtOut_func for unicode-ipa: tries to catch \\uNNNN etc"
+   "Special-case cvtOut_func for unicode-ipa etc: tries to catch \\uNNNN etc"
    if maybe_bytes("\\u",pronunc) in pronunc and not maybe_bytes('"',pronunc) in pronunc: # maybe \uNNNN copied from Gecko on X11, can just evaluate it to get the unicode
       # (NB make sure to quote the \'s if pasing in on the command line)
       try: pronunc=eval('u"'+pronunc+'"')
