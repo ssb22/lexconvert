@@ -2098,7 +2098,7 @@ for l in i:
     cleanup_func = hiragana_to_katakana
   ),
 
-  "devanagari-approx" : makeDic(
+  "deva-approx" : makeDic(
   "Rough approximation using Devanagari (for getting Indian computer voices to speak some English words; works with some words better than others); can also be used to approximate Devanagari words in English phonemes",
     (u'\u02c8',primary_stress),
     (u'\u093e',a_as_in_ah),(u'\u0906',a_as_in_ah,False),
