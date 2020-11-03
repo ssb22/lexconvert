@@ -1,20 +1,22 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.32 - convert phonemes between different speech synthesizers etc
-(c) 2007-20 Silas S. Brown.  License: GPL"""
+"""lexconvert v0.33 - convert phonemes between different speech synthesizers etc
+(c) 2007-20 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
 
-#    This program is free software; you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
-#    the Free Software Foundation; either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Old versions of this code are being kept in the E-GuideDog SVN repository at
 # http://svn.code.sf.net/p/e-guidedog/code/ssb22/lexconvert
@@ -3395,7 +3397,7 @@ def main():
               sys.stderr.write(msg+"\n") ; return 1
            else: return 0
     html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
-    def htmlify(h): return re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>'))
+    def htmlify(h): return re.sub(" ('\\\\u[0-9a-fA-F\\\\u]*')",r' <kbd>\1</kbd>',re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>')))
     if not html: htmlify = lambda x:x
     print (htmlify(__doc__))
     if html: missALine = "<p>"
