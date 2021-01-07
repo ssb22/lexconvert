@@ -3406,7 +3406,7 @@ def main():
        h = re.sub(" ('\\\\u[0-9a-fA-F\\\\un]*')",r' <kbd>\1</kbd>',h)
        h = h.replace("lexconvert.py","<code>lexconvert.py</code>").replace("[[inpt PHON]]","<code>[[inpt PHON]]</code>").replace("python <code>lexconvert.py</code>","<kbd>python lexconvert.py</kbd>").replace("~/.festivalrc","<code>~/.festivalrc</code>")
        h = re.sub("(?<=[a-z])/","<wbr>/",h)
-       h = re.sub("(?<=[A-Z])_(?=[A-Z0-9])","_<wbr>",h)
+       h = re.sub("(?<=[A-Za-z])_(?=[A-Z0-9])","_<wbr>",h)
        h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
        return h
     if not html: htmlify = lambda x:x
