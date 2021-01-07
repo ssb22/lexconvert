@@ -2,7 +2,7 @@
 # May be run with either Python 2 or Python 3
 
 """lexconvert v0.33 - convert phonemes between different speech synthesizers etc
-(c) 2007-20 Silas S. Brown.  License: Apache 2"""
+(c) 2007-21 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
 
@@ -3397,7 +3397,15 @@ def main():
               sys.stderr.write(msg+"\n") ; return 1
            else: return 0
     html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
-    def htmlify(h): return re.sub(" ('\\\\u[0-9a-fA-F\\\\u]*')",r' <kbd>\1</kbd>',re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('\n','<br>')))
+    def htmlify(h):
+       h = h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+       h = h.replace('\n','<br>')
+       h = re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h)
+       h = re.sub(" ('\\\\u[0-9a-fA-F\\\\u]*')",r' <kbd>\1</kbd>',h)
+       h = re.sub("(?<=[a-z])/","<wbr>/",h)
+       h = re.sub("(?<=[A-Z])_(?=[A-Z])","_<wbr>",h)
+       h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
+       return h
     if not html: htmlify = lambda x:x
     print (htmlify(__doc__))
     if html: missALine = "<p>"
