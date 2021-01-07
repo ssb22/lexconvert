@@ -3400,14 +3400,17 @@ def main():
     def htmlify(h):
        h = h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
        h = h.replace('\n','<br>')
-       h = re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h)
-       h = re.sub(" ('\\\\u[0-9a-fA-F\\\\u]*')",r' <kbd>\1</kbd>',h)
+       h = re.sub('(--[2A-Za-z-]*)',r'<kbd>\1</kbd>',h) # command-line option
+       h = re.sub('(?<= )([A-Z]+_[A-Z_]*)(?= )',r'<code>\1</code>',h) # BRAILLE_UNICODE etc (as a word between spaces)
+       h = re.sub('(?<= )(export [A-Z]+_[A-Z_]*=1)',r'<kbd>\1</kbd>',h) # export DTALK_COMMAND_CODE=1
+       h = re.sub(" ('\\\\u[0-9a-fA-F\\\\un]*')",r' <kbd>\1</kbd>',h)
+       h = h.replace("lexconvert.py","<code>lexconvert.py</code>").replace("[[inpt PHON]]","<code>[[inpt PHON]]</code>").replace("python <code>lexconvert.py</code>","<kbd>python lexconvert.py</kbd>").replace("~/.festivalrc","<code>~/.festivalrc</code>")
        h = re.sub("(?<=[a-z])/","<wbr>/",h)
-       h = re.sub("(?<=[A-Z])_(?=[A-Z])","_<wbr>",h)
+       h = re.sub("(?<=[A-Z])_(?=[A-Z0-9])","_<wbr>",h)
        h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
        return h
     if not html: htmlify = lambda x:x
-    print (htmlify(__doc__))
+    print (htmlify(__doc__).replace(" - ","<br>"))
     if html: missALine = "<p>"
     else: missALine = ""
     print (missALine)
