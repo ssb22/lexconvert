@@ -24,6 +24,7 @@
 # and on GitLab at https://gitlab.com/ssb22/lexconvert
 # and on Bitbucket https://bitbucket.org/ssb22/lexconvert
 # and at https://gitlab.developers.cam.ac.uk/ssb22/lexconvert
+# and in China at https://gitee.com/ssb22/lexconvert
 # although some early ones are missing.
 
 def Phonemes():
