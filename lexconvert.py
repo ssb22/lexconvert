@@ -3414,7 +3414,7 @@ def main():
     elif markdown:
        print ("Usage information\n=================\n")
        sys.stdout.flush()
-       getBuf(sys.stdout).write(__doc__.replace(" - ",u"\u2014").replace("(c)",u"\u00a9").replace("\n",", ").encode('utf-8'))
+       getBuf(sys.stdout).write(__doc__.replace(" - ",u"\u2014").replace("(c) ",u"\u00a9\u00a0").replace("\n",", ").encode('utf-8'))
        sys.stdout.flush()
        htmlify0 = htmlify
        htmlify = lambda x: \
