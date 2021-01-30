@@ -3397,7 +3397,7 @@ def main():
               sys.stdout.flush()
               sys.stderr.write(msg+"\n") ; return 1
            else: return 0
-    html = ('--htmlhelp' in sys.argv) # (undocumented option used for my website, don't rely on it staying)
+    html,markdown = ('--htmlhelp' in sys.argv), ('--mdhelp' in sys.argv) # (undocumented options used for my website, don't rely on them staying)
     def htmlify(h):
        h = h.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
        h = h.replace('\n','<br>')
@@ -3410,8 +3410,23 @@ def main():
        h = re.sub("(?<=[A-Za-z])_(?=[A-Z0-9])","_<wbr>",h)
        h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
        return h
-    if not html: htmlify = lambda x:x
-    print (htmlify(__doc__).replace(" - ","<br>"))
+    if html: print (htmlify(__doc__).replace(" - ","<br>"))
+    elif markdown:
+       print ("Usage information\n=================\n")
+       sys.stdout.flush()
+       getBuf(sys.stdout).write(__doc__.replace(" - ",u"\u2014").replace("(c)",u"\u00a9").replace("\n",", ").encode('utf-8'))
+       sys.stdout.flush()
+       htmlify0 = htmlify
+       htmlify = lambda x: \
+          htmlify0(x) \
+          .replace("<wbr>","") \
+          .replace("<kbd>","`").replace("</kbd>","`") \
+          .replace("<code>","`").replace("</code>","`") \
+          .replace("``","").replace("<br>","  \n") \
+          .replace("&lt;","<").replace("&gt;",">").replace("&amp;","&")
+    else:
+       print (__doc__)
+       htmlify = lambda x:x
     if html: missALine = "<p>"
     else: missALine = ""
     print (missALine)
@@ -3431,15 +3446,24 @@ def main():
           print ("\n"+k+" ("+", ".join(types)+")")
           print (getSetting(k,"doc"))
        return 0
-    elif html:
-       print ("Available pronunciation formats:")
+    elif html or markdown:
+       if markdown:
+          print ("")
+          colon = "\n-------------------------------\n"
+       else: colon = ":"
+       print ("Available pronunciation formats"+colon)
        if html: print ('<table id="formats">')
        keys=list(lexFormats.keys()) ; keys.sort()
-       for k in keys: print ('<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>")
-       print ("</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//--></script>")
+       for k in keys:
+          if html: print ('<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>")
+          else: print (k+'\n: '+htmlify(getSetting(k,"doc"))+"\n")
+       if html: print ("</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//--></script>")
     else: print ("Available pronunciation formats: "+", ".join(sorted(list(lexFormats.keys())))+"\n(Use --formats to see their descriptions)")
-    print (missALine)
-    print ("Program options:")
+    if markdown: colon = "\n---------------"
+    else:
+       colon = ":"
+       print (missALine)
+    print ("Program options"+colon)
     print (missALine)
     if html: print ("<dl>")
     for _,opt,desc in sorted([(not not v.__doc__ and not v.__doc__.startswith('*'),k,v.__doc__) for k,v in globals().items()]):
@@ -3450,6 +3474,7 @@ def main():
        if params.startswith('*'): params=params[1:]
        if params: opt += (' '+params)
        if html: print ("<dt>"+htmlify(opt)+"</dt><dd>"+htmlify(rest)+"</dd>")
+       elif markdown: print (opt.replace("<","`<").replace(">",">`")+"\n: "+htmlify(rest)+"\n")
        else: print (opt+"\n"+rest+"\n")
     if html: print ("</dl>")
     return 0
