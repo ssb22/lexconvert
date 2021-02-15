@@ -3409,6 +3409,7 @@ def main():
        h = re.sub("(?<=[a-z])/","<wbr>/",h)
        h = re.sub("(?<=[A-Za-z])_(?=[A-Z0-9])","_<wbr>",h)
        h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
+       h = h.replace(" ALL "," <em>all</em> ")
        return h
     if html: print (htmlify(__doc__).replace(" - ","<br>"))
     elif markdown:
@@ -3423,6 +3424,7 @@ def main():
           .replace("<kbd>","`").replace("</kbd>","`") \
           .replace("<code>","`").replace("</code>","`") \
           .replace("``","").replace("<br>","  \n") \
+          .replace("<em>","*").replace("</em>","*") \
           .replace("&lt;","<").replace("&gt;",">").replace("&amp;","&")
     else:
        print (__doc__)

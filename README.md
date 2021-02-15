@@ -131,7 +131,7 @@ E.g.: `python lexconvert.py` `--convert` festival cepstral
 E.g.: `python lexconvert.py` `--phones` unicode-ipa This is a test sentence.  
 Set environment variable `PHONES_PIPE_COMMAND` to an additional command to which to write the phones as well as standard output.  (If standard input is a terminal then this will be done separately after each line.)  
 (Some commercial speech synthesizers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)  
-Set format to 'all' if you want to see the phonemes in ALL supported formats.
+Set format to 'all' if you want to see the phonemes in *all* supported formats.
 
 --phones2phones `<format1>` `<format2>` [`<phonemes in format1>`]
 : Perform a one-off conversion of phonemes from format1 to format2 (format2 can be 'all' if you want)
