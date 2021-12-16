@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.33 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.34 - convert phonemes between different speech synthesizers etc
 (c) 2007-21 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -2252,7 +2252,7 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats."""
           out()
           sys.stdout = o
 
-def mainopt_ruby(i):
+def mainopt_ruby(i,is_1line=False):
    """*<format> [<words>]
 Like --phones but outputs the result as HTML RUBY markup, with each word's pronunciation symbols placed above the corresponding English word.
 E.g.: python lexconvert.py --ruby unicode-ipa This is a test sentence.
@@ -2371,7 +2371,9 @@ function h5a(link) {
    r.append(text[i:])
    while rubyList: # oops, lost synchronisation the other way (TODO: show this per-paragraph? but don't call eSpeak too many times if processing many short paragraphs)
       r.append(as_utf8("<ruby><rb>ERROR</rb><rt>")+rubyList.pop()+as_utf8("</rt></ruby>"))
-   out = as_utf8("").join(r)
+   out = as_utf8("").join(r).replace(as_utf8("<rt>"),as_utf8("<rp> (</rp><rt>")).replace(as_utf8("</rt>"),as_utf8("</rt><rp>)</rp>"))
+   if is_1line: out = re.sub(as_utf8("<[^>]*>"),as_utf8(""),out)
+   # else: out = re.sub(as_utf8("<rp>[^<]*</rp>"),as_utf8(""),out) # if you're sure it won't be viewed in a non-ruby capable browser
    if not out.endswith(as_utf8("\n")): out += as_utf8("\n")
    getBuf(sys.stdout).write(out)
 
@@ -2417,6 +2419,13 @@ def writeFormatHeader(format):
    print('-'*len(format))
    writeFormatHeader_called = True
 writeFormatHeader_called = False
+
+def mainopt_parens(i):
+   """*<format> [<words>]
+Like --ruby but outputs just text with parenthesised pronunciation after each word, for pasting into instant messaging etc.
+E.g.: python lexconvert.py --parens unicode-ipa This is a test sentence.
+Beware, the considerations about eSpeak versions that apply to --ruby also apply here."""
+   return mainopt_ruby(i,True)
 
 def mainopt_check_variants(i):
    # undocumented (won't appear in help text)

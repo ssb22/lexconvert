@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.33—convert phonemes between different speech synthesizers etc, © 2007-21 Silas S. Brown.  License: Apache 2
+lexconvert v0.34—convert phonemes between different speech synthesizers etc, © 2007-21 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
@@ -125,6 +125,11 @@ Program options
 --convert `<from-format>` `<to-format>`
 : Convert a user lexicon (generally from its default filename; if this cannot be found then lexconvert will tell you what it should be).  
 E.g.: `python lexconvert.py` `--convert` festival cepstral
+
+--parens `<format>` [`<words>`]
+: Like `--ruby` but outputs just text with parenthesised pronunciation after each word, for pasting into instant messaging etc.  
+E.g.: `python lexconvert.py` `--parens` unicode-ipa This is a test sentence.  
+Beware, the considerations about eSpeak versions that apply to `--ruby` also apply here.
 
 --phones `<format>` [`<words>`]
 : Use eSpeak to convert text to phonemes, and then convert the phonemes to format 'format'.  
