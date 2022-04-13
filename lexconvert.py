@@ -3416,7 +3416,7 @@ def main():
        h = re.sub(" ('\\\\u[0-9a-fA-F\\\\un]*')",r' <kbd>\1</kbd>',h)
        h = h.replace("lexconvert.py","<code>lexconvert.py</code>").replace("[[inpt PHON]]","<code>[[inpt PHON]]</code>").replace("python <code>lexconvert.py</code>","<kbd>python lexconvert.py</kbd>").replace("~/.festivalrc","<code>~/.festivalrc</code>").replace(r"'\uNNNN'",r"<kbd>'\uNNNN'</kbd>")
        h = re.sub("(?<=[a-z])/","<wbr>/",h)
-       h = re.sub("(?<=[A-Za-z])_(?=[A-Z0-9])","_<wbr>",h)
+       h = re.sub("(?<=[A-Za-z]{3})([_.])(?=[A-Za-z0-9]{3})",r"\1<wbr>",h)
        h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
        h = h.replace(" ALL "," <em>all</em> ")
        return h
