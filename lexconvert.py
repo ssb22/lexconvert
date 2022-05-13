@@ -2244,7 +2244,7 @@ Set format to 'all' if you want to see the phonemes in ALL supported formats."""
           getBuf(sys.stdout).write(as_utf8(checkSetting(format,"inline_header")))
           output_clauses(format,convert(parseIntoWordsAndClauses("espeak",response),"espeak",format))
           getBuf(sys.stdout).write(as_utf8(checkSetting(format,"inline_footer")))
-          print("")
+          getBuf(sys.stdout).write(as_utf8("\n"))
           sys.stdout.flush() # in case it's being piped
        out(not hadOneoff) ; hadOneoff = True
        if os.environ.get("PHONES_PIPE_COMMAND",""):
@@ -2417,6 +2417,7 @@ def writeFormatHeader(format):
    if writeFormatHeader_called: print("")
    print(format)
    print('-'*len(format))
+   sys.stdout.flush() # in case it's being piped
    writeFormatHeader_called = True
 writeFormatHeader_called = False
 
