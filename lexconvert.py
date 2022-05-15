@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.34 - convert phonemes between different speech synthesizers etc
-(c) 2007-21 Silas S. Brown.  License: Apache 2"""
+"""lexconvert v0.35 - convert phonemes between different speech synthesizers etc
+(c) 2007-22 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
 
@@ -2602,6 +2602,17 @@ Speak text in Mac OS 10.7+ British voices while using a lexicon converted in fro
    lex = get_macuk_lexicon(fromFormat)
    try:
       for line in getInputText(i+2,"text",True):
+         if "MACUK_FIX_VERBS_ETC" in os.environ: # TODO document this
+            # espeak gets the 'to live' and 'and live' being verbs, but Daniel doesn't (at least not on 10.7)
+            line=re.sub("(?i)(?<![a-z])(also|and|can|child|could|donkey|he|I|let them|long|may|me|might|must|not|really|should|still|they|to|we|who|will|you) live(?![a-z])",r"\1 liv",line)
+            line = re.sub("(?i)(?<![a-z])live(s?) (by|in|forever|with)",r"liv\1 \2",line).replace("their livs ","their lives ")
+            line = re.sub("(?i)(ah|son) lives",r"\1 livs",line)
+            line = re.sub("(?i)(the|four|strong) wind(s?)(?![a-z])",r"\1 winnd\2",line)
+            line = re.sub("(?i)(?<![a-z])(that|to|they|should|would|will|gently|take the|taking the|surely) lead(s?)(?![a-z])",r"\1 leed\2",line)
+            line = re.sub("(?i)(?<![a-z])lead(s?) (to|up|you|me|him|her|them|it)",r"leed\1 \2",line)
+            line = re.sub(" (is|being) read(?![a-z])",r" \1 red",line)
+            line = re.sub("(the|a) desert",r"\1 des-ert",line)
+            line = line.replace("guardpost","guard post").replace("the refuse ","the ref use ").replace("stonesaws","stone saws").replace("[Beth]","[Behth]").replace("[Heth]","[Chehth]").replace("[Lamed]","[Lamedh]").replace("[Nun]","[noon]").replace("[Shin]","[sheen]").replace("wisehearted","wise hearted").replace("laborer","labourer").replace("labored","laboured")
          m = MacBritish_System_Lexicon(line,os.environ.get("MACUK_VOICE","Daniel"))
          try: m.readWithLex(lex)
          finally: m.close()

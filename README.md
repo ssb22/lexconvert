@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.34—convert phonemes between different speech synthesizers etc, © 2007-21 Silas S. Brown.  License: Apache 2
+lexconvert v0.35—convert phonemes between different speech synthesizers etc, © 2007-22 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
