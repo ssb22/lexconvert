@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.35 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.36 - convert phonemes between different speech synthesizers etc
 (c) 2007-22 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -2392,21 +2392,20 @@ def pipeThroughEspeak(inpt):
       response = pipeThroughEspeak(inpt[:splitAt])
       if not '\n' in response.rstrip() and 'command' in response: return response.strip() # 'bad cmd' / 'cmd not found'
       ret.append(response) ; inpt=inpt[splitAt:]
-   try: w,r=os.popen4("espeak -q -x",bufsize=bufsize) # Python 2
-   except AttributeError: # Python 3
-      import subprocess
+   try:
+      import subprocess # Python 2.4+
       proc=subprocess.Popen(['espeak','-q','-x'],stdin=subprocess.PIPE,stdout=subprocess.PIPE)
       w = proc.stdin
-      r = None
-   if r:
-      getBuf(w).write(inpt) ; w.close()
-      r = getBuf(r).read()
-   else: # Python 3
       w.write(inpt)
       out,err=proc.communicate()
       r = as_utf8("")
       if out: r += out
       if err: r += err
+   except ImportError:
+      try: w,r=os.popen4("espeak -q -x",bufsize=bufsize) # Python 2.3 or below
+      except TypeError: w,r=os.popen4("espeak -q -x") # some buggy Python 2 installs on Windows can't take bufsize= (we'll have to hope we're small enough)
+      getBuf(w).write(inpt) ; w.close()
+      r = getBuf(r).read()
    return as_utf8("\n").join(ret) + r
 
 def espeak_version_line(): return os.popen("espeak -h 2>&1").read().strip().split("\n")[0]
