@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.36—convert phonemes between different speech synthesizers etc, © 2007-22 Silas S. Brown.  License: Apache 2
+lexconvert v0.37—convert phonemes between different speech synthesizers etc, © 2007-23 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
@@ -42,7 +42,7 @@ cepstral
 : Cepstral's British English SSML phoneset
 
 cheetah
-: Allophone codes for the 1983 "Cheetah Sweet Talker" SP0256-based hardware add-on for ZX Spectrum and BBC Micro home computers. The conversion from phonemes to allophones might need tweaking.
+: Allophone codes for the 1983 "Cheetah Sweet Talker" SP0256-based hardware add-on for ZX Spectrum and BBC Micro home computers. The conversion from phonemes to allophones might need tweaking. Set the `CHEETAH_SYM` environment variable to see the mnemonic symbols from the instruction sheet (not actually used by the system).
 
 cmu
 : format of the US-English Carnegie Mellon University Pronouncing Dictionary, contributed by Jan Weiss

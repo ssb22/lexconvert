@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.36 - convert phonemes between different speech synthesizers etc
-(c) 2007-22 Silas S. Brown.  License: Apache 2"""
+"""lexconvert v0.37 - convert phonemes between different speech synthesizers etc
+(c) 2007-23 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
 
@@ -1327,76 +1327,76 @@ def LexFormats():
   ),
 
   "cheetah" : makeDic(
-     'Allophone codes for the 1983 "Cheetah Sweet Talker" SP0256-based hardware add-on for ZX Spectrum and BBC Micro home computers. The conversion from phonemes to allophones might need tweaking.',
+     'Allophone codes for the 1983 "Cheetah Sweet Talker" SP0256-based hardware add-on for ZX Spectrum and BBC Micro home computers. The conversion from phonemes to allophones might need tweaking. Set the CHEETAH_SYM environment variable to see the mnemonic symbols from the instruction sheet (not actually used by the system).',
      (syllable_separator,'',False),
      ("0",syllable_separator,False),
      ("1",syllable_separator,False),
      ("2",syllable_separator,False),
      ("3",syllable_separator,False),
      ("4",syllable_separator,False),
-     ("5",oy_as_in_toy),
-     ("6",eye),
-     ("7",e_as_in_them),
-     ("8",k,False),
-     ("9",p),
-     ("10",j_as_in_jump),
-     ("11",n),
-     ("12",i_as_in_it),
-     ("13",t),
-     ("14",r),
-     ("15",u_as_in_but),
-     ("16",m),
-     ("17",t,False),
-     ("18",th_as_in_them),
-     ("19",e_as_in_eat),
-     ("20",a_as_in_ate),
-     ("21",d),
-     ("22",oo_as_in_food),
-     ("23",close_to_or),
-     ("24",o_as_in_orange),
-     ("25",y),
-     ("26",a_as_in_apple),
-     ("27",h),
-     ("28",b),
-     ("29",th_as_in_think),
-     (opt_u_as_in_pull,"30",False),
-     ("30",opt_ul_as_in_pull),
-     ("31",oo_as_in_food,False),
-     ("32",o_as_in_now),
-     ("33",d,False),
-     ("34",g,False),
-     ("35",v),
-     ("36",g),
-     ("37",sh),
-     ("38",ge_of_blige_etc),
-     ("39",r,False),
-     ("40",f),
-     ("41",k),
-     ("42",k,False),
-     ("43",z),
-     ("44",ng),
-     ("45",l),
-     ("46",w),
-     ("47",a_as_in_air),
-     ("49",y,False),
-     ("50",ch),
-     ("51",a_as_in_ago),
-     ("52",e_as_in_herd),
-     (var1_a_as_in_ago,"52",False),
-     ("53",o_as_in_go),
-     ("54",th_as_in_them,False),
-     ("55",s),
-     ("56",n,False),
-     ("57",h,False),
-     ("58",var3_close_to_or),
-     ("59",a_as_in_ah),
-     ("60",ear), # or var2_ear
-     ("61",g,False),
-     ("62",l,False),
-     ("63",b,False),
+     (cheetah("OY","5"),oy_as_in_toy),
+     (cheetah("AY","6"),eye),
+     (cheetah("EH","7"),e_as_in_them), # can be doubled
+     (cheetah("KK3","8"),k,False), # TODO: use instead of KK2 if before ll/w/rr/uw/uh/ow/oy/or/ar/ao
+     (cheetah("PP","9"),p),
+     (cheetah("JH","10"),j_as_in_jump),
+     (cheetah("NN1","11"),n),
+     (cheetah("IH","12"),i_as_in_it), # can be doubled
+     (cheetah("TT2","13"),t),
+     (cheetah("RR1","14"),r),
+     (cheetah("AX","15"),u_as_in_but), # can be doubled
+     (cheetah("MM","16"),m),
+     (cheetah("TT1","17"),t,False), # TODO: use instead of TT2 if before ss
+     (cheetah("DH1","18"),th_as_in_them),
+     (cheetah("IY","19"),e_as_in_eat),
+     (cheetah("EY","20"),a_as_in_ate),
+     (cheetah("DD1","21"),d),
+     (cheetah("UW1","22"),oo_as_in_food),
+     (cheetah("AO","23"),close_to_or), # can be doubled
+     (cheetah("AA","24"),o_as_in_orange), # can be doubled
+     (cheetah("YY2","25"),y),
+     (cheetah("AE","26"),a_as_in_apple), # can be doubled
+     (cheetah("HH1","27"),h),
+     (cheetah("BB1","28"),b),
+     (cheetah("TH","29"),th_as_in_think), # can be doubled if at start of word
+     (opt_u_as_in_pull,cheetah("UH","30"),False),
+     (cheetah("UH","30"),opt_ul_as_in_pull), # can be doubled
+     (cheetah("UW2","31"),oo_as_in_food,False), # TODO: use instead of UW1 in one-syllable words
+     (cheetah("AW","32"),o_as_in_now),
+     (cheetah("DD2","33"),d,False), # TODO: use instead of DD1 in initial position
+     (cheetah("GG3","34"),g,False), # TODO: use instead of GG1 before ae/aw/ay/ar/aa/ao/or/er and final g
+     (cheetah("VV","35"),v),
+     (cheetah("GG1","36"),g),
+     (cheetah("SH","37"),sh),
+     (cheetah("ZH","38"),ge_of_blige_etc),
+     (cheetah("RR2","39"),r,False), # TODO: use instead of RR1 if in a cluster (br etc)
+     (cheetah("FF","40"),f), # can be doubled
+     (cheetah("KK2","41"),k),
+     (cheetah("KK1","42"),k,False), # TODO: use instead of KK2 in final position
+     (cheetah("ZZ","43"),z),
+     (cheetah("NG","44"),ng),
+     (cheetah("LL","45"),l),
+     (cheetah("WW","46"),w),
+     (cheetah("XR","47"),a_as_in_air),
+     (cheetah("YY1","49"),y,False), # TODO: use instead of YY2 if after a consonant
+     (cheetah("CH","50"),ch),
+     (cheetah("ER1","51"),a_as_in_ago),
+     (cheetah("ER2","52"),e_as_in_herd),
+     (var1_a_as_in_ago,cheetah("ER2","52"),False),
+     (cheetah("OW","53"),o_as_in_go),
+     (cheetah("DH2","54"),th_as_in_them,False), # TODO: use instead of DH1 if not in initial position
+     (cheetah("SS","55"),s),
+     (cheetah("NN2","56"),n,False), # TODO: use instead of NN1 before uh/ow/oy/or/ar/aa
+     (cheetah("HH2","57"),h,False), # TODO: use instead of HH1 befor uw/uh/ow/oy/ao/or/ar
+     (cheetah("OR","58"),var3_close_to_or),
+     (cheetah("AR","59"),a_as_in_ah),
+     (cheetah("YR","60"),ear), # or var2_ear
+     (cheetah("GG2","61"),g,False), # TODO: use instead of GG1 before uw/uh/ow/oy/ax/rr/ll
+     (cheetah("EL","62"),l,False), # TODO: use instead of LL if from -le
+     (cheetah("BB2","63"),b,False), # TODO: use instead of BB1 for initial b before vowel
      approximate_missing=True,
      phoneme_separator=',',safe_to_drop_characters=",",
-     inline_header="DATA ",inline_footer=",0"),
+     inline_header="DATA ",inline_footer=","+cheetah("","0")), # TODO: may need to repeat the 'DATA' if we exceed line length.  BBC Micro can take 238 characters per line; Spectrum can theoretically take 65536, although input on the 128k model may run into trouble after 542
 
   # END (?) PRE-32bit ERA SYNTHS (but see TODO above re SpeakJet, which is below)
 
@@ -2655,6 +2655,11 @@ def speakjet(symbol,opcode):
       assert not ifset('SPEAKJET_SYM',1), "Cannot set both SPEAKJET_SYM and SPEAKJET_BINARY"
       return chr(opcode)
    else: return ifset('SPEAKJET_SYM',symbol,str(opcode))
+
+def cheetah(symbol,opcode):
+   "Special-case function for the Cheetah table"
+   if ifset('CHEETAH_SYM',1): return '"'+symbol+'"' # quote for DATA
+   else: return opcode
 
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
