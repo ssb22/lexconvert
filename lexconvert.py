@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.37 - convert phonemes between different speech synthesizers etc
+"""lexconvert v0.38 - convert phonemes between English speech synthesizers etc
 (c) 2007-23 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -3417,7 +3417,8 @@ def main():
               # Python 2.6+ can have "except Message as e",
               # but Python 2.5 has to have "except Message,e"
               # which is disallowed in Python 3, so
-              msg=sys.exc_info()[1].message
+              if type(u"")==type(""): msg=str(sys.exc_info()[1])
+              else: msg=sys.exc_info()[1].message
            if msg:
               sys.stdout.flush()
               sys.stderr.write(msg+"\n") ; return 1
