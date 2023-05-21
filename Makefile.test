@@ -40,3 +40,4 @@ test:
 	[ "$$(python3 lexconvert.py --phones2phones festival vocaloid shei1drak)" = "S eI d r { k" ]
 	[ "$$(python2.7 lexconvert.py --phones2phones festival x-sampa shei1drak)" = 'SeI"dr\{k' ]
 	[ "$$(python3 lexconvert.py --phones2phones festival x-sampa shei1drak)" = 'SeI"dr\{k' ]
+.PHONY: test
