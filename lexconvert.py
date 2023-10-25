@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.38 - convert phonemes between English speech synthesizers etc
+"""lexconvert v0.39 - convert phonemes between English speech synthesizers etc
 (c) 2007-23 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -2331,7 +2331,8 @@ function h5a(link) {
      ae.setAttribute('src', link.href+"&filetype=ogg");
      ae.play(); return false; }
  } return true; }
-//--></script>""")
+//-->
+</script>""")
    else: linkStart,linkEnd = lambda w:maybe_bytes("",w), ""
    rubyList = []
    for clause in parseIntoWordsAndClauses("espeak",response):
@@ -3485,7 +3486,7 @@ def main():
        for k in keys:
           if html: print ('<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>")
           else: print (k+'\n: '+htmlify(getSetting(k,"doc"))+"\n")
-       if html: print ("</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//--></script>")
+       if html: print ("</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//-->\n</script>")
     else: print ("Available pronunciation formats: "+", ".join(sorted(list(lexFormats.keys())))+"\n(Use --formats to see their descriptions)")
     if markdown: colon = "\n---------------"
     else:
