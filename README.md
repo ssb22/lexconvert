@@ -185,7 +185,6 @@ Trademarks
 * Microsoft is a registered trademark of Microsoft Corp.
 * Python is a trademark of the Python Software Foundation.
 * ScanSoft and Nuance are trademarks of Nuance Communications, Inc.
-* TeX is a trademark of the American Mathematical Society.
 * Unicode is a registered trademark of Unicode, Inc. in the United States and other countries.
 * Vocaloid is a trademark of Yamaha Corporation.
 * Wenlin is a trademark of Wenlin Institute, Inc. SPC.

@@ -3486,7 +3486,7 @@ def main():
        for k in keys:
           if html: print ('<tr><td valign="top"><nobr>'+k+'</nobr></td><td valign="top">'+htmlify(getSetting(k,"doc"))+"</td></tr>")
           else: print (k+'\n: '+htmlify(getSetting(k,"doc"))+"\n")
-       if html: print ("</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/dd');\n//-->\n</script>")
+       if html: print ("</table><script><!-- try to be more readable on some smartphones\nif(((screen && screen.width<600) || navigator.userAgent.slice(-6)==\"Gecko/\" /* UC Browser? */) && document.getElementById && document.getElementById('formats').outerHTML) document.getElementById('formats').outerHTML = document.getElementById('formats').outerHTML.replace(/<table/g,'<dl').replace(/<.table/g,'<'+'/dl').replace(/<tr><td/g,'<dt').replace(/<.td><td/g,'<'+'/dt><dd').replace(/<.td><.tr/g,'<'+'/'+'dd');\n//-->\n</script>") # Google crawler 2023-12 treated '/dd' as a URL and logged it as a 404 on Search Console, so we'd best split after the / as well
     else: print ("Available pronunciation formats: "+", ".join(sorted(list(lexFormats.keys())))+"\n(Use --formats to see their descriptions)")
     if markdown: colon = "\n---------------"
     else:
