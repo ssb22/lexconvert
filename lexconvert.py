@@ -3550,7 +3550,7 @@ class MacBritish_System_Lexicon(object):
             assert not voice in MacBritish_System_Lexicon.instances, "There is already another instance of MacBritish_System_Lexicon for the "+voice+" voice"
             assert not os.system("lockfile -1 -r 10 /tmp/"+voice+".PCMWave.lock") # in case some other process has it (note: if you run with python -O, this check won't happen!)
             self.voice = voice # (don't set this if text==False, since we won't need cleanup on __del__)
-        self.filename = "/System/Library/Speech/Voices/"+voice+".SpeechVoice/Contents/Resources/PCMWave"
+        self.filename = "/System/Library/Speech/Voices/"+voice+".SpeechVoice/Contents/Resources/PCMWave" # this is no longer where it is on modern macOS (I'm not sure where it is now, or if it's even in anything like the same format)
         assert not (not os.path.exists(self.filename) and os.path.exists("/System/Library/Speech/Voices/"+voice+"Compact.SpeechVoice/Contents/Resources/PCMWave")), "The only installation of "+voice+" found on this system was the Compact one, which lexconvert does not yet support" # TODO: could try self.wordIndexStart = findW("Abiquiu"),self.phIndexStart = findW("'@b.Ik.ju"),self.wordIndexEnd = findW("www.youtube.com",1),self.phIndexEnd = findW("'d^b.l.ju.'d^b.l.ju.'d^b.l.ju.dA+t.'ju.'tjub.dA+t.kA+m",1), but "t" in phones should be ignored, "activesync" and "afterlife" have no phones, "aqua" has TWO sets of phonemes (aquarium ok) and there are other synchronization issues.
         # TODO: some sync issues persist even on the NON-Compact version in newer versions of macOS (e.g. 10.12).  This currently leads to exceptions in findW on such systems (which do say it could be due to wrong version of the voice); fixing would need looking at more sync issues as above
         assert os.path.exists(self.filename),"Cannot find an installation of '"+voice+"' on this system"
@@ -3566,8 +3566,8 @@ class MacBritish_System_Lexicon(object):
             err = os.system("sudo touch \""+lexFile+"\" ; sudo chown "+str(os.getuid())+" \""+lexFile+"\"")
             assert not err, "Error creating lexdir"
         compat_err = "\nThis probably means your Mac has a new version of the voice that is no longer compatible with this system-lexicon patch."
-        import cPickle
-        if os.path.exists(lexFile) and os.stat(lexFile).st_size: self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd = cPickle.Unpickler(open(lexFile)).load()
+        import pickle
+        if os.path.exists(lexFile) and os.stat(lexFile).st_size: self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd = pickle.Unpickler(open(lexFile)).load()
         else:
             f = open(self.filename)
             dat = getBuf(f).read()
@@ -3585,7 +3585,7 @@ class MacBritish_System_Lexicon(object):
             self.phIndexStart = findW("'e&It.o&U.e&Its")
             self.wordIndexEnd = findW("zombie",1)
             self.phIndexEnd = findW("'zA+m.bI",1)
-            if not text==False: cPickle.Pickler(open(lexFile,"w")).dump((self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd))
+            if not text==False: pickle.Pickler(open(lexFile,"w")).dump((self.wordIndexStart,self.wordIndexEnd,self.phIndexStart,self.phIndexEnd))
         if text==False: self.dFile = open(self.filename)
         else: self.dFile = open(self.filename,'r+')
         assert len(self.allWords()) == len(self.allPh()), str(len(self.allWords()))+" words but "+str(len(self.allPh()))+" phonemes"+compat_err
