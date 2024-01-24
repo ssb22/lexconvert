@@ -2,7 +2,7 @@
 # May be run with either Python 2 or Python 3
 
 """lexconvert v0.39 - convert phonemes between English speech synthesizers etc
-(c) 2007-23 Silas S. Brown.  License: Apache 2"""
+(c) 2007-24 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
 
@@ -803,7 +803,7 @@ def LexFormats():
      noInherit=True
   ),
   "android-pico" : makeVariantDic(
-    'X-SAMPA phonemes for the default \"Pico\" voice in Android (1.6+, American), wrapped in Java code', # you could put en-GB instead of en-US, but it must be installed on the phone
+    'X-SAMPA phonemes for the default \"Pico\" voice in Android 1.6+ (American), wrapped in Java code', # you could put en-GB instead of en-US, but it must be installed on the phone
     ('A:',a_as_in_ah), # won't sound without the :
     (var5_a_as_in_ah,'A:',False), # a: won't sound
     ('@U:',o_as_in_go),
@@ -2223,7 +2223,7 @@ Convert phonemes from <format> and try it with Mac OS British voices (see --mac-
 
 def mainopt_phones(i):
    """*<format> [<words>]
-Use eSpeak to convert text to phonemes, and then convert the phonemes to format 'format'.
+Use eSpeak to convert text to phonemes, and then convert the phonemes to format <format>.
 E.g.: python lexconvert.py --phones unicode-ipa This is a test sentence.
 Set environment variable PHONES_PIPE_COMMAND to an additional command to which to write the phones as well as standard output.  (If standard input is a terminal then this will be done separately after each line.)
 (Some commercial speech synthesizers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)
@@ -3503,7 +3503,7 @@ def main():
        if params.startswith('*'): params=params[1:]
        if params: opt += (' '+params)
        if html: print ("<dt>"+htmlify(opt)+"</dt><dd>"+htmlify(rest)+"</dd>")
-       elif markdown: print (opt.replace("<","`<").replace(">",">`")+"\n: "+htmlify(rest)+"\n")
+       elif markdown: print (opt.replace("<","`<").replace(">",">`")+"\n: "+htmlify(rest).replace('<','`<').replace('>','>`')+"\n")
        else: print (opt+"\n"+rest+"\n")
     if html: print ("</dl>")
     return 0

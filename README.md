@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.39—convert phonemes between English speech synthesizers etc, © 2007-23 Silas S. Brown.  License: Apache 2
+lexconvert v0.39—convert phonemes between English speech synthesizers etc, © 2007-24 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
@@ -21,7 +21,7 @@ amiga
 : AmigaOS speech synthesizer (American English)
 
 android-pico
-: X-SAMPA phonemes for the default "Pico" voice in Android (1.6+, American), wrapped in Java code
+: X-SAMPA phonemes for the default "Pico" voice in Android 1.6+ (American), wrapped in Java code
 
 apollo
 : Dolphin Apollo 2 serial-port and parallel-port hardware synthesizers (in case anybody still uses those)
@@ -132,7 +132,7 @@ E.g.: `python lexconvert.py` `--parens` unicode-ipa This is a test sentence.
 Beware, the considerations about eSpeak versions that apply to `--ruby` also apply here.
 
 --phones `<format>` [`<words>`]
-: Use eSpeak to convert text to phonemes, and then convert the phonemes to format 'format'.  
+: Use eSpeak to convert text to phonemes, and then convert the phonemes to format `<format>`.  
 E.g.: `python lexconvert.py` `--phones` unicode-ipa This is a test sentence.  
 Set environment variable `PHONES_PIPE_COMMAND` to an additional command to which to write the phones as well as standard output.  (If standard input is a terminal then this will be done separately after each line.)  
 (Some commercial speech synthesizers do not work well when driven entirely from phonemes, because their internal format is different and is optimised for normal text.)  
@@ -148,26 +148,26 @@ This option is made more complicated by the fact that different versions of eSpe
 You can optionally set the `RUBY_GRADINT_CGI` environment variable to the URL of an instance of Gradint Web Edition to generate audio links for each word.  If doing this in a Web Adjuster filter, see comments in the lexconvert source for setup details.
 
 --try `<format>` [`<pronunciation>`]
-: Convert input from <format> into eSpeak and try it out.  
+: Convert input from `<format>` into eSpeak and try it out.  
 (Requires the 'espeak' command.)  
 E.g.: `python lexconvert.py` `--try` festival h @0 l ou1  
  or: `python lexconvert.py` `--try` unicode-ipa `'\u02c8\u0279\u026adn\u0329'` (for Unicode put `'\uNNNN'` or UTF-8)
 
 --trymac `<format>` [`<pronunciation>`]
-: Convert phonemes from <format> into Mac and try it using the Mac OS 'say' command
+: Convert phonemes from `<format>` into Mac and try it using the Mac OS 'say' command
 
 --trymac-uk `<format>` [`<pronunciation>`]
-: Convert phonemes from <format> and try it with Mac OS British voices (see `--mac-uk` for details)
+: Convert phonemes from `<format>` and try it with Mac OS British voices (see `--mac-uk` for details)
 
 --festival-dictionary-to-espeak `<location>`
 : Convert the Festival Oxford Advanced Learners Dictionary (OALD) pronunciation lexicon to eSpeak.  
-You need to specify the location of the OALD file in <location>,  
+You need to specify the location of the OALD file in `<location>`,  
 e.g. for Debian festlex-oald package: `python lexconvert.py` `--festival-dictionary-to-espeak` /usr/share/festival/dicts/oald/all.scm  
 or if you can't install the Debian package, try downloading http://ftp.debian.org/debian/pool/non-free/f/festlex-oald/festlex-oald_1.4.0.orig.tar.gz, unpack it into /tmp, and do: `python lexconvert.py` `--festival-dictionary-to-espeak` /tmp/festival/lib/dicts/oald/oald-0.4.out  
 In all cases you need to cd to the eSpeak source directory before running this.  en_extra will be overwritten.  Converter will also read your `~/.festivalrc` if it exists.  (You can later incrementally update from `~/.festivalrc` using the `--convert` option; the entries from the system dictionary will not be overwritten in this case.)  Specify `--without-check` to bypass checking the existing eSpeak pronunciation for OALD entries (much faster, but makes a larger file and in some cases compromises the pronunciation quality).
 
 --mac-uk `<from-format>` [`<text>`]
-: Speak text in Mac OS 10.7+ British voices while using a lexicon converted in from <from-format>. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually. Text speaking needs to be under lexconvert's control because it usually has to change the input words to make them fit the available space in the binary lexicon.) By default the Daniel voice is used; Emily or Serena can be selected by setting the `MACUK_VOICE` environment variable.
+: Speak text in Mac OS 10.7+ British voices while using a lexicon converted in from `<from-format>`. As these voices do not have user-modifiable lexicons, lexconvert must binary-patch your system's master lexicon; this is at your own risk! (Superuser privileges are needed the first time. A backup of the system file is made, and all changes are restored on normal exit but if you force-quit then you might need to restore the backup manually. Text speaking needs to be under lexconvert's control because it usually has to change the input words to make them fit the available space in the binary lexicon.) By default the Daniel voice is used; Emily or Serena can be selected by setting the `MACUK_VOICE` environment variable.
 
 --syllables [`<words>`]
 : Attempt to break 'words' into syllables for music lyrics (uses espeak to determine how many syllables are needed)
