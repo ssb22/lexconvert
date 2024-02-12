@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.39—convert phonemes between English speech synthesizers etc, © 2007-24 Silas S. Brown.  License: Apache 2
+lexconvert v0.4—convert phonemes between English speech synthesizers etc, © 2007-24 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
@@ -115,6 +115,9 @@ vocaloid
 
 x-sampa
 : General X-SAMPA notation, contributed by Jan Weiss
+
+x-sampa-strict
+: A stricter version of X-SAMPA, which can distinguish between sounds not distinct in British English when converting to/from IPA, but might not work on all voices
 
 yinghan
 : As unicode-ipa but, when converting a user lexicon, generates Python code that reads Wenlin Yinghan dictionary entries and adds IPA bands to matching words

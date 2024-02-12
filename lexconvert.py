@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.39 - convert phonemes between English speech synthesizers etc
+"""lexconvert v0.4 - convert phonemes between English speech synthesizers etc
 (c) 2007-24 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -51,6 +51,7 @@ def Phonemes():
    _, var4_a_as_in_ah = variant()
    _, var5_a_as_in_ah = variant()
    a_as_in_apple = vowel()
+   _, var1_a_as_in_apple = variant()
    u_as_in_but = vowel() # or the first part of un as in hunt
    _, var1_u_as_in_but = variant()
    o_as_in_orange = vowel()
@@ -760,6 +761,11 @@ def LexFormats():
     word_separator=" ",phoneme_separator="",
     safe_to_drop_characters=True, # TODO: really?
   ),
+  "x-sampa-strict" : makeVariantDic(
+     "A stricter version of X-SAMPA, which can distinguish between sounds not distinct in British English when converting to/from IPA, but might not work on all voices",
+     ('a',var1_a_as_in_apple),
+     ('r',var1_r),
+     noInherit=True),
   "vocaloid" : makeVariantDic(
      "X-SAMPA phonemes for Yamaha's Vocaloid singing synthesizer.  Contributed by Lorenzo Gatti, who tested in Vocaloid 4 using two American English voices.",
      ('-',syllable_separator),
@@ -1561,7 +1567,7 @@ def LexFormats():
     (u'\u0251\u0279',var4_a_as_in_ah),
     (u'a\u02d0',var5_a_as_in_ah),
     (u'\xe6',a_as_in_apple),
-    ('a',a_as_in_apple,False),
+    ('a',var1_a_as_in_apple),
     (u'\u028c',u_as_in_but),
     ('\u1d27',u_as_in_but,False), # 28c sometimes mistakenly written as 1d27
     (u'\u0252',o_as_in_orange),
@@ -1616,8 +1622,8 @@ def LexFormats():
     (u'\u0254\u026a',oy_as_in_toy),
     (u'o\u026a',var1_oy_as_in_toy),
     ('p',p),
-    (u'\u0279',r), ('r',r,False),
-    (var1_r,'r',False),
+    (u'\u0279',r),
+    ('r',var1_r),
     ('s',s),
     (u'\u0283',sh),
     ('t',t),
@@ -1746,7 +1752,7 @@ for l in i:
     ('*#',var4_a_as_in_ah),
     ('A3',var5_a_as_in_ah),
     ('%',a_as_in_apple),
-    ('A',a_as_in_apple,False),
+    ('A',var1_a_as_in_apple),
     ('+',u_as_in_but),
     ('4*',o_as_in_orange),
     (var1_o_as_in_orange,'*',False),
@@ -1799,7 +1805,7 @@ for l in i:
     ('O/',var1_oy_as_in_toy),
     ('P',p),
     ('#',r),
-    (var1_r,'R',False),
+    ('R',var1_r),
     ('S',s),
     (':',sh),
     ('T',t),
@@ -1848,6 +1854,7 @@ for l in i:
     ('A\\textturnr{}',var4_a_as_in_ah),
     ('a:',var5_a_as_in_ah),
     ('\\ae{}',a_as_in_apple),
+    ('a',var1_a_as_in_apple),
     ('2',u_as_in_but),
     ('6',o_as_in_orange),
     (var1_o_as_in_orange,'A',False),
@@ -1899,7 +1906,7 @@ for l in i:
     ('oI',var1_oy_as_in_toy),
     ('p',p),
     ('\\textturnr{}',r),
-    (var1_r,'r',False),
+    ('r',var1_r),
     ('s',s),
     ('S',sh),
     ('t',t),
