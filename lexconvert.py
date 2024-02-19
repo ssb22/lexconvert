@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.4 - convert phonemes between English speech synthesizers etc
+"""lexconvert v0.41 - convert phonemes between English speech synthesizers etc
 (c) 2007-24 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -3169,35 +3169,39 @@ def hyphenate(word,numSyls):
   orig = word
   try: word,isu8 = word.decode('utf-8'),True
   except: isu8 = False
-  pre=[] ; post=[]
-  while word and not 'a'<=word[:1].lower()<='z':
-    pre.append(word[:1]) ; word=word[1:]
-  while word and not 'a'<=word[-1].lower()<='z':
-    post.insert(0,word[-1:]) ; word=word[:-1]
+  pre = re.match("(?i)[^a-z]*",word).group()
+  post = re.findall("(?i)[^a-z]*$",word)[0]
+  word = word[len(pre):len(word)-len(post)]
   if numSyls>len(word): return orig # probably numbers or something
-  l = int((len(word)+numSyls/2)/numSyls) ; syls = []
+  syls = []
   for i in range(numSyls):
-    if i==numSyls-1: syls.append(word[i*l:])
-    else: syls.append(word[i*l:(i+1)*l])
+    if i==numSyls-1: syls.append(word[int(i*len(word)/numSyls):])
+    else: syls.append(word[int(i*len(word)/numSyls):int((i+1)*len(word)/numSyls)])
     if len(syls)>1:
+      if not re.search("(?i)[aeiouy]",syls[-1]) and re.search("(?i)[aeiouy].*[aeiouy]",syls[-2]):
+        # try to have at least one vowel per syllable: take from previous syllable if it has two and we have none
+        syls[-2],syls[-1]=syls[-2][:re.search("(?i)[aeiouy][^aeiouy]*$",syls[-2]).start()],re.search("(?i)[aeiouy][^aeiouy]*$",syls[-2]).group()+syls[-1]
+      elif not re.search("(?i)[aeiouy]",syls[-2]) and re.search("(?i)[aeiouy]",syls[-1]):
+        # give a vowel to previous syllable if it has none (we'll try to get one from next if that's our last)
+        syls[-2],syls[-1]=syls[-2]+syls[-1][:re.search("(?i)[aeiouy]",syls[-1]).start()+1],syls[-1][re.search("(?i)[aeiouy]",syls[-1]).start()+1:]
       if syls[-1].startswith('-') or (len(syls[-1])>2 and syls[-1][:1]==syls[-1][1:2] and not syls[-1][:1].lower() in "aeiou"):
         # repeated consonant at start - put one on previous
         # (or hyphen at start - move it to the previous)
         syls[-2] += syls[-1][:1]
         syls[-1] = syls[-1][1:]
       elif len(syls[-1])>2 and syls[-1][1]=='-':
-        # better move this splitpoint after that hyphen (TODO: move more than one character?)
+        # better move this splitpoint after that hyphen (todo: move more than one character?)
         syls[-2] += syls[-1][:2]
         syls[-1] = syls[-1][2:]
-      elif ((len(syls[-2])>2 and syls[-2][-1]==syls[-2][-2] and not syls[-2][-1].lower() in "aeiou") \
-            or (syls[-1] and syls[-1][:1].lower() in "aeiouy" and len(syls[-2])>2)) \
-            and list(filter(lambda x:x.lower() in "aeiou",list(syls[-2][:-1]))):
-        # repeated consonant at end - put one on next
-        # or vowel on right: move a letter over (sometimes the right thing to do...)
-        # (unless doing so leaves no vowels)
+      while len(syls[-2])>2 and syls[-2][-1]==syls[-2][-2] and not syls[-2][-1].lower() in "aeiou" \
+            or syls[-1][:1].lower() in "aeiouy" and re.search("(?i)[aeiouy]",syls[-2][:-1]) and not syls[-2][-1].lower() in 'vx':
+        # repeated consonant at end of previous - put one on this
+        # or vowel at start of this: move a letter over from prev
+        # (sometimes the right thing to do...)
+        # (unless doing so leaves no vowels on prev)
         syls[-1] = syls[-2][-1]+syls[-1]
         syls[-2] = syls[-2][:-1]
-  word = ''.join(pre)+"- ".join(syls)+''.join(post)
+  word = pre+"- ".join(syls)+post
   if isu8: word=word.encode('utf-8')
   return word
 
