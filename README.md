@@ -1,6 +1,6 @@
 # lexconvert
-Convert phoneme codes and lexicon formats for English speech synths, from http://ssb22.user.srcf.net/gradint/lexconvert.html
-(also mirrored at http://ssb22.gitlab.io/gradint/lexconvert.html just in case)
+Convert phoneme codes and lexicon formats for English speech synths, from http://ssb22.user.srcf.net/lexconvert/
+(also mirrored at http://ssb22.gitlab.io/lexconvert/ just in case, plus you can access Lexconvert via `pip install lexconvert` or `pipx run lexconvert`)
 
 As a person with limited vision, I often use speech synthesis software to read things. Some uncommon words (such as names and places in literature) are pronounced wrongly by speech synthesizers, but if the synthesizer has a user-controlled pronunciation dictionary (lexicon) then this can be used to correct its pronunciation where necessary. However, if you move to a different speech synthesizer, you may find the lexicon format is different.
 

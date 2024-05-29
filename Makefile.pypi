@@ -1,0 +1,16 @@
+# -*- mode: Makefile -*-
+check-if-lexconvert-version-is-changing:
+	@if grep '^"""lexconvert v[0-9][^.]*[.][0-9][0-9][0-9]' lexconvert.py; then echo "3+ decimal digits in version number will now need another -e 's/[.][0-9][0-9]$$/&0/' in Makefile.pypi's sed expression"; false; fi
+	if (git diff;git diff --staged)|grep '^[+]"""lexconvert v[0-9]'; then make -f Makefile.pypi update-lexconvert-pypi; else true; fi
+update-lexconvert-pypi:
+	mkdir lexconvert
+	cp lexconvert.py lexconvert/__init__.py
+	echo "import lexconvert;lexconvert.main()" > lexconvert/__main__.py
+	echo "from setuptools import setup, find_packages;setup(name='lexconvert',version='$$(grep '^...lexconvert v[0-9]' lexconvert.py|sed -e 's/[^ ]* v//' -e 's/ .*//' -e 's/[.][1-9]$$/&0/')',entry_points={'console_scripts':['lexconvert=lexconvert.__init__:main']},license='Apache 2',platforms='any',url='http://ssb22.user.srcf.net/lexconvert/',author='Silas S. Brown',author_email='ssb$$(echo 22@ca)m.ac.uk',description='Convert phoneme codes and lexicon formats for English speech synths',long_description=r'''$$(grep -v 'also mirrored' < README.md | sed -e 's/python lexconvert.py/python -m lexconvert/g')''',long_description_content_type='text/markdown',packages=find_packages(),classifiers=['Programming Language :: Python :: 2','Programming Language :: Python :: 3','License :: OSI Approved :: Apache Software License','Operating System :: OS Independent'],python_requires='>=2.3,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*')" > setup.py
+	mv README.md .. # or it'll override our altered version
+	python3 setup.py sdist
+	twine upload dist/*
+	mv ../README.md .
+	rm -r lexconvert.egg-info dist lexconvert setup.py
+.PHONY: check-if-lexconvert-version-is-changing
+.PHONY: update-lexconvert-pypi
