@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.41 - convert phonemes between English speech synthesizers etc
+"""lexconvert v0.42 - convert phonemes between English speech synthesizers etc
 (c) 2007-24 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -2786,7 +2786,7 @@ def make_dictionary(sourceName,destName):
       assert type(k) in [bytes,unicode]
       d[k] = dest[v]
       if int(v) in consonants: dest_consonants.add(d[k])
-      if int(v)==e_as_in_herd and (not implicit_vowel_before_NL or v==int(v)): # TODO: or u_as_in_but ?  used by festival and some other synths before words ending 'n' or 'l' (see usage of implicit_vowel_before_NL later)
+      if int(v)==e_as_in_herd and not "LEXCONVERT_NO_IMPLICIT_VOWELS" in os.environ and (not implicit_vowel_before_NL or v==int(v)): # TODO: or u_as_in_but ?  used by festival and some other synths before words ending 'n' or 'l' (see usage of implicit_vowel_before_NL later)
         implicit_vowel_before_NL = d[k]
       d[as_utf8(k)] = d[k]
       try: d[as_unicode(k)] = d[k]
@@ -2842,7 +2842,11 @@ def convert(pronunc,source,dest):
                     if dest_syllable_sep: ret.append(maybe_bytes(dest_syllable_sep,toAdd)) # (TODO: this assumes stress marks are at end of syllable rather than immediately after vowel; correct for Festival; check others; probably a harmless assumption though; mac-uk is better with syllable separators although espeak basically ignores them)
                     toAdd = maybe_bytes("",toAdd)
                 # attempt to sort out the festival dictionary's (and other's) implicit_vowel_before_NL
-                elif implicit_vowel_before_NL and ret and ret[-1] and toAdd in [maybe_bytes('n',toAdd),maybe_bytes('l',toAdd)] and ret[-1] in dest_consonants: ret.append(maybe_bytes(implicit_vowel_before_NL,toAdd)+maybe_bytes('*added',toAdd))
+                elif implicit_vowel_before_NL and ret and ret[-1] and toAdd in [maybe_bytes('n',toAdd),maybe_bytes('l',toAdd)] and ret[-1] in dest_consonants:
+                   msg = "Warning: added implicit vowel using British Festival logic\nSet LEXCONVERT_NO_IMPLICIT_VOWELS environment variable if you didn't want this\n"
+                   if not msg in warnedAlready:
+                      warnedAlready.add(msg) ; sys.stderr.write(msg)
+                   ret.append(maybe_bytes(implicit_vowel_before_NL,toAdd)+maybe_bytes('*added',toAdd))
                 elif len(ret)>2 and ret[-2].endswith(maybe_bytes('*added',ret[-2])) and toAdd and not toAdd in dest_consonants and not toAdd==dest_syllable_sep: del ret[-2]
                 if toAdd:
                     # Add it, but if toAdd is multiple phonemes, try to put toAddAfter after the FIRST phoneme
