@@ -105,7 +105,7 @@ unicode-ipa
 : IPA symbols in Unicode, as used by an increasing number of dictionary programs, websites etc
 
 unicode-ipa-syls
-: Like unicode-ipa but with syllable separators preserved
+: Like unicode-ipa but with syllable separators preserved (note however that this cannot generate syllable separator markers that do not already exist in the input, it merely preserves any already there)
 
 unicode-rough
 : A non-standard notation that's reminiscent of unicode-ipa but changed so that more of the characters show in old browsers with incomplete fonts

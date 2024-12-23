@@ -1657,7 +1657,7 @@ def LexFormats():
   ),
 
   "unicode-ipa-syls" : makeVariantDic(
-  "Like unicode-ipa but with syllable separators preserved",
+  "Like unicode-ipa but with syllable separators preserved (note however that this cannot generate syllable separator markers that do not already exist in the input, it merely preserves any already there)",
   (syllable_separator,'.'),
   cleanup_regexps=[(r"\.+",".")], # multiple . to one .
   noInherit=True),
