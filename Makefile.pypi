@@ -1,6 +1,8 @@
 # -*- mode: Makefile -*-
-check-if-lexconvert-version-is-changing:
+all: test check-if-lexconvert-version-is-changing
+test:
 	@if python3 lexconvert.py --version|grep 'v[0-9][^.]*[.][0-9][0-9][0-9]'; then echo "3+ decimal digits in version number will now need another -e 's/[.][0-9][0-9]$$/&0/' in Makefile.pypi's sed expression"; false; fi
+check-if-lexconvert-version-is-changing:
 	if (git diff;git diff --staged)|grep '^[+]"""lexconvert v[0-9]'; then make -f Makefile.pypi update-lexconvert-pypi; else true; fi
 update-lexconvert-pypi:
 	mkdir lexconvert
@@ -13,4 +15,4 @@ update-lexconvert-pypi:
 	mv ../README.md .
 	rm -r lexconvert.egg-info dist lexconvert setup.py
 .PHONY: check-if-lexconvert-version-is-changing
-.PHONY: update-lexconvert-pypi
+.PHONY: update-lexconvert-pypi all test
