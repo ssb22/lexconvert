@@ -2,7 +2,7 @@
 # May be run with either Python 2 or Python 3
 
 """lexconvert v0.42 - convert phonemes between English speech synthesizers etc
-(c) 2007-24 Silas S. Brown.  License: Apache 2"""
+(c) 2007-25 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
 
@@ -3452,6 +3452,7 @@ def main():
        h = re.sub("(?<=[A-Za-z]{3})([_.])(?=[A-Za-z0-9]{3})",r"\1<wbr>",h)
        h = re.sub(r"(?<=[a-z0-9])\\u",r"<wbr>\\u",h)
        h = h.replace(" ALL "," <em>all</em> ")
+       h = h.replace("approximation","approx&shy;imation").replace("synchronisation","synch&shy;ronisation").replace("pronunciation","pronun&shy;ciation") # soft hyphens for mobile Chrome at larger than usual print
        return h
     if html: print (htmlify(__doc__).replace(" - ","<br>"))
     elif markdown:
@@ -3462,7 +3463,7 @@ def main():
        htmlify0 = htmlify
        htmlify = lambda x: \
           htmlify0(x) \
-          .replace("<wbr>","") \
+          .replace("<wbr>","").replace("&shy;","") \
           .replace("<kbd>","`").replace("</kbd>","`") \
           .replace("<code>","`").replace("</code>","`") \
           .replace("``","").replace("<br>","  \n") \

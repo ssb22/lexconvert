@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.42—convert phonemes between English speech synthesizers etc, © 2007-24 Silas S. Brown.  License: Apache 2
+lexconvert v0.42—convert phonemes between English speech synthesizers etc, © 2007-25 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
@@ -178,7 +178,7 @@ In all cases you need to cd to the eSpeak source directory before running this. 
 Trademarks
 ----------
 * Android is a trademark of Google LLC.
-* Apache is a registered trademark of The Apache Software Foundation.
+* Apache is a registered trademark of The Apache Software Foundation, which from February to July 2023 acknowledged the Chiricahua Apache, the Choctaw Apache, the Fort Sill Apache, the Jicarilla Apache, the Mescalero Apache, the Lipan Apache, the Apache Tribe of Oklahoma, the Plains Apache, the San Carlos Apache, the Tonto Apache, the White Mountain Apache, the Yavapai Apache and the Apache Alliance.
 * Apple is a trademark of Apple Inc.
 * Cepstral is a trademark and brand of Cepstral, LLC.
 * Debian is a trademark owned by Software in the Public Interest, Inc.
