@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # May be run with either Python 2 or Python 3
 
-"""lexconvert v0.42 - convert phonemes between English speech synthesizers etc
+"""lexconvert v0.43 - convert phonemes between English speech synthesizers etc
 (c) 2007-25 Silas S. Brown.  License: Apache 2"""
 
 # Run without arguments for usage information
@@ -2174,6 +2174,41 @@ for l in i:
        (u'\u092d',u'\u092c\u0939'),(u'\u0927',u'\u0922\u0939'),(u'\u0918',u'\u0917\u0939'),(u'\u091d',u'\u091c\u0939'),(u'\u0922\u093c',u'\u0921\u093c\u0939'),
     ]),
 
+  "thai-approx" : makeDic(
+  "Rough approximation using Thai (for getting Thai computer voices to speak some English words; works with some words better than others)",
+    ('49',primary_stress),
+    ('2d32',a_as_in_ah),
+    ('2d30',a_as_in_apple), # or 32 ?
+    ('1a',b),
+    ('08',ch),
+    ('14',d),
+    ('402D30',e_as_in_them),
+    ('402D',a_as_in_ate),
+    ('1f',f),
+    ('2b',h),
+    ('2d35',e_as_in_eat),
+    ('01',k),
+    ('25',l),
+    ('21',m),
+    ('19',n),
+    ('07',ng),
+    ('1b',p),
+    ('23',r),
+    ('2a',s),
+    ('15',t),
+    ('2d39',oo_as_in_food),
+    ('2D2D',close_to_or),
+    ('422D',o_as_in_go),
+    ('2d38',opt_u_as_in_pull),
+    ('27',w),
+    ('22',y),
+    word_separator=" ",phoneme_separator="",
+    stress_comes_before_vowel=True,
+    safe_to_drop_characters=True, # it's an approximation
+    approximate_missing=True,
+    cleanup_regexps=[('(?<=.)2d',''),(u'[0-9a-fA-F]{2}',lambda m:unichr(0xE00+int(m.group(),16)))], # (TODO add U+0E4C if ending with a consonant?) NB U+0E35 might not always display on all terminals
+    cvtOut_func=unicode_preprocess),
+
   "names" : makeDic(
     "Lexconvert internal phoneme names (sometimes useful with the --phones option while developing new formats)",
      *[(phName,phVal) for phName,phVal in phonemes.items()])}
@@ -2672,23 +2707,23 @@ def cheetah(symbol,opcode):
 def makeDic(doc,*args,**kwargs):
     "Make a dictionary with a doc string, default-bidirectional mappings and extra settings; see LexFormats for how this is used."
     assert type(doc)==str, "doc must be a string"
-    d = {} ; duplicates = set()
+    D = {} ; duplicates = set()
     for a in args:
         assert type(a)==tuple and (len(a)==2 or len(a)==3)
-        k=a[0]
-        if k in d: duplicates.add(k)
-        v=a[1]
-        assert (type(k) in [bytes,unicode] and type(v) in [int,float]) or (type(v) in [bytes,unicode] and type(k) in [int,float]), "Wrong types "+repr(a)+" (did you forget a _, before calling variant() or something?)"
-        d[k] = v
-        if type(k)==unicode: d[as_utf8(k)] = v
+        K=a[0]
+        if K in D: duplicates.add(K)
+        V=a[1]
+        assert (type(K) in [bytes,unicode] and type(V) in [int,float]) or (type(V) in [bytes,unicode] and type(K) in [int,float]), "Wrong types "+repr(a)+" (did you forget a _, before calling variant() or something?)"
+        D[K] = V
+        if type(K)==unicode: D[as_utf8(K)] = V
         if len(a)==3: bidir=a[2]
         else: bidir=True
         if bidir:
-            # (k,v,True) = both (k,v) and (v,k)
-            if v in d: duplicates.add(v)
-            d[v] = k
-    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+g+")" for g,val in globals().items() if val==dup)) for dup in sorted(list(duplicates)))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
-    missing = [l for l in (list(consonants)+list(mainVowels)) if not l in d]
+            # (K,V,True) = both (K,V) and (V,K)
+            if V in D: duplicates.add(V)
+            D[V] = K
+    assert not duplicates, " Duplicate key(s) in "+repr(doc)+": "+", ".join((repr(dup)+"".join(" (="+G+")" for G,val in globals().items() if val==dup)) for dup in sorted(list(duplicates)))+". Did you forget a ,False to suppress bidirectional mapping?" # by the way, Python does not detect duplicate keys in {...} notation - it just lets you overwrite
+    missing = [L for L in (list(consonants)+list(mainVowels)) if not L in D]
     # did_approx = False
     if missing and 'approximate_missing' in kwargs:
       for miss,approxTo in [
@@ -2701,24 +2736,25 @@ def makeDic(doc,*args,**kwargs):
           (a_as_in_ah,[a_as_in_apple]), # this seems to be missing in some American voices (DecTalk, Keynote, SAM); TODO: is this the best approximation we can do?
           (a_as_in_apple,[a_as_in_ah]), # the reverse of the above, for Devanagari
           (o_as_in_orange,[oo_as_in_food]),(o_as_in_go,[oo_as_in_food]),(oy_as_in_toy,[oo_as_in_food,i_as_in_it]),(o_as_in_now,[a_as_in_ah, w]),(e_as_in_herd,[u_as_in_but,u_as_in_but]),(ar_as_in_year,[u_as_in_but,u_as_in_but]),(eye,[a_as_in_ah,y]),(th_as_in_think,[th_as_in_them]), # (Devanagari: is this really the best we can do?)
+            (g,[k]),(i_as_in_it,[e_as_in_eat]),(j_as_in_jump,[ch]),(th_as_in_them,[t]),(th_as_in_think,[t]),(sh,[ch]),(v,[w]),(z,[s]),(ge_of_blige_etc,[ch]),(u_as_in_but,[a_as_in_apple]),(a_as_in_ago,[a_as_in_ah]),(e_as_in_herd,[a_as_in_ah]),(ear,[a_as_in_ah]),(oy_as_in_toy,[close_to_or,e_as_in_eat]), # Thai ([t] works better than [t,s] for th)
           ]:
-        if miss in missing and all(x in d for x in approxTo):
-          d[miss]=maybe_bytes(kwargs.get("phoneme_separator"," "),d[approxTo[0]]).join(d[x] for x in approxTo)
+        if miss in missing and all(x in D for x in approxTo):
+          D[miss]=maybe_bytes(kwargs.get("phoneme_separator"," "),D[approxTo[0]]).join(D[x] for x in approxTo)
           # did_approx = True
           missing.remove(miss)
     # if did_approx: doc="(approx.) "+doc # and see also the code in makeVariantDic.  Commenting out because this is misleading: the formats where we didn't do a did_approx might also contain approximations of some kind.  Incidentally there are some British English voices that need approximate_missing (e.g. Apollo 2)
-    d[("settings","doc")] = doc
+    D[("settings","doc")] = doc
     if missing:
-       import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(g for g,val in globals().items() if val==m) for m in missing)+"\n")
-    for k,v in kwargs.items(): d[('settings',k)] = v
-    assert type(d.get(('settings','cleanup_regexps'),[]))==list, "cleanup_regexps must be a list" # not one tuple
-    assert type(d.get(('settings','cvtOut_regexps'),[]))==list, "cvtOut_regexps must be a list" # not one tuple
-    wsep = d.get(('settings','word_separator'),None)
-    psep = d.get(('settings','phoneme_separator'),' ')
-    if not wsep==None: assert not wsep in d, "word_separator duplicates with a key in "+repr(doc)
-    if not psep==None: assert not psep in d, "phoneme_separator duplicates with a key (did you forget to change the default, or to add a ,False somewhere?) in "+repr(doc)
-    global lastDictionaryMade ; lastDictionaryMade = d
-    return d
+       import sys ; sys.stderr.write("WARNING: Some non-optional vowels/consonants are missing from "+repr(doc)+"\nThe following are missing: "+", ".join("/".join(G for G,val in globals().items() if val==m) for m in missing)+"\n")
+    for K,V in kwargs.items(): D[('settings',K)] = V
+    assert type(D.get(('settings','cleanup_regexps'),[]))==list, "cleanup_regexps must be a list" # not one tuple
+    assert type(D.get(('settings','cvtOut_regexps'),[]))==list, "cvtOut_regexps must be a list" # not one tuple
+    wsep = D.get(('settings','word_separator'),None)
+    psep = D.get(('settings','phoneme_separator'),' ')
+    if not wsep==None: assert not wsep in D, "word_separator duplicates with a key in "+repr(doc)
+    if not psep==None: assert not psep in D, "phoneme_separator duplicates with a key (did you forget to change the default, or to add a ,False somewhere?) in "+repr(doc)
+    global lastDictionaryMade ; lastDictionaryMade = D
+    return D
 def makeVariantDic(doc,*args,**kwargs):
     "Like makeDic but create a new 'variant' version of the last-made dictionary, modifying some phonemes and settings (and giving it a new doc string) but keeping everything else the same.  Any list settings (e.g. cleanup_regexps) are ADDED to by the variant; other settings and phonemes are REPLACED if they are specified in the variant.  If you don't want subsequent variants to inherit the changes made by this variant, add noInherit=True to the keyword args."
     global lastDictionaryMade

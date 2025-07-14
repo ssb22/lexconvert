@@ -9,7 +9,7 @@ This is a Python program that converts between different codes for English phone
 Usage information
 =================
 
-lexconvert v0.42—convert phonemes between English speech synthesizers etc, © 2007-25 Silas S. Brown.  License: Apache 2
+lexconvert v0.43—convert phonemes between English speech synthesizers etc, © 2007-25 Silas S. Brown.  License: Apache 2
 
 Available pronunciation formats
 -------------------------------
@@ -100,6 +100,9 @@ sapi
 
 speakjet
 : Allophone codes for the American English "SpeakJet" speech synthesis chip (the conversion from phonemes to allophones might need tweaking).  Set the `SPEAKJET_SYM` environment variable to use mnemonics, otherwise numbers are used (set `SPEAKJET_BINARY` for binary output).
+
+thai-approx
+: Rough approximation using Thai (for getting Thai computer voices to speak some English words; works with some words better than others)
 
 unicode-ipa
 : IPA symbols in Unicode, as used by an increasing number of dictionary programs, websites etc
